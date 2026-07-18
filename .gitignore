@@ -9,5 +9,9 @@
 node_modules/
 frontend/dist/
 
+# Embedded SPA build — populated only inside the Docker build
+/api/internal/api/dist/*
+!/api/internal/api/dist/.gitkeep
+
 # OS
 .DS_Store

@@ -1,0 +1,21 @@
+.git
+.env
+.env.example
+
+# Build outputs — produced inside the image
+node_modules
+frontend/node_modules
+frontend/dist
+api/internal/api/dist/*
+!api/internal/api/dist/.gitkeep
+
+# Local binaries / coverage
+api/pitlane
+api/coverage.out
+
+# Docs and dev-only files
+*.md
+docker-compose*.yml
+Makefile
+.claude
+**/.DS_Store

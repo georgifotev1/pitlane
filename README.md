@@ -31,10 +31,29 @@ First run copies `.env.example` → `.env`, starts postgres/mailpit/minio, then 
 | `make test`           | Go tests (unit + testcontainers integration, Phase 2+)   |
 | `make types`          | Regenerate `frontend/src/lib/generated/types.ts` (tygo)  |
 | `make e2e`            | Playwright journeys (Phase 2+)                           |
-| `make build`          | Production Docker image (Phase 1+)                       |
-| `make migrate-*`      | goose up/down/status via the api binary (Phase 1+)       |
+| `make build`          | Production Docker image (`pitlane:latest`)               |
+| `make migrate-up` / `migrate-down` / `migrate-status` | goose + River migrations via the api binary |
 | `make audit`          | go vet, tsc, oxlint, pnpm audit, tygo staleness check    |
 | `make deps` / `deps-down` | Start/stop the docker-compose stack                  |
+
+## Production rehearsal
+
+The single deployable artifact is the Docker image: one binary serves the API
+and the embedded SPA, migrations run only as an explicit operator command.
+
+```sh
+make build                                                # pitlane:latest
+docker compose -f docker-compose.prod.yml up -d db
+docker compose -f docker-compose.prod.yml run --rm app migrate up
+docker compose -f docker-compose.prod.yml up -d app       # http://localhost:4000
+```
+
+## Backups
+
+`scripts/backup.sh` streams `pg_dump | gzip` into the `pitlane-backups` MinIO
+bucket (R2 in production; override with the `BACKUP_S3_*` env vars). It only
+writes timestamped objects — retention is a bucket lifecycle policy. Phase D
+schedules it nightly and rehearses a restore.
 
 ## House rules
 

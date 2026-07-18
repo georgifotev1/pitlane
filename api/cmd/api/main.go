@@ -12,6 +12,7 @@ import (
 
 	"github.com/gfotev/pitlane/internal/api"
 	"github.com/gfotev/pitlane/internal/config"
+	"github.com/gfotev/pitlane/internal/jobs"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -22,7 +23,24 @@ func main() {
 	}
 }
 
+// run dispatches subcommands Edwards-style: a plain os.Args switch, no CLI
+// framework. Bare "api" is the server; "api migrate …" is the operator tool.
 func run() error {
+	args := os.Args[1:]
+	if len(args) == 0 {
+		args = []string{"serve"}
+	}
+	switch args[0] {
+	case "serve":
+		return serve()
+	case "migrate":
+		return runMigrate(context.Background(), args[1:], os.Stdout)
+	default:
+		return fmt.Errorf("unknown command %q\nusage: api [serve] | api migrate <up|down|status>", args[0])
+	}
+}
+
+func serve() error {
 	cfg, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("config: %w", err)
@@ -39,7 +57,6 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// No stores consume the pool until Phase 2; opening it now proves the DSN.
 	pool, err := pgxpool.New(ctx, cfg.DSN)
 	if err != nil {
 		return fmt.Errorf("db pool: %w", err)
@@ -53,9 +70,25 @@ func run() error {
 	}
 	logger.Info("database connected")
 
+	// River runs in the same binary as the API (single-artifact deployment).
+	// Its schema must already exist — River refuses to start unmigrated.
+	riverClient, err := jobs.NewClient(pool)
+	if err != nil {
+		return err
+	}
+	if err := riverClient.Start(ctx); err != nil {
+		return fmt.Errorf("river start (migrated? run: api migrate up): %w", err)
+	}
+	logger.Info("river client started")
+
+	server, err := api.NewServer(logger, cfg.Env)
+	if err != nil {
+		return fmt.Errorf("server: %w", err)
+	}
+
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Port),
-		Handler:           api.NewServer(logger, cfg.Env).Handler(),
+		Handler:           server.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      30 * time.Second,
@@ -74,10 +107,15 @@ func run() error {
 	case <-ctx.Done():
 	}
 
+	// Shutdown order: stop taking HTTP traffic, then drain job workers, then
+	// the deferred pool.Close() releases connections last.
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("graceful shutdown: %w", err)
+	}
+	if err := riverClient.Stop(shutdownCtx); err != nil {
+		return fmt.Errorf("river drain: %w", err)
 	}
 	logger.Info("server stopped")
 	return nil

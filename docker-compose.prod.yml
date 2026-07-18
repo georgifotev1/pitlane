@@ -1,0 +1,42 @@
+name: pitlane-prod
+
+# Local production rehearsal (AGENT_PLAN Phase 1): the exact image from
+# `make build` + postgres, serving SPA and API from ONE container on :4000.
+#
+#   docker compose -f docker-compose.prod.yml up -d db
+#   docker compose -f docker-compose.prod.yml run --rm app migrate up
+#   docker compose -f docker-compose.prod.yml up -d app
+#
+# Real deployment (Dokploy on Hetzner) is Phase D.
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: pitlane
+      POSTGRES_PASSWORD: pitlane-prod-rehearsal
+      POSTGRES_DB: pitlane
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pitlane -d pitlane"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: "4000"
+      ENV: production
+      DSN: postgres://pitlane:pitlane-prod-rehearsal@db:5432/pitlane?sslmode=disable
+    ports:
+      - "4000:4000"
+
+volumes:
+  pgdata:

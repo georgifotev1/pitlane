@@ -18,7 +18,7 @@ deps-down:
 dev: .env deps
 	$(MAKE) -j2 dev-api dev-frontend
 
-dev-api:
+dev-api: migrate-up
 	cd api && go run ./cmd/api
 
 dev-frontend:
@@ -34,10 +34,16 @@ e2e:
 	@echo "e2e: Playwright journeys arrive in Phase 2" && exit 1
 
 build:
-	@echo "build: production Dockerfile arrives in Phase 1" && exit 1
+	docker build -t pitlane:latest .
 
-migrate-up migrate-down migrate-status:
-	@echo "$@: goose migrations arrive in Phase 1" && exit 1
+migrate-up:
+	cd api && go run ./cmd/api migrate up
+
+migrate-down:
+	cd api && go run ./cmd/api migrate down
+
+migrate-status:
+	cd api && go run ./cmd/api migrate status
 
 audit:
 	cd api && go vet ./...
