@@ -1,0 +1,13 @@
+# Secrets
+.env
+
+# Go
+/api/pitlane
+/api/coverage.out
+
+# Node
+node_modules/
+frontend/dist/
+
+# OS
+.DS_Store

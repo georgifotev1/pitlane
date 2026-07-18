@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go vet *)",
+      "Bash(go build *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(docker compose *)",
+      "Bash(go version *)",
+      "Bash(docker info *)",
+      "Bash(echo \"wait-exit: $?\")",
+      "Bash(echo \"init-exit: $?\")",
+      "Bash(export PORT=4000 ENV=development DSN=\"postgres://pitlane:pitlane@localhost:5432/pitlane?sslmode=disable\")",
+      "Bash(go run *)",
+      "Bash(echo \"started pid $!\")",
+      "Read(//tmp/**)",
+      "Bash(curl -s -i http://localhost:4000/api/v1/healthz)",
+      "Bash(curl -s http://localhost:4000/nope)",
+      "Bash(lsof -iTCP:4000 -sTCP:LISTEN -n -P)",
+      "Bash(lsof -iTCP:5173 -sTCP:LISTEN -n -P)"
+    ]
+  }
+}

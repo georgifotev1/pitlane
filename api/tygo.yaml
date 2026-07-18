@@ -1,0 +1,3 @@
+packages:
+  - path: "github.com/gfotev/pitlane/internal/api/dto"
+    output_path: "../frontend/src/lib/generated/types.ts"
