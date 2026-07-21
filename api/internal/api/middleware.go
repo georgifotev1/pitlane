@@ -67,7 +67,7 @@ func recoverPanic(logger *slog.Logger, next http.Handler) http.Handler {
 					slog.String("requestId", requestIDFromContext(r.Context())),
 					slog.Any("err", err),
 				)
-				renderProblem(w, r, http.StatusInternalServerError, "internal server error")
+				renderProblem(w, r, http.StatusInternalServerError, CodeInternalError, "internal server error")
 			}
 		}()
 		next.ServeHTTP(w, r)

@@ -41,13 +41,13 @@ func runMigrate(ctx context.Context, args []string, stdout io.Writer) error {
 
 	// goose speaks database/sql over the pgx stdlib driver; River wants the
 	// native pgx pool. Two thin handles, one database.
-	db, err := sql.Open("pgx", cfg.DSN)
+	db, err := sql.Open("pgx", cfg.MigrateDSN)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
 	defer db.Close()
 
-	pool, err := pgxpool.New(ctx, cfg.DSN)
+	pool, err := pgxpool.New(ctx, cfg.MigrateDSN)
 	if err != nil {
 		return fmt.Errorf("db pool: %w", err)
 	}

@@ -33,10 +33,9 @@ A multi-tenant SaaS dashboard for car service owners: Go JSON API + React SPA, s
 - `make dev` — compose deps up + Go API + Vite dev server (proxy to :4000)
 - `make test` — Go tests (unit + testcontainers integration)
 - `make types` — tygo: regenerate frontend/src/lib/generated/types.ts
-- `make e2e` — Playwright journeys against the local stack
 - `make build` — production Docker image
 - `make migrate-up / migrate-down / migrate-status` — goose via the api binary
-- `make audit` — go vet, staticcheck (if approved), pnpm audit, tygo staleness check
+- `make audit` — go vet, pnpm audit, tygo staleness check, Lingui catalog check (extracted messages match compiled catalog)
 
 ## Workflow per slice (Phases 4+ follow this order strictly)
 migration → store (+ integration test) → handler (+ httptest) → dto → `make types` → api.ts client + query keys → UI → verification gate.

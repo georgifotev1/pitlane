@@ -16,7 +16,7 @@
 | 5 | Database | PostgreSQL, latest stable major |
 | 6 | Data access | **Raw `database/sql` over `pgx/v5/stdlib` (owner revision from sqlc)** — see Compensating Controls |
 | 7 | Migrations | goose, plain SQL, embedded, explicit `api migrate` subcommand |
-| 8 | API conventions | `/api/v1` URL versioning; plural nouns; camelCase JSON; ISO-8601 UTC; string UUIDs; **RFC 9457 problem+json errors** (+ `requestId`, `errors` field map); **Edwards-style named envelopes**; **offset/page pagination** with metadata |
+| 8 | API conventions | `/api/v1` URL versioning; plural nouns; camelCase JSON; ISO-8601 UTC; string UUIDs; **RFC 9457 problem+json errors** (+ `requestId`, `errors` field map, **`code` field for stable machine-readable error identity**); **Edwards-style named envelopes**; **offset/page pagination** with metadata |
 | 9 | Authentication | **HttpOnly session cookies via `alexedwards/scs` (Postgres store)** for the SPA; auth middleware structured header-then-cookie so **opaque bearer tokens (hashed, Edwards-style) slot in for a future React Native app**; JWT rejected |
 | 10 | Authorization | Hand-rolled RBAC: `owner`/`admin`/`mechanic` enum + `map[Role][]Permission`; `requireAuth` → 401, `requirePermission` → 403 (problem+json, never conflated); object-level checks in handlers; permissions exposed read-only via `GET /auth/me` |
 | 11 | Password hashing | **bcrypt (owner override of argon2id recommendation)** — cost 12, validator enforces 72-byte max password; self-describing hashes keep argon2id migration open via re-hash-on-login |
@@ -37,7 +37,7 @@
 | 26 | Client routing | **TanStack Router** — typed params, typed/validated search params (pagination in URL), auth-guarded layout route, Query prefetch in loaders. React Router noted as the safe alternative |
 | 27 | Forms | **React Hook Form + server-driven validation** — shallow client checks only; shared 422→`setError` mapper; `useFieldArray` for the offer editor; totals via `useWatch` display-only (server recomputes). **No parallel Zod schema layer** (single-rulebook rule); targeted local refinements permitted as exceptions |
 | 28 | Styling/UI | **Tailwind (Vite plugin) + shadcn/ui** — owned copied components on **Base UI** primitives (owner revision from Radix, 2026-07-17 — current shadcn default); brand tokens configured early; components added per-screen, never wholesale. CSS-in-JS and full component libraries rejected |
-| 29 | Frontend testing | **Minimal (owner-calibrated): ~3 Playwright journeys** (login→dashboard; customer→car→offer→send w/ Mailpit assert; mechanic 403 UX) **+ unit tests on the few pure functions** (422 mapper, money formatting). RTL/MSW layer deferred; rationale: frontend logic deliberately thin, wiring bugs are the real risk, journeys are the AI-workflow regression net |
+| 29 | Frontend testing | **Minimal (owner-calibrated, 2026-07-20 revision): unit tests on the few pure functions** (422→`setError` mapper, money formatting, error-code → message mapper). Playwright/journeys layer removed. Rationale: frontend logic deliberately thin, owner relies on manual smoke + the Go-side integration tests for regressions. Decision is reversible later if UI complexity grows. |
 | 30 | Repo layout | **Monorepo**: `api/` (Go module) + `frontend/` (Node confined); structure below; no service layer until orchestration demands it |
 | 31 | Domain model | Carried from v1 with additions — see Domain Model |
 | 32 | Security | See consolidated review — SPA edition |
@@ -49,8 +49,8 @@
 **Go build/dev:** tygo (codegen), testcontainers-go (tests).
 Router, config, logging, validation, middleware, CSRF, RBAC: stdlib or hand-written.
 
-**Frontend runtime:** react · @tanstack/react-query · @tanstack/react-router · react-hook-form · tailwindcss · Base UI primitives (via owned shadcn copies). Package manager: **pnpm** (owner revision from npm, 2026-07-17).
-**Frontend dev:** vite · typescript · vitest · playwright.
+**Frontend runtime:** react · @tanstack/react-query · @tanstack/react-router · react-hook-form · tailwindcss · Base UI primitives (via owned shadcn copies) · **@lingui/react + @lingui/core** (i18n, native ICU MessageFormat, 2026-07-20). Package manager: **pnpm** (owner revision from npm, 2026-07-17).
+**Frontend dev:** vite · typescript · oxlint · **@lingui/cli + @lingui/macro + @lingui/vite-plugin** (build-time message extraction).
 House bias: adding frontend packages requires justification (supply-chain surface).
 
 ## Compensating Controls (for the `database/sql` revision)
@@ -133,6 +133,9 @@ Dependency direction: `domain` → imported by `store`/`pdf`/`mailer` → import
 - **Minimal frontend testing** — 3 Playwright journeys + pure-function units; RTL/MSW deferred (inverted from unit-only after discussion: wiring bugs, not logic bugs, are the frontend risk).
 - **Base UI over Radix (2026-07-17)** — shadcn/ui's current default registry is Base UI; owner directive. No shadcn components had been added yet, so the switch costs nothing.
 - **pnpm over npm (2026-07-17)** — owner directive; lockfile is `pnpm-lock.yaml`, CI uses `pnpm install --frozen-lockfile`.
+- **LinguiJS for i18n (2026-07-20)** — chosen over react-i18next and react-intl for: (1) Bulgarian requires ICU MessageFormat for correct count plurals (singular / count-form / many-form) and grammatical number, (2) compile-time message extraction matches the "everything must compile" house rule, (3) smallest runtime (~5 kB gz vs ~23 kB for react-i18next). One locale for now (`bg`); no fallback. Locale detected from `localStorage["pitlane:locale"]` then `navigator.language` then `bg`.
+- **Drop Playwright, keep unit tests only (2026-07-20)** — frontend journeys removed entirely. Owner rationale: manual smoke + Go integration tests cover regressions. ADR §29 revised. Decision is reversible; re-add at the next complexity plateau.
+- **Stable error codes in problem+json (2026-07-20)** — server emits a machine-readable `code` field alongside the human-readable `title`/`detail`. Client maps `code` → locale message. Decouples error translation from server-side string drift. The `errors` field map on 422 follows the same pattern: each value carries a code-prefixed message that the SPA unwraps via the `errorCodeToMessage` mapper.
 
 ## Consequences & Known Tradeoffs
 

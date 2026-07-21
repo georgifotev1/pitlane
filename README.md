@@ -30,10 +30,9 @@ First run copies `.env.example` → `.env`, starts postgres/mailpit/minio, then 
 | `make dev`            | Deps up + Go API + Vite dev server (proxy to :4000)      |
 | `make test`           | Go tests (unit + testcontainers integration, Phase 2+)   |
 | `make types`          | Regenerate `frontend/src/lib/generated/types.ts` (tygo)  |
-| `make e2e`            | Playwright journeys (Phase 2+)                           |
 | `make build`          | Production Docker image (`pitlane:latest`)               |
 | `make migrate-up` / `migrate-down` / `migrate-status` | goose + River migrations via the api binary |
-| `make audit`          | go vet, tsc, oxlint, pnpm audit, tygo staleness check    |
+| `make audit`          | go vet, tsc, oxlint, pnpm audit, tygo staleness, Lingui catalog |
 | `make deps` / `deps-down` | Start/stop the docker-compose stack                  |
 
 ## Production rehearsal

@@ -10,9 +10,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alexedwards/scs/pgxstore"
+	"github.com/alexedwards/scs/v2"
 	"github.com/gfotev/pitlane/internal/api"
 	"github.com/gfotev/pitlane/internal/config"
 	"github.com/gfotev/pitlane/internal/jobs"
+	"github.com/gfotev/pitlane/internal/store"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -81,7 +84,27 @@ func serve() error {
 	}
 	logger.Info("river client started")
 
-	server, err := api.NewServer(logger, cfg.Env)
+	// scs session manager backed by Postgres (ADR decision 9).
+	sessionManager := scs.New()
+	sessionManager.Store = pgxstore.New(pool)
+	sessionManager.Lifetime = cfg.Session.Lifetime
+	sessionManager.IdleTimeout = 30 * time.Minute
+	sessionManager.Cookie.Name = "pitlane_session"
+	sessionManager.Cookie.HttpOnly = true
+	sessionManager.Cookie.Secure = cfg.Env == "production"
+	sessionManager.Cookie.SameSite = http.SameSiteLaxMode
+	sessionManager.Cookie.Path = "/"
+
+	// Wire stores.
+	db := store.NewDB(pool)
+	server, err := api.NewServer(api.ServerDeps{
+		Logger:  logger,
+		Cfg:     cfg,
+		Session: sessionManager,
+		Tenants: store.NewTenantStore(db),
+		Users:   store.NewUserStore(db),
+		Audit:   store.NewAuditLogStore(db),
+	})
 	if err != nil {
 		return fmt.Errorf("server: %w", err)
 	}

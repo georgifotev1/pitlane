@@ -48,9 +48,29 @@ Steps:
 4. `internal/domain`: Role, Permission, the `map[Role][]Permission`.
 5. Frontend: `/login`, `/signup` routes (RHF + the 422→setError mapper built here as `lib/formErrors.ts`); auth-guarded layout route using a `useMe` query; 401 interceptor in `api.ts` → redirect to login preserving destination.
 6. **Two-tenant isolation test**: harness that will grow with every entity — signs up A and B, asserts B sees none of A via API calls.
-7. Playwright setup + **Journey #1**: signup → login → dashboard shell renders.
+7. ~~Playwright setup + **Journey #1**: signup → login → dashboard shell renders.~~ (Playwright removed 2026-07-20 — see ADR §29 revision; manual smoke replaces the journey. UI verification done by hand + a small unit-test layer for pure functions per Phase 2.5.)
 
-**Verification gate:** `make test` green including isolation test; manual: signup two tenants in two browsers, verify separation; `make e2e` journey #1 green; 401 vs 403 verified with curl. **STOP.**
+**Verification gate:** `make test` green including isolation test; manual: signup two tenants in two browsers, verify separation; 401 vs 403 verified with curl. **STOP.**
+
+---
+
+## Phase 2.5 — i18n foundation (Bulgarian only, no fallback)
+
+**Objective:** every user-facing string in the SPA flows through `@lingui/react`; Bulgarian is the default (and only) locale; server error messages reach the UI as stable codes that the SPA maps to translated strings. After this phase, no new code commits English strings to JSX without `<Trans>` / `t`. Added 2026-07-20 per owner direction; precedes Phase 3 so the pattern-setting slice is built i18n-native.
+
+Steps:
+1. Install LinguiJS: `@lingui/react`, `@lingui/core` (runtime); `@lingui/macro`, `@lingui/vite-plugin`, `@lingui/cli` (build/extract). Configure `lingui.config.ts` with `locale: ["bg"]`, `fallbackLocale: "bg"`, `sourceLocale: "bg"`. Wire `vite-plugin-lingui` in `vite.config.ts`. `make types` and `make audit` updated to call `pnpm lingui extract` + `pnpm lingui compile` so a missing translation breaks CI.
+2. `frontend/src/i18n/`: `Provider.tsx` mounted in `main.tsx`; `config.ts` (i18n instance, default `"bg"`); `detector.ts` (localStorage → navigator → `bg`); `format.ts` (currency/number/date helpers via `Intl.*` for `bg-BG`).
+3. `frontend/src/locales/bg.po` — single source of truth. Every hardcoded string in the current 5 routes + 2 RHF rules + index.html title gets a real Bulgarian translation with native grammar (count plurals, definite articles, gender agreement). Translations reviewed by the owner, not auto-generated from the English.
+4. Replace hardcoded JSX with `<Trans>` / `t` macros in `routes/login.tsx`, `routes/signup.tsx`, `routes/index.tsx`, `routes/_authed.tsx`, `routes/_authed/dashboard.tsx`. `<html lang="bg">` synced from the active locale in `main.tsx`. Document title moved to a React-managed `<Helmet>`-equivalent (TanStack Router `head`).
+5. **Server-side error codes**: add a `code` field to `problemDetail` in `internal/api/render.go`. Emit codes from every error site:
+   - validator → `required`, `invalid_email`, `too_short`, `too_long`, `invalid`
+   - `auth_handlers.go` → `invalid_credentials` (the three 401 sites), `invalid_json` (400), `internal_error` (500)
+   - the existing `errors` map on 422 keeps its shape (field → string) but the string is now a stable code-prefixed message like `required:изисква се` so the client can dispatch on the prefix
+6. **Client mapper**: `frontend/src/lib/errorCodes.ts` — `errorCodeToMessage(code, field) → string` table, BG strings. `lib/formErrors.ts` updated: if the value is `"code:message"`, use the code for dispatch and the BG message for display. Unknown codes fall back to the server-supplied message.
+7. `make audit` extends: `pnpm lingui extract` then `git diff --exit-code frontend/src/locales` (catches untranslated strings); `pnpm lingui compile` to make sure catalog is valid; tygo staleness; `tsc --noEmit`; `go vet ./...`; `pnpm audit`.
+
+**Verification gate:** `pnpm dev` shows Bulgarian strings in the browser; toggle locale persistence works; 401/422 errors render in Bulgarian from the code map; no console warnings; `tsc --noEmit` and `go test ./...` and `go vet ./...` clean; `make audit` green. **STOP.**
 
 ---
 
@@ -85,7 +105,7 @@ Migrations: `offers` (status enum, `send_status`, totals snapshot cols, RLS) + `
 
 ## Phase 7 — Send offer by email (River's debut)
 `internal/mailer`: `Mailer` interface, go-mail SMTP impl, embedded offer email template (+ text alt). River: `SendOfferEmail` job (typed args), worker calls Mailer with generated PDF attached; enqueue **in the same tx** as status/`send_status` change. `POST /offers/{id}/send` (recipient prefilled from customer, Reply-To garage). UI: send dialog, `send_status` badge, retry action. Tests: tx-enqueue assertion, worker→mock-Mailer, Mailpit end-to-end.
-**Gate:** email with PDF lands in Mailpit UI; kill-the-API-mid-send rehearsal shows River retry; Playwright **Journey #2** (customer→car→offer→send) green. **STOP.**
+**Gate:** email with PDF lands in Mailpit UI; kill-the-API-mid-send rehearsal shows River retry; manual walkthrough of customer→car→offer→send by the owner. **STOP.**
 
 ## Phase 8 — Repairs + conversion
 Migrations `repairs`/`repair_items` (RLS, `offer_id` nullable FK). Accept-offer endpoint: tx copies items (price freeze), links provenance. Status flow open→in_progress→completed; mileage update on completion. UI: repairs board/list, convert action, item editing while open.
@@ -97,11 +117,11 @@ History: SQL view/query (completed repairs ∪ `history_notes`), notes CRUD (RLS
 
 ## Phase 10 — Password reset + staff invitations
 Reset per ADR §Security: hashed tokens, 1h, single-use, all-sessions destroyed, enumeration-safe, per-email throttle (Postgres), River-sent email; frontend `/forgot-password` + `/reset-password?token=` routes. Invitations: owner invites email+role, invite token → account completion; role management UI (permission-gated).
-**Gate:** full reset via Mailpit; second use of token fails; mechanic invited then blocked from owner action — Playwright **Journey #3** green. **STOP.**
+**Gate:** full reset via Mailpit; second use of token fails; mechanic invited then blocked from owner action — verified by the owner manually. **STOP.**
 
 ## Phase 11 — Hardening + release candidate
 River periodic jobs (expired tokens, audit prune). Global rate limiter verified (429 + Retry-After; burst fits SPA page-mount). CSP audited against built bundle (no violations in console). Loading/empty/error states pass on every route; 404 route; problem+json rendering audited. `pnpm install --frozen-lockfile` + audit in `make audit`; Renovate config. Log line review (request/tenant/user IDs everywhere). Restore rehearsal from `scripts/backup.sh` output. Ops section in README.
-**Gate:** `make audit && make test && make e2e` all green from a clean clone; owner walkthrough of the full app; tag `v0.1.0-rc1`. **STOP — app is done pending a server.**
+**Gate:** `make audit && make test` all green from a clean clone; owner walkthrough of the full app; tag `v0.1.0-rc1`. **STOP — app is done pending a server.**
 
 ---
 
@@ -115,11 +135,11 @@ Agent/owner steps:
 3. `api migrate up` against prod DB (one-off command through Dokploy).
 4. Schedule `scripts/backup.sh` nightly → versioned R2 backups bucket (Dokploy scheduled task or cron); **perform and document one restore rehearsal immediately**.
 5. Point SMTP config at Resend; send a real offer email to an owned address; verify SPF/DKIM pass (headers).
-6. Smoke: healthz, signup, login, offer→PDF→send on prod; run Playwright against prod URL once (read-only-ish journeys or a scratch tenant).
+6. Smoke: healthz, signup, login, offer→PDF→send on prod.
 
 **Gate:** live domain, green TLS, backups scheduled AND restore proven, real email delivered. Tag `v0.1.0`. Launch.
 
 ---
 
 ## Standing verification (every phase)
-`go vet ./...` · `go test ./...` · `tsc --noEmit` · tygo staleness check · lint clean · repo compiles at every commit.
+`go vet ./...` · `go test ./...` · `tsc --noEmit` · tygo staleness check · Lingui catalog check (extracted messages match compiled catalog) · lint clean · repo compiles at every commit.

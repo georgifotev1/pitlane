@@ -1,0 +1,112 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-07-20 22:13+0300\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: bg\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#: src/routes/signup.tsx
+msgid "Already have an account?"
+msgstr "Вече имате акаунт?"
+
+#: src/routes/index.tsx
+msgid "API unreachable:"
+msgstr "API е недостъпно:"
+
+#: src/routes/index.tsx
+msgid "Checking the API…"
+msgstr "Проверява се връзката с API…"
+
+#: src/routes/signup.tsx
+msgid "Create garage"
+msgstr "Създай гараж"
+
+#: src/routes/login.tsx
+#: src/routes/signup.tsx
+msgid "Create your garage"
+msgstr "Създайте своя гараж"
+
+#: src/routes/signup.tsx
+msgid "Creating…"
+msgstr "Създаване…"
+
+#: src/routes/_authed/dashboard.tsx
+msgid "Dashboard"
+msgstr "Табло"
+
+#: src/routes/login.tsx
+#: src/routes/signup.tsx
+msgid "Email"
+msgstr "Имейл"
+
+#: src/routes/signup.tsx
+msgid "Garage name"
+msgstr "Име на гаража"
+
+#: src/routes/_authed.tsx
+#: src/routes/_authed/dashboard.tsx
+msgid "Loading…"
+msgstr "Зареждане…"
+
+#: src/routes/signup.tsx
+msgid "Must be at least 8 characters."
+msgstr "Трябва да съдържа поне 8 символа."
+
+#: src/routes/login.tsx
+msgid "New here?"
+msgstr "Нов потребител?"
+
+#: src/routes/login.tsx
+#: src/routes/signup.tsx
+msgid "Password"
+msgstr "Парола"
+
+#: src/routes/_authed/dashboard.tsx
+msgid "Permissions"
+msgstr "Права"
+
+#: src/routes/signup.tsx
+msgid "Set up a garage and your owner account."
+msgstr "Създайте гараж и вашия акаунт."
+
+#: src/routes/login.tsx
+#: src/routes/signup.tsx
+msgid "Sign in"
+msgstr "Вход"
+
+#: src/routes/login.tsx
+msgid "Sign in to pitlane"
+msgstr "Влезте в pitlane"
+
+#: src/routes/login.tsx
+msgid "Sign in with your garage credentials."
+msgstr "Влезте с данните на вашия гараж."
+
+#: src/routes/_authed/dashboard.tsx
+msgid "Sign out"
+msgstr "Изход"
+
+#: src/routes/_authed/dashboard.tsx
+msgid "Signed in as"
+msgstr "Влезли сте като"
+
+#: src/routes/login.tsx
+msgid "Signing in…"
+msgstr "Влизане…"
+
+#: src/routes/login.tsx
+#: src/routes/signup.tsx
+msgid "This field is required."
+msgstr "Полето е задължително."
+
+#: src/routes/signup.tsx
+msgid "Your name"
+msgstr "Вашето име"

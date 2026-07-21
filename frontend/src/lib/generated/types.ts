@@ -11,3 +11,27 @@ export interface HealthResponse {
   status: string;
   environment: string;
 }
+export interface SignupRequest {
+  tenantName: string;
+  userName: string;
+  email: string;
+  password: string;
+}
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+export interface UserResponse {
+  id: string;
+  tenantId: string;
+  email: string;
+  name: string;
+  role: string;
+  permissions: string[];
+}
+export interface SignupResponse {
+  user: UserResponse;
+}
+export interface MeResponse {
+  user: UserResponse;
+}

@@ -10,11 +10,12 @@ import (
 )
 
 type Config struct {
-	Port int
-	Env  string
-	DSN  string
+	Port       int
+	Env        string
+	DSN        string
+	MigrateDSN string
 
-	// TODO(phase 2): consumed by scs session setup.
+	// Session config consumed by scs (Phase 2).
 	Session struct {
 		Secret   string
 		Lifetime time.Duration
@@ -49,6 +50,7 @@ func Load() (Config, error) {
 	cfg.Port = envInt(&errs, "PORT", 4000)
 	cfg.Env = envString("ENV", "development")
 	cfg.DSN = envString("DSN", "")
+	cfg.MigrateDSN = envString("MIGRATE_DSN", cfg.DSN)
 
 	cfg.Session.Secret = envString("SESSION_SECRET", "")
 	cfg.Session.Lifetime = envDuration(&errs, "SESSION_LIFETIME", 12*time.Hour)
@@ -79,6 +81,12 @@ func Load() (Config, error) {
 	}
 	if cfg.DSN == "" {
 		errs = append(errs, errors.New("DSN is required"))
+	}
+	if cfg.MigrateDSN == "" {
+		errs = append(errs, errors.New("MIGRATE_DSN is required"))
+	}
+	if cfg.Env == "production" && len(cfg.Session.Secret) < 32 {
+		errs = append(errs, errors.New("SESSION_SECRET must be at least 32 bytes in production"))
 	}
 
 	return cfg, errors.Join(errs...)

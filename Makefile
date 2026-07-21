@@ -1,7 +1,7 @@
 -include .env
 export
 
-.PHONY: dev deps deps-down dev-api dev-frontend test types e2e build \
+.PHONY: dev deps deps-down dev-api dev-frontend test types build \
 	migrate-up migrate-down migrate-status audit
 
 .env:
@@ -30,9 +30,6 @@ test:
 types:
 	cd api && go tool tygo generate
 
-e2e:
-	@echo "e2e: Playwright journeys arrive in Phase 2" && exit 1
-
 build:
 	docker build -t pitlane:latest .
 
@@ -52,3 +49,7 @@ audit:
 	cd frontend && pnpm audit
 	$(MAKE) types
 	git diff --exit-code frontend/src/lib/generated
+	cd frontend && pnpm exec lingui extract
+	cd frontend && pnpm exec lingui compile
+	@bash -c '! grep -q "^msgstr \"\"$$" frontend/src/locales/*.po || (echo "ERROR: empty translations in PO catalog" && exit 1)'
+	git diff --exit-code frontend/src/locales

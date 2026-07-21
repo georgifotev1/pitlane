@@ -12,7 +12,7 @@ Migration 0001; `api migrate` subcommand; graceful shutdown (draining River work
 
 ## M2 — Tenancy foundation + auth
 Migrations: tenants, users, sessions, RLS policies (FORCE RLS, non-owner role). Store RLS tx helper. API: signup (tenant+owner), login/logout (scs, bcrypt, RenewToken), `GET /auth/me` (+permissions), CSRF active, strict auth rate limits, 401/403 problem+json discipline. Frontend: login/signup pages, auth-guarded layout route, `useMe` hook, 401→login redirect wiring.
-**Exit:** two tenants sign up and log in via the SPA; **two-tenant isolation test** in CI (mandatory forever); Playwright journey #1 (login → dashboard) green.
+**Exit:** two tenants sign up and log in via the SPA; **two-tenant isolation test** in CI (mandatory forever); manual smoke of the login → dashboard flow by the owner.
 
 ## M3 — Customers (the pattern-setting slice)
 Full vertical: list (paginated, typed search params in URL) / detail / create / edit / archive. Go validator → 422 → shared `setError` mapper; audit log writes; soft-delete. **This slice defines the house pattern both codebases copy** — extra care and review here.
@@ -32,7 +32,7 @@ maroto behind `OfferRenderer`: tenant branding (R2 logo), locale formatting, ite
 
 ## M7 — Send offer by email (River's debut)
 Mailer SMTP impl (go-mail) + offer email template; `POST /offers/{id}/send` enqueues River job **in the same tx** as status change; `send_status` lifecycle (`pending→sent|failed`) surfaced in UI with retry; Reply-To pattern; Mailpit assertions in tests. SPF/DKIM checklist for the app domain documented.
-**Exit:** offer email with PDF attachment lands in Mailpit locally end to end; Playwright journey #2 (customer→car→offer→send) green.
+**Exit:** offer email with PDF attachment lands in Mailpit locally end to end; owner walkthrough of customer→car→offer→send passes.
 
 ## M8 — Repairs + conversion
 Repair CRUD; accept-offer→create-repair copying items (price freeze); status flow; mileage update on completion.
@@ -48,7 +48,7 @@ Multipart upload through `FileStore`→R2 (size caps, server-side sniffing, tena
 
 ## M11 — Password reset + staff invitations
 Reset per ADR §32 (hashed tokens, expiry, single-use, session destruction, enumeration-safe, per-email throttle); frontend `/reset-password` route; owner invites staff with role assignment (exercises permission map + 403 UX).
-**Exit:** reset works against Mailpit and prod SMTP; Playwright journey #3 (mechanic hits owner-only action → clean 403) green.
+**Exit:** reset works against Mailpit and prod SMTP; owner verifies mechanic hits owner-only action → clean 403.
 
 ## M12 — Hardening + launch polish
 River periodic jobs (token cleanup, audit pruning); CSP verified strict in the built bundle; `pnpm install --frozen-lockfile`/audit/Renovate in CI; error/empty/loading states pass; 404/500 experiences; log review; restore rehearsal #2; ops README.
