@@ -75,6 +75,7 @@ func newTestAPI(t *testing.T) *testAPI {
 		Customers:    store.NewCustomerStore(db),
 		Cars:         store.NewCarStore(db),
 		Offers:       store.NewOfferStore(db),
+		Repairs:      store.NewRepairStore(db),
 		Audit:        store.NewAuditLogStore(db),
 		PDF:          pdf.NewRenderer(),
 		SendEnqueuer: jobs.NewOfferEmailEnqueuer(riverClient),

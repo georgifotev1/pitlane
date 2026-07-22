@@ -292,6 +292,44 @@ func (s *Server) sendOffer(w http.ResponseWriter, r *http.Request) {
 	renderJSON(w, http.StatusOK, envelope{"offer": offerResponse(o)})
 }
 
+// acceptOffer accepts a sent offer BY converting it into a repair: in one
+// transaction it copies the offer's (frozen) line items into a new open repair,
+// links provenance, and flips the offer to `accepted`. This is the sole accept
+// path — the generic status endpoint deliberately cannot reach `accepted` (see
+// domain.offerTransitions) — so an accepted offer always has exactly one
+// repair. Returns 201 with the created repair. A non-sent offer is 409; an
+// unknown one is 404.
+func (s *Server) acceptOffer(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromContext(r.Context())
+	userID := userIDFromContext(r.Context())
+	id := r.PathValue("id")
+
+	repair, err := s.repairs.CreateFromOffer(r.Context(), tenantID, id)
+	if err != nil {
+		switch {
+		case errors.Is(err, store.ErrNotFound):
+			renderProblem(w, r, http.StatusNotFound, CodeNotFound, "offer not found")
+		case errors.Is(err, store.ErrOfferNotAcceptable):
+			renderProblem(w, r, http.StatusConflict, CodeConflict, "offer is not in an acceptable state")
+		default:
+			loggerFromContext(r.Context(), s.logger).Error("accept offer", "err", err)
+			renderProblem(w, r, http.StatusInternalServerError, CodeInternalError, "internal server error")
+		}
+		return
+	}
+
+	// One user action, two provenance-linked records: audit both.
+	_ = s.audit.Insert(r.Context(), tenantID, userID, "offer.accept", "offer", id, map[string]any{
+		"repairId": repair.ID,
+	})
+	_ = s.audit.Insert(r.Context(), tenantID, userID, "repair.create", "repair", repair.ID, map[string]any{
+		"offerId":    id,
+		"totalCents": repair.TotalCents,
+	})
+
+	renderJSON(w, http.StatusCreated, envelope{"repair": repairResponse(repair)})
+}
+
 // carExists guards the nested offer routes: it confirms the path's car belongs
 // to this tenant, rendering a 404 (and returning false) if not. Mirrors
 // customerExists for the cars slice.

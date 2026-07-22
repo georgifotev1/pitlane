@@ -60,6 +60,11 @@ function Dashboard() {
             <Trans>Customers</Trans>
           </Button>
         </Link>
+        <Link to="/repairs" search={{ page: 1, status: "" }}>
+          <Button variant="outline">
+            <Trans>Repairs</Trans>
+          </Button>
+        </Link>
       </nav>
       <section className="rounded-lg border border-border p-6">
         <h2 className="text-lg font-semibold">

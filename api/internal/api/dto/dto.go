@@ -213,3 +213,82 @@ type UpdateOfferStatusRequest struct {
 type SendOfferRequest struct {
 	Recipient string `json:"recipient"`
 }
+
+// RepairItemResponse is one line of a repair. Same shape as OfferItemResponse:
+// the copy made at conversion is faithful. Money is integer cents.
+type RepairItemResponse struct {
+	ID             string `json:"id"`
+	Kind           string `json:"kind"`
+	Description    string `json:"description"`
+	Quantity       int    `json:"quantity"`
+	UnitPriceCents int64  `json:"unitPriceCents"`
+	LineTotalCents int64  `json:"lineTotalCents"`
+	SortOrder      int    `json:"sortOrder"`
+}
+
+// RepairResponse is a repair as seen by the client. offerId is null for a
+// repair with no source quote; completedAt is null until completion. Money is
+// integer cents, snapshotted server-side and frozen on completion. mileage is
+// the odometer reading captured at completion (0 while open/in_progress).
+type RepairResponse struct {
+	ID            string               `json:"id"`
+	CarID         string               `json:"carId"`
+	OfferID       *string              `json:"offerId"`
+	Status        string               `json:"status"`
+	TaxRateBps    int                  `json:"taxRateBps"`
+	SubtotalCents int64                `json:"subtotalCents"`
+	TaxCents      int64                `json:"taxCents"`
+	TotalCents    int64                `json:"totalCents"`
+	Mileage       int                  `json:"mileage"`
+	Notes         string               `json:"notes"`
+	Items         []RepairItemResponse `json:"items"`
+	CompletedAt   *time.Time           `json:"completedAt"`
+	CreatedAt     time.Time            `json:"createdAt"`
+	UpdatedAt     time.Time            `json:"updatedAt"`
+}
+
+// RepairSummaryResponse is one row of the tenant-wide repairs board. It carries
+// the car plate and customer name (joined server-side) so the board renders
+// without extra round-trips, but not the line items (the detail fetch loads
+// those).
+type RepairSummaryResponse struct {
+	ID           string     `json:"id"`
+	CarID        string     `json:"carId"`
+	CarPlate     string     `json:"carPlate"`
+	CustomerName string     `json:"customerName"`
+	OfferID      *string    `json:"offerId"`
+	Status       string     `json:"status"`
+	TotalCents   int64      `json:"totalCents"`
+	Mileage      int        `json:"mileage"`
+	CompletedAt  *time.Time `json:"completedAt"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	UpdatedAt    time.Time  `json:"updatedAt"`
+}
+
+// RepairListResponse is the full body of the board endpoint (both keys read by
+// the client), mirroring the other list responses.
+type RepairListResponse struct {
+	Repairs  []RepairSummaryResponse `json:"repairs"`
+	Metadata ListMetadata            `json:"metadata"`
+}
+
+// UpdateRepairRequest is a full replace of an open repair's editable fields.
+// Items reuse OfferItemRequest — identical shape, and the repair's item set is
+// replaced wholesale just like an offer's. taxRateBps is editable while open.
+type UpdateRepairRequest struct {
+	Notes      string             `json:"notes"`
+	TaxRateBps int                `json:"taxRateBps"`
+	Items      []OfferItemRequest `json:"items"`
+}
+
+// UpdateRepairStatusRequest drives the generic lifecycle (open ↔ in_progress).
+// Completion is a separate endpoint (it records the odometer reading).
+type UpdateRepairStatusRequest struct {
+	Status string `json:"status"`
+}
+
+// CompleteRepairRequest finishes a repair, recording the odometer reading that
+// is also written onto the car.
+type CompleteRepairRequest struct {
+	Mileage int `json:"mileage"`
+}

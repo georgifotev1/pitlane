@@ -295,10 +295,23 @@ func TestOfferCRUD(t *testing.T) {
 
 	t.Run("invalid transition is 409", func(t *testing.T) {
 		_, o := tc.createOffer(t, car.ID, twoItemOffer())
-		// draft → accepted is not allowed (must send first).
-		res, _ := tc.setOfferStatus(t, o.ID, "accepted")
+		// draft → rejected is not allowed (must send first).
+		res, _ := tc.setOfferStatus(t, o.ID, "rejected")
 		if res.StatusCode != http.StatusConflict {
 			t.Fatalf("status: got %d, want 409", res.StatusCode)
+		}
+	})
+
+	t.Run("accepted is not reachable via the generic status endpoint", func(t *testing.T) {
+		// Accepting an offer converts it to a repair (POST /offers/{id}/accept),
+		// so the generic machine must refuse 'accepted' even from sent → 409.
+		_, o := tc.createOffer(t, car.ID, twoItemOffer())
+		if res, _ := tc.sendOffer(t, o.ID, "customer@example.com"); res.StatusCode != http.StatusOK {
+			t.Fatalf("send: %d", res.StatusCode)
+		}
+		res, _ := tc.setOfferStatus(t, o.ID, "accepted")
+		if res.StatusCode != http.StatusConflict {
+			t.Fatalf("sent→accepted via status: got %d, want 409", res.StatusCode)
 		}
 	})
 
@@ -313,14 +326,14 @@ func TestOfferCRUD(t *testing.T) {
 		}
 	})
 
-	t.Run("full lifecycle: send→accepted", func(t *testing.T) {
+	t.Run("full lifecycle: send→reject", func(t *testing.T) {
 		_, o := tc.createOffer(t, car.ID, twoItemOffer())
 		if res, _ := tc.sendOffer(t, o.ID, "customer@example.com"); res.StatusCode != http.StatusOK {
 			t.Fatalf("send: %d", res.StatusCode)
 		}
-		res, accepted := tc.setOfferStatus(t, o.ID, "accepted")
-		if res.StatusCode != http.StatusOK || accepted.Status != "accepted" {
-			t.Fatalf("accept failed: %d %+v", res.StatusCode, accepted)
+		res, rejected := tc.setOfferStatus(t, o.ID, "rejected")
+		if res.StatusCode != http.StatusOK || rejected.Status != "rejected" {
+			t.Fatalf("reject failed: %d %+v", res.StatusCode, rejected)
 		}
 	})
 
@@ -487,7 +500,7 @@ func TestOfferTenantIsolation(t *testing.T) {
 	})
 
 	t.Run("B cannot change A's offer status", func(t *testing.T) {
-		res, _ := tcB.setOfferStatus(t, offerA.ID, "accepted")
+		res, _ := tcB.setOfferStatus(t, offerA.ID, "rejected")
 		if res.StatusCode != http.StatusNotFound {
 			t.Fatalf("cross-tenant status: status %d, want 404", res.StatusCode)
 		}
@@ -497,6 +510,13 @@ func TestOfferTenantIsolation(t *testing.T) {
 		res, _ := tcB.sendOffer(t, offerA.ID, "b@example.com")
 		if res.StatusCode != http.StatusNotFound {
 			t.Fatalf("cross-tenant send: status %d, want 404", res.StatusCode)
+		}
+	})
+
+	t.Run("B cannot accept (convert) A's offer", func(t *testing.T) {
+		res, _ := tcB.acceptOffer(t, offerA.ID)
+		if res.StatusCode != http.StatusNotFound {
+			t.Fatalf("cross-tenant accept: status %d, want 404", res.StatusCode)
 		}
 	})
 

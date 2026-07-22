@@ -237,14 +237,20 @@ func TaxCents(subtotalCents int64, taxRateBps int) int64 {
 }
 
 // offerTransitions is the allowed status machine for the generic status
-// endpoint: sent → accepted | rejected | expired. accepted/rejected/expired
-// are terminal. The draft → sent transition is deliberately absent: an offer
-// only becomes `sent` by actually being emailed (POST /offers/{id}/send,
-// Phase 7), so a `sent` offer always carries a recipient and a dispatched
-// send job — the freeze-on-send ≡ emailed-PDF invariant (ADR §14) holds by
-// construction. SetStatus therefore cannot send; only the send path can.
+// endpoint: sent → rejected | expired. Both targets are terminal. TWO
+// transitions are deliberately absent from this generic machine, each owned by
+// a dedicated endpoint that carries a side effect the machine cannot:
+//   - draft → sent: only the send path (POST /offers/{id}/send, Phase 7) makes
+//     an offer `sent`, so a sent offer always carries a recipient + dispatched
+//     job — freeze-on-send ≡ emailed-PDF (ADR §14) holds by construction.
+//   - sent → accepted: only the accept path (POST /offers/{id}/accept, Phase 8)
+//     accepts an offer, and it does so by converting it into a repair in the
+//     same transaction. So an `accepted` offer always has exactly one repair
+//     (its price-frozen items copied) — provenance holds by construction.
+//
+// SetStatus therefore can neither send nor accept; only those paths can.
 var offerTransitions = map[OfferStatus][]OfferStatus{
-	OfferStatusSent: {OfferStatusAccepted, OfferStatusRejected, OfferStatusExpired},
+	OfferStatusSent: {OfferStatusRejected, OfferStatusExpired},
 }
 
 // CanTransitionTo reports whether an offer may move from its current status to
@@ -271,6 +277,101 @@ func IsValidOfferStatus(s string) bool {
 func IsValidOfferItemKind(s string) bool {
 	switch OfferItemKind(s) {
 	case OfferItemKindPart, OfferItemKindLabor, OfferItemKindOther:
+		return true
+	}
+	return false
+}
+
+// RepairStatus is the lifecycle state of a repair (migration 0006 CHECK).
+// Content is mutable only while open, mirroring an offer's draft-only rule.
+type RepairStatus string
+
+const (
+	RepairStatusOpen       RepairStatus = "open"
+	RepairStatusInProgress RepairStatus = "in_progress"
+	RepairStatusCompleted  RepairStatus = "completed"
+)
+
+// Repair is the work performed on a Car. It is a separate entity from Offer:
+// its Items are COPIED from the offer at conversion (price freeze), so editing
+// a repair never mutates the offer it came from. Money is integer cents;
+// Subtotal/Tax/Total are derived from Items by Recompute on every open write
+// and freeze on completion. OfferID is the (optional) provenance link.
+type Repair struct {
+	ID            string
+	TenantID      string
+	CarID         string
+	OfferID       *string
+	Status        RepairStatus
+	TaxRateBps    int
+	SubtotalCents int64
+	TaxCents      int64
+	TotalCents    int64
+	Mileage       int
+	Notes         string
+	Items         []RepairItem
+	CompletedAt   *time.Time
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+// RepairItem is one line of a repair. LineTotalCents is derived
+// (UnitPriceCents * Quantity) and set by Recompute, never trusted from input.
+type RepairItem struct {
+	ID             string
+	TenantID       string
+	RepairID       string
+	Kind           OfferItemKind
+	Description    string
+	Quantity       int
+	UnitPriceCents int64
+	LineTotalCents int64
+	SortOrder      int
+	CreatedAt      time.Time
+}
+
+// Recompute is the single source of truth for repair math. It mirrors
+// Offer.Recompute exactly (shared TaxCents, round half up at the repair level),
+// keeping the DB snapshot in step with the lines on every open write.
+func (r *Repair) Recompute() {
+	var subtotal int64
+	for i := range r.Items {
+		line := r.Items[i].UnitPriceCents * int64(r.Items[i].Quantity)
+		r.Items[i].LineTotalCents = line
+		subtotal += line
+	}
+	r.SubtotalCents = subtotal
+	r.TaxCents = TaxCents(subtotal, r.TaxRateBps)
+	r.TotalCents = subtotal + r.TaxCents
+}
+
+// repairTransitions is the allowed status machine for the generic repair status
+// endpoint: open ↔ in_progress. Completion is deliberately absent: a repair
+// only becomes `completed` through the dedicated complete path
+// (POST /repairs/{id}/complete, Phase 8), which also records the odometer
+// reading and advances the car's mileage in the same transaction. So a
+// completed repair always carries a mileage reading and a completed_at — the
+// side effect holds by construction, exactly as send/accept do for offers.
+var repairTransitions = map[RepairStatus][]RepairStatus{
+	RepairStatusOpen:       {RepairStatusInProgress},
+	RepairStatusInProgress: {RepairStatusOpen},
+}
+
+// CanTransitionTo reports whether a repair may move from its current status to
+// next via the generic status endpoint.
+func (s RepairStatus) CanTransitionTo(next RepairStatus) bool {
+	for _, allowed := range repairTransitions[s] {
+		if allowed == next {
+			return true
+		}
+	}
+	return false
+}
+
+// IsValidRepairStatus reports whether a string is one of the known statuses.
+func IsValidRepairStatus(s string) bool {
+	switch RepairStatus(s) {
+	case RepairStatusOpen, RepairStatusInProgress, RepairStatusCompleted:
 		return true
 	}
 	return false

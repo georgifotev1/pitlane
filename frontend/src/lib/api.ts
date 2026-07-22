@@ -10,11 +10,14 @@ import type {
   LoginRequest,
   OfferListResponse,
   OfferResponse,
+  RepairListResponse,
+  RepairResponse,
   SignupRequest,
   SignupResponse,
   UpdateCarRequest,
   UpdateCustomerRequest,
   UpdateOfferRequest,
+  UpdateRepairRequest,
   UserResponse,
 } from "@/lib/generated/types"
 
@@ -153,6 +156,22 @@ function offerListPath(carId: string, q: OfferListQuery): string {
   return `/cars/${carId}/offers?${params.toString()}`
 }
 
+// Repairs are a tenant-wide board (not nested under a car), filtered by an
+// optional status. "" means all statuses.
+export type RepairListQuery = {
+  page: number
+  pageSize: number
+  status: string
+}
+
+function repairListPath(q: RepairListQuery): string {
+  const params = new URLSearchParams()
+  params.set("page", String(q.page))
+  params.set("pageSize", String(q.pageSize))
+  if (q.status) params.set("status", q.status)
+  return `/repairs?${params.toString()}`
+}
+
 export const api = {
   health: () => request<HealthResponse>("/healthz", "health"),
   signup: (data: SignupRequest) =>
@@ -248,6 +267,36 @@ export const api = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ recipient }),
+      }),
+    // accept converts a sent offer into a repair (the sole accept path) and
+    // returns the newly created repair, so the caller can navigate to it.
+    accept: (id: string) =>
+      request<RepairResponse>(`/offers/${id}/accept`, "repair", { method: "POST" }),
+  },
+
+  repairs: {
+    list: (q: RepairListQuery) => requestBody<RepairListResponse>(repairListPath(q)),
+    get: (id: string) => request<RepairResponse>(`/repairs/${id}`, "repair"),
+    update: (id: string, data: UpdateRepairRequest) =>
+      request<RepairResponse>(`/repairs/${id}`, "repair", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    // status drives the generic lifecycle (open ↔ in_progress).
+    setStatus: (id: string, status: string) =>
+      request<RepairResponse>(`/repairs/${id}/status`, "repair", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      }),
+    // complete finishes the repair, recording the odometer reading (also written
+    // onto the car). It is the sole path to `completed`.
+    complete: (id: string, mileage: number) =>
+      request<RepairResponse>(`/repairs/${id}/complete`, "repair", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mileage }),
       }),
   },
 }

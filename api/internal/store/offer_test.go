@@ -159,8 +159,8 @@ func TestOfferStore(t *testing.T) {
 			t.Fatalf("create: %v", err)
 		}
 
-		// draft → accepted is not allowed (must send first).
-		if _, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusAccepted); err != ErrInvalidStatusTransition {
+		// draft → rejected is not allowed (must send first).
+		if _, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusRejected); err != ErrInvalidStatusTransition {
 			t.Fatalf("expected ErrInvalidStatusTransition, got %v", err)
 		}
 		// draft → sent is NOT a status-machine move: sending is the only path
@@ -181,15 +181,21 @@ func TestOfferStore(t *testing.T) {
 			t.Fatalf("MarkSending should return items, got %d", len(sent.Items))
 		}
 
-		accepted, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusAccepted)
-		if err != nil {
-			t.Fatalf("accept: %v", err)
-		}
-		if accepted.Status != domain.OfferStatusAccepted {
-			t.Fatalf("status not accepted: %s", accepted.Status)
+		// sent → accepted is NOT a generic move: accepting converts to a repair
+		// (RepairStore.CreateFromOffer), so SetStatus must reject it.
+		if _, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusAccepted); err != ErrInvalidStatusTransition {
+			t.Fatalf("expected ErrInvalidStatusTransition for sent→accepted, got %v", err)
 		}
 
-		// accepted is terminal.
+		rejected, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusRejected)
+		if err != nil {
+			t.Fatalf("reject: %v", err)
+		}
+		if rejected.Status != domain.OfferStatusRejected {
+			t.Fatalf("status not rejected: %s", rejected.Status)
+		}
+
+		// rejected is terminal.
 		if _, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusExpired); err != ErrInvalidStatusTransition {
 			t.Fatalf("expected terminal, got %v", err)
 		}
@@ -287,7 +293,7 @@ func TestOfferStore(t *testing.T) {
 		if err := offers2.Update(ctx2, &poison); err != ErrNotFound {
 			t.Fatalf("cross-tenant Update: expected ErrNotFound, got %v", err)
 		}
-		if _, err := offers2.SetStatus(ctx2, other, mine.ID, domain.OfferStatusAccepted); err != ErrNotFound {
+		if _, err := offers2.SetStatus(ctx2, other, mine.ID, domain.OfferStatusRejected); err != ErrNotFound {
 			t.Fatalf("cross-tenant SetStatus: expected ErrNotFound, got %v", err)
 		}
 		if _, err := offers2.MarkSending(ctx2, other, mine.ID, "x@example.com", &fakeEnqueuer{}); err != ErrNotFound {

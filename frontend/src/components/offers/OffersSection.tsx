@@ -1,7 +1,8 @@
 import { useState } from "react"
+import { useNavigate } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Trans, useLingui } from "@lingui/react/macro"
-import { PlusIcon, PencilIcon, SendIcon, FileTextIcon } from "lucide-react"
+import { PlusIcon, PencilIcon, SendIcon, FileTextIcon, WrenchIcon } from "lucide-react"
 import type { OfferResponse } from "@/lib/generated/types"
 import { api, ProblemError } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
@@ -66,6 +67,7 @@ function SendStatusBadge({ status, sendStatus }: { status: string; sendStatus: s
 export function OffersSection({ carId, defaultRecipient }: { carId: string; defaultRecipient: string }) {
   const { t } = useLingui()
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [createOpen, setCreateOpen] = useState(false)
   const [editing, setEditing] = useState<OfferResponse | undefined>()
   const [previewing, setPreviewing] = useState<OfferResponse | undefined>()
@@ -84,6 +86,22 @@ export function OffersSection({ carId, defaultRecipient }: { carId: string; defa
     onMutate: () => setStatusError(""),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: queryKeys.offers.all() })
+    },
+    onError: (err) => {
+      const code = err instanceof ProblemError ? err.code : undefined
+      setStatusError(errorCodeToMessage(code) || t`The action could not be completed.`)
+    },
+  })
+
+  // Accepting a sent offer converts it into a repair (the sole accept path).
+  // On success we jump straight to the new repair so the mechanic can start work.
+  const convertMutation = useMutation({
+    mutationFn: (id: string) => api.offers.accept(id),
+    onMutate: () => setStatusError(""),
+    onSuccess: async (repair) => {
+      await qc.invalidateQueries({ queryKey: queryKeys.offers.all() })
+      await qc.invalidateQueries({ queryKey: queryKeys.repairs.all() })
+      await navigate({ to: "/repairs/$repairId", params: { repairId: repair.id } })
     },
     onError: (err) => {
       const code = err instanceof ProblemError ? err.code : undefined
@@ -153,7 +171,7 @@ export function OffersSection({ carId, defaultRecipient }: { carId: string; defa
               </TableRow>
             )}
             {offers.map((offer) => {
-              const busy = statusMutation.isPending
+              const busy = statusMutation.isPending || convertMutation.isPending
               return (
                 <TableRow key={offer.id}>
                   <TableCell>
@@ -214,11 +232,10 @@ export function OffersSection({ carId, defaultRecipient }: { carId: string; defa
                             size="sm"
                             variant="outline"
                             disabled={busy}
-                            onClick={() =>
-                              statusMutation.mutate({ id: offer.id, status: "accepted" })
-                            }
+                            onClick={() => convertMutation.mutate(offer.id)}
                           >
-                            <Trans>Accept</Trans>
+                            <WrenchIcon />
+                            <Trans>Convert to repair</Trans>
                           </Button>
                           <Button
                             size="sm"

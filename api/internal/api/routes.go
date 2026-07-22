@@ -22,6 +22,7 @@ type Server struct {
 	customers *store.CustomerStore
 	cars      *store.CarStore
 	offers       *store.OfferStore
+	repairs      *store.RepairStore
 	audit        *store.AuditLogStore
 	pdf          offerRenderer
 	sendEnqueuer offerEmailEnqueuer
@@ -37,6 +38,7 @@ type ServerDeps struct {
 	Customers *store.CustomerStore
 	Cars      *store.CarStore
 	Offers       *store.OfferStore
+	Repairs      *store.RepairStore
 	Audit        *store.AuditLogStore
 	PDF          offerRenderer
 	SendEnqueuer offerEmailEnqueuer
@@ -58,6 +60,7 @@ func NewServer(deps ServerDeps) (*Server, error) {
 		customers: deps.Customers,
 		cars:      deps.Cars,
 		offers:       deps.Offers,
+		repairs:      deps.Repairs,
 		audit:        deps.Audit,
 		pdf:          deps.PDF,
 		sendEnqueuer: deps.SendEnqueuer,
@@ -111,6 +114,23 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/v1/offers/{id}/send", s.protected(domain.PermissionOffersWrite, s.sendOffer))
 	// PDF is a read: gated by offers:read, streamed on demand (never stored).
 	mux.Handle("GET /api/v1/offers/{id}/pdf", s.protected(domain.PermissionOffersRead, s.offerPDF))
+	// Accept converts a sent offer into a repair (the sole accept path). Its
+	// primary effect is creating the repair — the offer→accepted flip is a side
+	// effect of conversion — so it is gated by repairs:write (a mechanic turns
+	// quotes into jobs), not offers:write.
+	mux.Handle("POST /api/v1/offers/{id}/accept", s.protected(domain.PermissionRepairsWrite, s.acceptOffer))
+
+	// Repairs — the work performed on a car. Born only by converting an offer
+	// (accept, above), so there is no create route here. The board list is
+	// tenant-wide (?status= filter); item ops address the repair directly. Same
+	// read/write split. Repairs are never deleted (ADR §Deletion policy). The
+	// status endpoint drives open↔in_progress; completion (with the mileage
+	// reading) is its own endpoint, the sole path to `completed`.
+	mux.Handle("GET /api/v1/repairs", s.protected(domain.PermissionRepairsRead, s.listRepairs))
+	mux.Handle("GET /api/v1/repairs/{id}", s.protected(domain.PermissionRepairsRead, s.getRepair))
+	mux.Handle("PUT /api/v1/repairs/{id}", s.protected(domain.PermissionRepairsWrite, s.updateRepair))
+	mux.Handle("POST /api/v1/repairs/{id}/status", s.protected(domain.PermissionRepairsWrite, s.updateRepairStatus))
+	mux.Handle("POST /api/v1/repairs/{id}/complete", s.protected(domain.PermissionRepairsWrite, s.completeRepair))
 
 	// Unmatched API paths get problem+json — never the SPA shell.
 	mux.HandleFunc("GET /api/", s.notFound)

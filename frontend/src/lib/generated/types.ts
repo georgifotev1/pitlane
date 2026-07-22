@@ -224,3 +224,89 @@ export interface UpdateOfferStatusRequest {
 export interface SendOfferRequest {
   recipient: string;
 }
+/**
+ * RepairItemResponse is one line of a repair. Same shape as OfferItemResponse:
+ * the copy made at conversion is faithful. Money is integer cents.
+ */
+export interface RepairItemResponse {
+  id: string;
+  kind: string;
+  description: string;
+  quantity: number /* int */;
+  unitPriceCents: number /* int64 */;
+  lineTotalCents: number /* int64 */;
+  sortOrder: number /* int */;
+}
+/**
+ * RepairResponse is a repair as seen by the client. offerId is null for a
+ * repair with no source quote; completedAt is null until completion. Money is
+ * integer cents, snapshotted server-side and frozen on completion. mileage is
+ * the odometer reading captured at completion (0 while open/in_progress).
+ */
+export interface RepairResponse {
+  id: string;
+  carId: string;
+  offerId?: string;
+  status: string;
+  taxRateBps: number /* int */;
+  subtotalCents: number /* int64 */;
+  taxCents: number /* int64 */;
+  totalCents: number /* int64 */;
+  mileage: number /* int */;
+  notes: string;
+  items: RepairItemResponse[];
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+/**
+ * RepairSummaryResponse is one row of the tenant-wide repairs board. It carries
+ * the car plate and customer name (joined server-side) so the board renders
+ * without extra round-trips, but not the line items (the detail fetch loads
+ * those).
+ */
+export interface RepairSummaryResponse {
+  id: string;
+  carId: string;
+  carPlate: string;
+  customerName: string;
+  offerId?: string;
+  status: string;
+  totalCents: number /* int64 */;
+  mileage: number /* int */;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+/**
+ * RepairListResponse is the full body of the board endpoint (both keys read by
+ * the client), mirroring the other list responses.
+ */
+export interface RepairListResponse {
+  repairs: RepairSummaryResponse[];
+  metadata: ListMetadata;
+}
+/**
+ * UpdateRepairRequest is a full replace of an open repair's editable fields.
+ * Items reuse OfferItemRequest — identical shape, and the repair's item set is
+ * replaced wholesale just like an offer's. taxRateBps is editable while open.
+ */
+export interface UpdateRepairRequest {
+  notes: string;
+  taxRateBps: number /* int */;
+  items: OfferItemRequest[];
+}
+/**
+ * UpdateRepairStatusRequest drives the generic lifecycle (open ↔ in_progress).
+ * Completion is a separate endpoint (it records the odometer reading).
+ */
+export interface UpdateRepairStatusRequest {
+  status: string;
+}
+/**
+ * CompleteRepairRequest finishes a repair, recording the odometer reading that
+ * is also written onto the car.
+ */
+export interface CompleteRepairRequest {
+  mileage: number /* int */;
+}

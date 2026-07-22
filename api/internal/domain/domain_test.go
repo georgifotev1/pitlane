@@ -72,7 +72,6 @@ func TestOfferRecomputeEmpty(t *testing.T) {
 
 func TestOfferStatusTransitions(t *testing.T) {
 	allow := []struct{ from, to OfferStatus }{
-		{OfferStatusSent, OfferStatusAccepted},
 		{OfferStatusSent, OfferStatusRejected},
 		{OfferStatusSent, OfferStatusExpired},
 	}
@@ -86,12 +85,61 @@ func TestOfferStatusTransitions(t *testing.T) {
 		// draft → sent is NOT a status-machine move: sending is the only path to
 		// sent (POST /offers/{id}/send), so SetStatus must reject it.
 		{OfferStatusDraft, OfferStatusSent},
-		{OfferStatusDraft, OfferStatusAccepted}, // must be sent first
+		// sent → accepted is NOT a status-machine move either: accepting an offer
+		// converts it to a repair (POST /offers/{id}/accept), so the generic
+		// machine must reject it — only the accept path can accept.
+		{OfferStatusSent, OfferStatusAccepted},
+		{OfferStatusDraft, OfferStatusAccepted}, // must be sent first anyway
 		{OfferStatusDraft, OfferStatusDraft},    // no-op is not a transition
 		{OfferStatusSent, OfferStatusDraft},     // cannot un-send
 		{OfferStatusAccepted, OfferStatusSent},  // terminal
 		{OfferStatusRejected, OfferStatusSent},  // terminal
 		{OfferStatusExpired, OfferStatusSent},   // terminal
+	}
+	for _, tc := range deny {
+		if tc.from.CanTransitionTo(tc.to) {
+			t.Errorf("expected %s → %s denied", tc.from, tc.to)
+		}
+	}
+}
+
+func TestRepairRecompute(t *testing.T) {
+	r := &Repair{
+		TaxRateBps: 1900,
+		Items: []RepairItem{
+			{Quantity: 2, UnitPriceCents: 4500}, // 90.00
+			{Quantity: 1, UnitPriceCents: 6000}, // 60.00
+		},
+	}
+	r.Recompute()
+	// subtotal 150.00; tax 19% = 28.50; total 178.50.
+	if r.SubtotalCents != 15000 || r.TaxCents != 2850 || r.TotalCents != 17850 {
+		t.Fatalf("totals wrong: sub=%d tax=%d total=%d", r.SubtotalCents, r.TaxCents, r.TotalCents)
+	}
+	if r.Items[0].LineTotalCents != 9000 || r.Items[1].LineTotalCents != 6000 {
+		t.Fatalf("line totals wrong: %+v", r.Items)
+	}
+}
+
+func TestRepairStatusTransitions(t *testing.T) {
+	allow := []struct{ from, to RepairStatus }{
+		{RepairStatusOpen, RepairStatusInProgress},
+		{RepairStatusInProgress, RepairStatusOpen},
+	}
+	for _, tc := range allow {
+		if !tc.from.CanTransitionTo(tc.to) {
+			t.Errorf("expected %s → %s allowed", tc.from, tc.to)
+		}
+	}
+
+	deny := []struct{ from, to RepairStatus }{
+		// completion is the complete path's job (records mileage), never the
+		// generic status machine — so → completed is denied from every state.
+		{RepairStatusOpen, RepairStatusCompleted},
+		{RepairStatusInProgress, RepairStatusCompleted},
+		{RepairStatusOpen, RepairStatusOpen},               // no-op
+		{RepairStatusCompleted, RepairStatusOpen},          // terminal
+		{RepairStatusCompleted, RepairStatusInProgress},    // terminal
 	}
 	for _, tc := range deny {
 		if tc.from.CanTransitionTo(tc.to) {

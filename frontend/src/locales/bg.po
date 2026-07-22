@@ -14,8 +14,8 @@ msgstr ""
 "Plural-Forms: \n"
 
 #: src/components/offers/OffersSection.tsx
-msgid "Accept"
-msgstr "Приемане"
+#~ msgid "Accept"
+#~ msgstr "Приемане"
 
 #: src/components/offers/OffersSection.tsx
 msgid "Accepted"
@@ -24,11 +24,13 @@ msgstr "Прието"
 #: src/components/cars/CarsSection.tsx
 #: src/components/offers/OfferFormDialog.tsx
 #: src/components/offers/OffersSection.tsx
+#: src/components/repairs/RepairFormDialog.tsx
 #: src/routes/_authed/customers/index.tsx
 msgid "Actions"
 msgstr "Действия"
 
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
 msgid "Add line"
 msgstr "Добавяне на ред"
 
@@ -36,6 +38,10 @@ msgstr "Добавяне на ред"
 #: src/routes/_authed/customers/$customerId.tsx
 msgid "Address"
 msgstr "Адрес"
+
+#: src/routes/_authed/repairs/index.tsx
+msgid "All"
+msgstr "Всички"
 
 #: src/routes/signup.tsx
 msgid "Already have an account?"
@@ -73,6 +79,10 @@ msgstr "Архивиран"
 msgid "Archiving…"
 msgstr "Архивиране…"
 
+#: src/routes/_authed/repairs/$repairId.tsx
+msgid "Back to car"
+msgstr "Обратно към автомобила"
+
 #: src/routes/_authed/cars/$carId.tsx
 msgid "Back to customer"
 msgstr "Обратно към клиента"
@@ -81,14 +91,24 @@ msgstr "Обратно към клиента"
 msgid "Back to customers"
 msgstr "Обратно към клиентите"
 
+#: src/routes/_authed/repairs/index.tsx
+msgid "Back to dashboard"
+msgstr "Обратно към таблото"
+
 #: src/components/cars/ArchiveCarDialog.tsx
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/ArchiveCustomerDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/components/offers/OfferFormDialog.tsx
 #: src/components/offers/SendOfferDialog.tsx
+#: src/components/repairs/CompleteRepairDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
 msgid "Cancel"
 msgstr "Отказ"
+
+#: src/routes/_authed/repairs/index.tsx
+msgid "Car"
+msgstr "Автомобил"
 
 #: src/routes/_authed/cars/$carId.tsx
 msgid "Car not found."
@@ -108,9 +128,37 @@ msgstr "Проверява се връзката с API…"
 msgid "Company"
 msgstr "Фирма"
 
+#: src/components/repairs/CompleteRepairDialog.tsx
+#: src/routes/_authed/repairs/$repairId.tsx
+msgid "Complete"
+msgstr "Завърши"
+
+#: src/components/repairs/CompleteRepairDialog.tsx
+msgid "Complete repair"
+msgstr "Завършване на ремонта"
+
+#: src/components/repairs/RepairStatusBadge.tsx
+#: src/routes/_authed/repairs/index.tsx
+msgid "Completed"
+msgstr "Завършен"
+
+#. placeholder {0}: new Date(repair.completedAt).toLocaleDateString("bg-BG")
+#. placeholder {1}: repair.mileage.toLocaleString("bg-BG")
+#: src/routes/_authed/repairs/$repairId.tsx
+msgid "Completed {0} at {1} km"
+msgstr "Завършен на {0} при {1} км"
+
+#: src/components/repairs/CompleteRepairDialog.tsx
+msgid "Completing…"
+msgstr "Завършване…"
+
 #: src/components/customers/CustomerFormDialog.tsx
 msgid "Contact and notes for this customer."
 msgstr "Контакти и бележки за този клиент."
+
+#: src/components/offers/OffersSection.tsx
+msgid "Convert to repair"
+msgstr "Преобразувай в ремонт"
 
 #: src/components/cars/ArchiveCarDialog.tsx
 #: src/components/customers/ArchiveCustomerDialog.tsx
@@ -129,6 +177,10 @@ msgstr "Клиентите не могат да бъдат заредени."
 msgid "Could not load offers."
 msgstr "Офертите не могат да бъдат заредени."
 
+#: src/routes/_authed/repairs/index.tsx
+msgid "Could not load repairs."
+msgstr "Ремонтите не можаха да се заредят."
+
 #: src/routes/signup.tsx
 msgid "Create garage"
 msgstr "Създай гараж"
@@ -141,6 +193,10 @@ msgstr "Създайте своя гараж"
 #: src/routes/signup.tsx
 msgid "Creating…"
 msgstr "Създаване…"
+
+#: src/routes/_authed/repairs/index.tsx
+msgid "Customer"
+msgstr "Клиент"
 
 #: src/routes/_authed/customers/$customerId.tsx
 msgid "Customer not found."
@@ -160,6 +216,8 @@ msgid "Dashboard"
 msgstr "Табло"
 
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
+#: src/routes/_authed/repairs/$repairId.tsx
 msgid "Description"
 msgstr "Описание"
 
@@ -171,7 +229,12 @@ msgstr "Изтегляне"
 msgid "Draft"
 msgstr "Чернова"
 
+#: src/components/repairs/CompleteRepairDialog.tsx
+msgid "e.g. 145000"
+msgstr "напр. 145000"
+
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
 msgid "e.g. Brake pads"
 msgstr "напр. Накладки"
 
@@ -179,6 +242,7 @@ msgstr "напр. Накладки"
 #: src/components/offers/OffersSection.tsx
 #: src/routes/_authed/customers/$customerId.tsx
 #: src/routes/_authed/customers/index.tsx
+#: src/routes/_authed/repairs/$repairId.tsx
 msgid "Edit"
 msgstr "Редактиране"
 
@@ -193,6 +257,10 @@ msgstr "Редактиране на клиент"
 #: src/components/offers/OfferFormDialog.tsx
 msgid "Edit offer"
 msgstr "Редактиране на оферта"
+
+#: src/components/repairs/RepairFormDialog.tsx
+msgid "Edit repair"
+msgstr "Редактиране на ремонт"
 
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/routes/_authed/customers/$customerId.tsx
@@ -218,17 +286,38 @@ msgstr "Изтекла"
 msgid "Garage name"
 msgstr "Име на гаража"
 
+#: src/components/repairs/RepairStatusBadge.tsx
+#: src/routes/_authed/repairs/index.tsx
+msgid "In progress"
+msgstr "В процес"
+
+#: src/routes/_authed/repairs/index.tsx
+msgid "Jobs across the whole garage. Convert a sent offer to start one."
+msgstr "Заявки от целия сервиз. Преобразувайте изпратена оферта, за да започнете."
+
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
+#: src/routes/_authed/repairs/$repairId.tsx
 msgid "Kind"
 msgstr "Вид"
 
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
+#: src/routes/_authed/repairs/$repairId.tsx
 msgid "Labor"
 msgstr "Труд"
+
+#: src/components/repairs/RepairFormDialog.tsx
+msgid "Line items and totals for this repair job."
+msgstr "Редове и суми за този ремонт."
 
 #: src/components/offers/OfferFormDialog.tsx
 msgid "Line items and totals for this repair quote."
 msgstr "Редове и суми за тази оферта за ремонт."
+
+#: src/routes/_authed/repairs/$repairId.tsx
+msgid "Line total"
+msgstr "Сума на реда"
 
 #: src/components/cars/CarsSection.tsx
 #: src/components/offers/OffersSection.tsx
@@ -237,6 +326,8 @@ msgstr "Редове и суми за тази оферта за ремонт."
 #: src/routes/_authed/customers/$customerId.tsx
 #: src/routes/_authed/customers/index.tsx
 #: src/routes/_authed/dashboard.tsx
+#: src/routes/_authed/repairs/$repairId.tsx
+#: src/routes/_authed/repairs/index.tsx
 msgid "Loading…"
 msgstr "Зареждане…"
 
@@ -251,6 +342,10 @@ msgstr "Марка"
 #: src/routes/_authed/cars/$carId.tsx
 msgid "Mileage"
 msgstr "Пробег"
+
+#: src/components/repairs/CompleteRepairDialog.tsx
+msgid "Mileage (km)"
+msgstr "Пробег (км)"
 
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/cars/CarsSection.tsx
@@ -291,6 +386,7 @@ msgid "New offer"
 msgstr "Нова оферта"
 
 #: src/routes/_authed/customers/index.tsx
+#: src/routes/_authed/repairs/index.tsx
 msgid "Next"
 msgstr "Следваща"
 
@@ -306,9 +402,14 @@ msgstr "Няма намерени клиенти."
 msgid "No offers yet."
 msgstr "Все още няма оферти."
 
+#: src/routes/_authed/repairs/index.tsx
+msgid "No repairs yet."
+msgstr "Все още няма ремонти."
+
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/components/offers/OfferFormDialog.tsx
 #: src/components/offers/OffersSection.tsx
+#: src/components/repairs/RepairFormDialog.tsx
 #: src/routes/_authed/customers/$customerId.tsx
 msgid "Notes"
 msgstr "Бележки"
@@ -325,15 +426,29 @@ msgstr "Преглед на PDF на офертата"
 msgid "Offers"
 msgstr "Оферти"
 
+#: src/components/repairs/RepairStatusBadge.tsx
+#: src/routes/_authed/repairs/index.tsx
+msgid "Open"
+msgstr "Отворен"
+
+#: src/routes/_authed/repairs/index.tsx
+msgid "Open repair"
+msgstr "Отвори ремонта"
+
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
+#: src/routes/_authed/repairs/$repairId.tsx
 msgid "Other"
 msgstr "Друго"
 
 #: src/routes/_authed/customers/index.tsx
+#: src/routes/_authed/repairs/index.tsx
 msgid "Page {page} of {totalPages} · {total} total"
 msgstr "Страница {page} от {totalPages} · общо {total}"
 
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
+#: src/routes/_authed/repairs/$repairId.tsx
 msgid "Part"
 msgstr "Част"
 
@@ -370,20 +485,28 @@ msgid "Preview the quote, then download or print it."
 msgstr "Прегледайте офертата, след което я изтеглете или отпечатайте."
 
 #: src/routes/_authed/customers/index.tsx
+#: src/routes/_authed/repairs/index.tsx
 msgid "Previous"
 msgstr "Предишна"
 
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
+#: src/routes/_authed/repairs/$repairId.tsx
 msgid "Qty"
 msgstr "Бр."
 
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
 msgid "Quantity"
 msgstr "Количество"
 
 #: src/components/offers/SendOfferDialog.tsx
 msgid "Recipient email"
 msgstr "Имейл на получателя"
+
+#: src/components/repairs/CompleteRepairDialog.tsx
+msgid "Record the car's odometer reading. This finishes the repair and updates the car's mileage."
+msgstr "Запишете показанието на километража. Това завършва ремонта и обновява пробега на автомобила."
 
 #: src/components/offers/OffersSection.tsx
 msgid "Reject"
@@ -394,12 +517,30 @@ msgid "Rejected"
 msgstr "Отхвърлена"
 
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
 msgid "Remove line"
 msgstr "Премахване на ред"
+
+#: src/routes/_authed/repairs/$repairId.tsx
+msgid "Reopen"
+msgstr "Отвори отново"
+
+#: src/routes/_authed/repairs/$repairId.tsx
+msgid "Repair"
+msgstr "Ремонт"
+
+#: src/routes/_authed/repairs/$repairId.tsx
+msgid "Repair not found."
+msgstr "Ремонтът не е намерен."
 
 #: src/components/offers/OffersSection.tsx
 msgid "Repair quotes for this car."
 msgstr "Оферти за ремонт на този автомобил."
+
+#: src/routes/_authed/dashboard.tsx
+#: src/routes/_authed/repairs/index.tsx
+msgid "Repairs"
+msgstr "Ремонти"
 
 #: src/components/offers/OffersSection.tsx
 msgid "Retry"
@@ -412,12 +553,14 @@ msgstr "Повторно изпращане"
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
 msgid "Save"
 msgstr "Запази"
 
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
 msgid "Saving…"
 msgstr "Запазване…"
 
@@ -481,15 +624,24 @@ msgstr "Влезли сте като"
 msgid "Signing in…"
 msgstr "Влизане…"
 
+#: src/routes/_authed/repairs/$repairId.tsx
+msgid "Start work"
+msgstr "Започни работа"
+
 #: src/components/offers/OffersSection.tsx
+#: src/routes/_authed/repairs/index.tsx
 msgid "Status"
 msgstr "Статус"
 
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
+#: src/routes/_authed/repairs/$repairId.tsx
 msgid "Subtotal"
 msgstr "Междинна сума"
 
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
+#: src/routes/_authed/repairs/$repairId.tsx
 msgid "Tax"
 msgstr "ДДС"
 
@@ -498,10 +650,12 @@ msgid "Tax and total are calculated on save."
 msgstr "ДДС и общата сума се изчисляват при запис."
 
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
 msgid "Tax rate (%)"
 msgstr "Ставка ДДС (%)"
 
 #: src/components/offers/OffersSection.tsx
+#: src/routes/_authed/repairs/$repairId.tsx
 msgid "The action could not be completed."
 msgstr "Действието не може да бъде изпълнено."
 
@@ -512,6 +666,7 @@ msgstr "PDF файлът с офертата ще бъде изпратен на
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
 #: src/routes/login.tsx
 #: src/routes/signup.tsx
 msgid "This field is required."
@@ -529,10 +684,15 @@ msgstr "Това скрива {0} от активния списък. Может
 
 #: src/components/offers/OfferFormDialog.tsx
 #: src/components/offers/OffersSection.tsx
+#: src/components/repairs/RepairFormDialog.tsx
+#: src/routes/_authed/repairs/$repairId.tsx
+#: src/routes/_authed/repairs/index.tsx
 msgid "Total"
 msgstr "Общо"
 
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/repairs/RepairFormDialog.tsx
+#: src/routes/_authed/repairs/$repairId.tsx
 msgid "Unit price"
 msgstr "Единична цена"
 

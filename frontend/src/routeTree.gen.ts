@@ -14,7 +14,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedDashboardRouteImport } from './routes/_authed/dashboard'
+import { Route as AuthedRepairsIndexRouteImport } from './routes/_authed/repairs/index'
 import { Route as AuthedCustomersIndexRouteImport } from './routes/_authed/customers/index'
+import { Route as AuthedRepairsRepairIdRouteImport } from './routes/_authed/repairs/$repairId'
 import { Route as AuthedCustomersCustomerIdRouteImport } from './routes/_authed/customers/$customerId'
 import { Route as AuthedCarsCarIdRouteImport } from './routes/_authed/cars/$carId'
 
@@ -42,9 +44,19 @@ const AuthedDashboardRoute = AuthedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedRepairsIndexRoute = AuthedRepairsIndexRouteImport.update({
+  id: '/repairs/',
+  path: '/repairs/',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedCustomersIndexRoute = AuthedCustomersIndexRouteImport.update({
   id: '/customers/',
   path: '/customers/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedRepairsRepairIdRoute = AuthedRepairsRepairIdRouteImport.update({
+  id: '/repairs/$repairId',
+  path: '/repairs/$repairId',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedCustomersCustomerIdRoute =
@@ -66,7 +78,9 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthedDashboardRoute
   '/cars/$carId': typeof AuthedCarsCarIdRoute
   '/customers/$customerId': typeof AuthedCustomersCustomerIdRoute
+  '/repairs/$repairId': typeof AuthedRepairsRepairIdRoute
   '/customers/': typeof AuthedCustomersIndexRoute
+  '/repairs/': typeof AuthedRepairsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -75,7 +89,9 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthedDashboardRoute
   '/cars/$carId': typeof AuthedCarsCarIdRoute
   '/customers/$customerId': typeof AuthedCustomersCustomerIdRoute
+  '/repairs/$repairId': typeof AuthedRepairsRepairIdRoute
   '/customers': typeof AuthedCustomersIndexRoute
+  '/repairs': typeof AuthedRepairsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -86,7 +102,9 @@ export interface FileRoutesById {
   '/_authed/dashboard': typeof AuthedDashboardRoute
   '/_authed/cars/$carId': typeof AuthedCarsCarIdRoute
   '/_authed/customers/$customerId': typeof AuthedCustomersCustomerIdRoute
+  '/_authed/repairs/$repairId': typeof AuthedRepairsRepairIdRoute
   '/_authed/customers/': typeof AuthedCustomersIndexRoute
+  '/_authed/repairs/': typeof AuthedRepairsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -97,7 +115,9 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/cars/$carId'
     | '/customers/$customerId'
+    | '/repairs/$repairId'
     | '/customers/'
+    | '/repairs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -106,7 +126,9 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/cars/$carId'
     | '/customers/$customerId'
+    | '/repairs/$repairId'
     | '/customers'
+    | '/repairs'
   id:
     | '__root__'
     | '/'
@@ -116,7 +138,9 @@ export interface FileRouteTypes {
     | '/_authed/dashboard'
     | '/_authed/cars/$carId'
     | '/_authed/customers/$customerId'
+    | '/_authed/repairs/$repairId'
     | '/_authed/customers/'
+    | '/_authed/repairs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -163,11 +187,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedDashboardRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/repairs/': {
+      id: '/_authed/repairs/'
+      path: '/repairs'
+      fullPath: '/repairs/'
+      preLoaderRoute: typeof AuthedRepairsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/customers/': {
       id: '/_authed/customers/'
       path: '/customers'
       fullPath: '/customers/'
       preLoaderRoute: typeof AuthedCustomersIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/repairs/$repairId': {
+      id: '/_authed/repairs/$repairId'
+      path: '/repairs/$repairId'
+      fullPath: '/repairs/$repairId'
+      preLoaderRoute: typeof AuthedRepairsRepairIdRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/customers/$customerId': {
@@ -191,14 +229,18 @@ interface AuthedRouteChildren {
   AuthedDashboardRoute: typeof AuthedDashboardRoute
   AuthedCarsCarIdRoute: typeof AuthedCarsCarIdRoute
   AuthedCustomersCustomerIdRoute: typeof AuthedCustomersCustomerIdRoute
+  AuthedRepairsRepairIdRoute: typeof AuthedRepairsRepairIdRoute
   AuthedCustomersIndexRoute: typeof AuthedCustomersIndexRoute
+  AuthedRepairsIndexRoute: typeof AuthedRepairsIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedDashboardRoute: AuthedDashboardRoute,
   AuthedCarsCarIdRoute: AuthedCarsCarIdRoute,
   AuthedCustomersCustomerIdRoute: AuthedCustomersCustomerIdRoute,
+  AuthedRepairsRepairIdRoute: AuthedRepairsRepairIdRoute,
   AuthedCustomersIndexRoute: AuthedCustomersIndexRoute,
+  AuthedRepairsIndexRoute: AuthedRepairsIndexRoute,
 }
 
 const AuthedRouteWithChildren =

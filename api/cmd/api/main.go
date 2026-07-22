@@ -83,6 +83,7 @@ func serve() error {
 	customers := store.NewCustomerStore(db)
 	cars := store.NewCarStore(db)
 	offers := store.NewOfferStore(db)
+	repairs := store.NewRepairStore(db)
 	audit := store.NewAuditLogStore(db)
 	pdfRenderer := pdf.NewRenderer()
 	mailSender := mailer.NewSMTP(mailer.Config{
@@ -133,6 +134,7 @@ func serve() error {
 		Customers:    customers,
 		Cars:         cars,
 		Offers:       offers,
+		Repairs:      repairs,
 		Audit:        audit,
 		PDF:          pdfRenderer,
 		SendEnqueuer: jobs.NewOfferEmailEnqueuer(riverClient),
