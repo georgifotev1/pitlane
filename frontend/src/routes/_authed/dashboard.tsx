@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Trans } from "@lingui/react/macro"
 import { api } from "@/lib/api"
@@ -54,6 +54,13 @@ function Dashboard() {
           </Button>
         </form>
       </header>
+      <nav className="flex gap-2">
+        <Link to="/customers" search={{ page: 1, search: "", archived: false }}>
+          <Button variant="outline">
+            <Trans>Customers</Trans>
+          </Button>
+        </Link>
+      </nav>
       <section className="rounded-lg border border-border p-6">
         <h2 className="text-lg font-semibold">
           <Trans>Permissions</Trans>

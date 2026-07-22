@@ -1,8 +1,12 @@
 import type {
+  CreateCustomerRequest,
+  CustomerListResponse,
+  CustomerResponse,
   HealthResponse,
   LoginRequest,
   SignupRequest,
   SignupResponse,
+  UpdateCustomerRequest,
   UserResponse,
 } from "@/lib/generated/types"
 
@@ -35,7 +39,10 @@ export class ProblemError extends Error {
   }
 }
 
-async function request<T>(path: string, envelope: string, init?: RequestInit): Promise<T> {
+// send performs the fetch and turns any non-2xx into a ProblemError (with the
+// 401 → login redirect side effect). Both request() and requestBody() build on
+// it so the error handling lives in exactly one place.
+async function send(path: string, init?: RequestInit): Promise<Response> {
   const res = await fetch(`${BASE}${path}`, {
     credentials: "include",
     ...init,
@@ -70,10 +77,40 @@ async function request<T>(path: string, envelope: string, init?: RequestInit): P
     throw pe
   }
 
-  if (res.status === 204) return undefined as T
+  return res
+}
 
+// request unwraps a single named envelope key, e.g. body.customer. Use for
+// single-entity responses and void (204) endpoints.
+async function request<T>(path: string, envelope: string, init?: RequestInit): Promise<T> {
+  const res = await send(path, init)
+  if (res.status === 204) return undefined as T
   const body = await res.json()
   return body[envelope] as T
+}
+
+// requestBody returns the whole JSON body. Use for list responses that carry
+// several top-level keys (e.g. { customers, metadata }).
+async function requestBody<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await send(path, init)
+  return (await res.json()) as T
+}
+
+// customerListQuery builds the list URL query string from typed params.
+export type CustomerListQuery = {
+  page: number
+  pageSize: number
+  search: string
+  archived: boolean
+}
+
+function customerListPath(q: CustomerListQuery): string {
+  const params = new URLSearchParams()
+  params.set("page", String(q.page))
+  params.set("pageSize", String(q.pageSize))
+  if (q.search) params.set("search", q.search)
+  if (q.archived) params.set("archived", "true")
+  return `/customers?${params.toString()}`
 }
 
 export const api = {
@@ -92,4 +129,24 @@ export const api = {
     }),
   logout: () => request<void>("/auth/logout", "", { method: "POST" }),
   me: () => request<UserResponse>("/auth/me", "user"),
+
+  customers: {
+    list: (q: CustomerListQuery) =>
+      requestBody<CustomerListResponse>(customerListPath(q)),
+    get: (id: string) => request<CustomerResponse>(`/customers/${id}`, "customer"),
+    create: (data: CreateCustomerRequest) =>
+      request<CustomerResponse>("/customers", "customer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: UpdateCustomerRequest) =>
+      request<CustomerResponse>(`/customers/${id}`, "customer", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    archive: (id: string) =>
+      request<void>(`/customers/${id}/archive`, "", { method: "POST" }),
+  },
 }

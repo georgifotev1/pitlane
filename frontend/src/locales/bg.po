@@ -13,6 +13,15 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#: src/routes/_authed/customers/index.tsx
+msgid "Actions"
+msgstr "Действия"
+
+#: src/components/customers/CustomerFormDialog.tsx
+#: src/routes/_authed/customers/$customerId.tsx
+msgid "Address"
+msgstr "Адрес"
+
 #: src/routes/signup.tsx
 msgid "Already have an account?"
 msgstr "Вече имате акаунт?"
@@ -21,9 +30,55 @@ msgstr "Вече имате акаунт?"
 msgid "API unreachable:"
 msgstr "API е недостъпно:"
 
+#: src/components/customers/ArchiveCustomerDialog.tsx
+#: src/routes/_authed/customers/$customerId.tsx
+#: src/routes/_authed/customers/index.tsx
+msgid "Archive"
+msgstr "Архивиране"
+
+#: src/components/customers/ArchiveCustomerDialog.tsx
+msgid "Archive customer"
+msgstr "Архивиране на клиент"
+
+#: src/routes/_authed/customers/$customerId.tsx
+#: src/routes/_authed/customers/index.tsx
+msgid "Archived"
+msgstr "Архивиран"
+
+#: src/components/customers/ArchiveCustomerDialog.tsx
+msgid "Archiving…"
+msgstr "Архивиране…"
+
+#: src/routes/_authed/customers/$customerId.tsx
+msgid "Back to customers"
+msgstr "Обратно към клиентите"
+
+#: src/components/customers/ArchiveCustomerDialog.tsx
+#: src/components/customers/CustomerFormDialog.tsx
+msgid "Cancel"
+msgstr "Отказ"
+
 #: src/routes/index.tsx
 msgid "Checking the API…"
 msgstr "Проверява се връзката с API…"
+
+#: src/components/customers/CustomerFormDialog.tsx
+#: src/routes/_authed/customers/$customerId.tsx
+#: src/routes/_authed/customers/index.tsx
+msgid "Company"
+msgstr "Фирма"
+
+#: src/components/customers/CustomerFormDialog.tsx
+msgid "Contact and notes for this customer."
+msgstr "Контакти и бележки за този клиент."
+
+#: src/components/customers/ArchiveCustomerDialog.tsx
+msgid "Could not archive. Please try again."
+msgstr "Архивирането е неуспешно. Опитайте отново."
+
+#: src/routes/_authed/customers/index.tsx
+msgid "Could not load customers."
+msgstr "Клиентите не могат да бъдат заредени."
 
 #: src/routes/signup.tsx
 msgid "Create garage"
@@ -38,10 +93,31 @@ msgstr "Създайте своя гараж"
 msgid "Creating…"
 msgstr "Създаване…"
 
+#: src/routes/_authed/customers/$customerId.tsx
+msgid "Customer not found."
+msgstr "Клиентът не е намерен."
+
+#: src/routes/_authed/customers/index.tsx
+#: src/routes/_authed/dashboard.tsx
+msgid "Customers"
+msgstr "Клиенти"
+
 #: src/routes/_authed/dashboard.tsx
 msgid "Dashboard"
 msgstr "Табло"
 
+#: src/routes/_authed/customers/$customerId.tsx
+#: src/routes/_authed/customers/index.tsx
+msgid "Edit"
+msgstr "Редактиране"
+
+#: src/components/customers/CustomerFormDialog.tsx
+msgid "Edit customer"
+msgstr "Редактиране на клиент"
+
+#: src/components/customers/CustomerFormDialog.tsx
+#: src/routes/_authed/customers/$customerId.tsx
+#: src/routes/_authed/customers/index.tsx
 #: src/routes/login.tsx
 #: src/routes/signup.tsx
 msgid "Email"
@@ -52,6 +128,8 @@ msgid "Garage name"
 msgstr "Име на гаража"
 
 #: src/routes/_authed.tsx
+#: src/routes/_authed/customers/$customerId.tsx
+#: src/routes/_authed/customers/index.tsx
 #: src/routes/_authed/dashboard.tsx
 msgid "Loading…"
 msgstr "Зареждане…"
@@ -60,22 +138,83 @@ msgstr "Зареждане…"
 msgid "Must be at least 8 characters."
 msgstr "Трябва да съдържа поне 8 символа."
 
+#: src/components/customers/CustomerFormDialog.tsx
+#: src/routes/_authed/customers/index.tsx
+msgid "Name"
+msgstr "Име"
+
+#: src/routes/_authed/customers/index.tsx
+msgid "Name, company, email, phone"
+msgstr "Име, фирма, имейл, телефон"
+
+#: src/components/customers/CustomerFormDialog.tsx
+#: src/routes/_authed/customers/index.tsx
+msgid "New customer"
+msgstr "Нов клиент"
+
 #: src/routes/login.tsx
 msgid "New here?"
 msgstr "Нов потребител?"
+
+#: src/routes/_authed/customers/index.tsx
+msgid "Next"
+msgstr "Следваща"
+
+#: src/routes/_authed/customers/index.tsx
+msgid "No customers found."
+msgstr "Няма намерени клиенти."
+
+#: src/components/customers/CustomerFormDialog.tsx
+#: src/routes/_authed/customers/$customerId.tsx
+msgid "Notes"
+msgstr "Бележки"
+
+#: src/routes/_authed/customers/index.tsx
+msgid "Page {page} of {totalPages} · {total} total"
+msgstr "Страница {page} от {totalPages} · общо {total}"
 
 #: src/routes/login.tsx
 #: src/routes/signup.tsx
 msgid "Password"
 msgstr "Парола"
 
+#: src/routes/_authed/customers/index.tsx
+msgid "People and companies your garage works with."
+msgstr "Хора и фирми, с които работи вашият сервиз."
+
 #: src/routes/_authed/dashboard.tsx
 msgid "Permissions"
 msgstr "Права"
 
+#: src/components/customers/CustomerFormDialog.tsx
+#: src/routes/_authed/customers/$customerId.tsx
+#: src/routes/_authed/customers/index.tsx
+msgid "Phone"
+msgstr "Телефон"
+
+#: src/routes/_authed/customers/index.tsx
+msgid "Previous"
+msgstr "Предишна"
+
+#: src/components/customers/CustomerFormDialog.tsx
+msgid "Save"
+msgstr "Запази"
+
+#: src/components/customers/CustomerFormDialog.tsx
+msgid "Saving…"
+msgstr "Запазване…"
+
+#: src/routes/_authed/customers/index.tsx
+msgid "Search"
+msgstr "Търсене"
+
 #: src/routes/signup.tsx
 msgid "Set up a garage and your owner account."
 msgstr "Създайте гараж и вашия акаунт."
+
+#: src/routes/_authed/customers/index.tsx
+msgid "Show archived"
+msgstr "Показване на архивираните"
 
 #: src/routes/login.tsx
 #: src/routes/signup.tsx
@@ -102,10 +241,16 @@ msgstr "Влезли сте като"
 msgid "Signing in…"
 msgstr "Влизане…"
 
+#: src/components/customers/CustomerFormDialog.tsx
 #: src/routes/login.tsx
 #: src/routes/signup.tsx
 msgid "This field is required."
 msgstr "Полето е задължително."
+
+#. placeholder {0}: customer.name
+#: src/components/customers/ArchiveCustomerDialog.tsx
+msgid "This hides {0} from the active list. You can still view archived customers with the filter."
+msgstr "Това скрива {0} от активния списък. Можете да видите архивираните клиенти чрез филтъра."
 
 #: src/routes/signup.tsx
 msgid "Your name"

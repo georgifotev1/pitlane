@@ -57,12 +57,13 @@ func newTestAPI(t *testing.T) *testAPI {
 
 	db := store.NewDB(tdb.Pool)
 	server, err := NewServer(ServerDeps{
-		Logger:  logger,
-		Cfg:     cfg,
-		Session: sessionManager,
-		Tenants: store.NewTenantStore(db),
-		Users:   store.NewUserStore(db),
-		Audit:   store.NewAuditLogStore(db),
+		Logger:    logger,
+		Cfg:       cfg,
+		Session:   sessionManager,
+		Tenants:   store.NewTenantStore(db),
+		Users:     store.NewUserStore(db),
+		Customers: store.NewCustomerStore(db),
+		Audit:     store.NewAuditLogStore(db),
 	})
 	if err != nil {
 		t.Fatalf("new server: %v", err)

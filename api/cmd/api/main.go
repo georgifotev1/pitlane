@@ -98,12 +98,13 @@ func serve() error {
 	// Wire stores.
 	db := store.NewDB(pool)
 	server, err := api.NewServer(api.ServerDeps{
-		Logger:  logger,
-		Cfg:     cfg,
-		Session: sessionManager,
-		Tenants: store.NewTenantStore(db),
-		Users:   store.NewUserStore(db),
-		Audit:   store.NewAuditLogStore(db),
+		Logger:    logger,
+		Cfg:       cfg,
+		Session:   sessionManager,
+		Tenants:   store.NewTenantStore(db),
+		Users:     store.NewUserStore(db),
+		Customers: store.NewCustomerStore(db),
+		Audit:     store.NewAuditLogStore(db),
 	})
 	if err != nil {
 		return fmt.Errorf("server: %w", err)

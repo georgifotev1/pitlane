@@ -51,5 +51,6 @@ audit:
 	git diff --exit-code frontend/src/lib/generated
 	cd frontend && pnpm exec lingui extract
 	cd frontend && pnpm exec lingui compile
-	@bash -c '! grep -q "^msgstr \"\"$$" frontend/src/locales/*.po || (echo "ERROR: empty translations in PO catalog" && exit 1)'
+	@awk '/^msgstr ""$$/ && prev != "msgid \"\"" { bad=1 } { prev=$$0 } END { exit bad }' frontend/src/locales/*.po \
+		|| (echo "ERROR: empty translations in PO catalog" && exit 1)
 	git diff --exit-code frontend/src/locales

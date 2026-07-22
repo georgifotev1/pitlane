@@ -16,7 +16,17 @@
       "Bash(curl -s -i http://localhost:4000/api/v1/healthz)",
       "Bash(curl -s http://localhost:4000/nope)",
       "Bash(lsof -iTCP:4000 -sTCP:LISTEN -n -P)",
-      "Bash(lsof -iTCP:5173 -sTCP:LISTEN -n -P)"
+      "Bash(lsof -iTCP:5173 -sTCP:LISTEN -n -P)",
+      "Bash(grep -iE \"plan|phase|roadmap|README|\\\\.md$\")",
+      "Bash(gofmt -w ./cmd ./internal ./migrations)",
+      "Bash(gofmt -l ./cmd ./internal)",
+      "Bash(grep -v '^$')",
+      "Bash(go test *)",
+      "Bash(make types *)",
+      "Bash(pnpm exec *)",
+      "Bash(awk '/^msgid /{id=$0} /^msgstr \"\"$/{if\\(id!=\"msgid \\\\\"\\\\\"\"\\) print id}' src/locales/bg.po)",
+      "Bash(make migrate-up *)",
+      "Bash(make migrate-status *)"
     ]
   }
 }

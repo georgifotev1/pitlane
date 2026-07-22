@@ -58,6 +58,13 @@ func (s *Server) requirePermission(perm domain.Permission) func(http.Handler) ht
 	}
 }
 
+// protected composes the two per-route auth gates: requireAuth (401 if no
+// valid session, plus tenant context) then requirePermission (403 if the role
+// lacks perm). Every entity route uses this so the pattern is one line.
+func (s *Server) protected(perm domain.Permission, h http.HandlerFunc) http.Handler {
+	return s.requireAuth(s.requirePermission(perm)(h))
+}
+
 // sessionMiddleware wraps scs LoadAndSave and exposes the session manager on
 // the context for requireAuth and the auth handlers.
 func sessionMiddleware(sm *scs.SessionManager) func(http.Handler) http.Handler {

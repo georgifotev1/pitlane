@@ -35,3 +35,58 @@ export interface SignupResponse {
 export interface MeResponse {
   user: UserResponse;
 }
+/**
+ * ListMetadata is the pagination envelope carried alongside every list
+ * response: `{"customers": [...], "metadata": {...}}`. Reused by all list
+ * endpoints (ADR §8 offset/page pagination with metadata).
+ */
+export interface ListMetadata {
+  page: number /* int */;
+  pageSize: number /* int */;
+  total: number /* int */;
+}
+/**
+ * CustomerResponse is the customer as seen by the client. ArchivedAt is null
+ * for active customers (tygo maps *time.Time → string | null).
+ */
+export interface CustomerResponse {
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  address: string;
+  notes: string;
+  archivedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+/**
+ * CustomerListResponse is the full body of the list endpoint. The client reads
+ * the whole object (both keys), unlike single-entity envelopes.
+ */
+export interface CustomerListResponse {
+  customers: CustomerResponse[];
+  metadata: ListMetadata;
+}
+/**
+ * CreateCustomerRequest / UpdateCustomerRequest share a shape today, but stay
+ * distinct types so they can diverge without a breaking rename (Create may gain
+ * server-only defaults; Update is a full PUT replace).
+ */
+export interface CreateCustomerRequest {
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  address: string;
+  notes: string;
+}
+export interface UpdateCustomerRequest {
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  address: string;
+  notes: string;
+}

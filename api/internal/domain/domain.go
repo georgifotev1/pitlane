@@ -95,6 +95,23 @@ type User struct {
 	UpdatedAt    time.Time
 }
 
+// Customer is a person or company a garage does business with. It belongs to
+// exactly one tenant. Optional contact fields are plain strings (empty when
+// absent); ArchivedAt is the soft-delete marker (nil = active).
+type Customer struct {
+	ID         string
+	TenantID   string
+	Name       string
+	Company    string
+	Email      string
+	Phone      string
+	Address    string
+	Notes      string
+	ArchivedAt *time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
 // IsValidRole reports whether a role string is one of the known roles.
 func IsValidRole(s string) bool {
 	switch Role(s) {

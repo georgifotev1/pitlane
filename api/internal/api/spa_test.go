@@ -11,9 +11,9 @@ import (
 
 func testSPAHandler() *spaHandler {
 	return &spaHandler{dist: fstest.MapFS{
-		"index.html":          &fstest.MapFile{Data: []byte("<html>pitlane</html>")},
+		"index.html":           &fstest.MapFile{Data: []byte("<html>pitlane</html>")},
 		"assets/app-a1b2c3.js": &fstest.MapFile{Data: []byte("console.log('app')")},
-		"favicon.svg":         &fstest.MapFile{Data: []byte("<svg></svg>")},
+		"favicon.svg":          &fstest.MapFile{Data: []byte("<svg></svg>")},
 	}}
 }
 
