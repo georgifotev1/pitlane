@@ -1,0 +1,274 @@
+package store
+
+import (
+	"context"
+	"testing"
+
+	"github.com/gfotev/pitlane/internal/domain"
+	"github.com/gfotev/pitlane/internal/testdb"
+	"github.com/google/uuid"
+)
+
+func newCar(tenantID, customerID, plate string) *domain.Car {
+	return &domain.Car{
+		ID:         uuid.NewString(),
+		TenantID:   tenantID,
+		CustomerID: customerID,
+		Plate:      plate,
+	}
+}
+
+func TestCarStore(t *testing.T) {
+	tdb := testdb.New(t)
+	t.Cleanup(func() { tdb.Cleanup(t) })
+
+	db := NewDB(tdb.Pool)
+	cars := NewCarStore(db)
+	custs := NewCustomerStore(db)
+	ts := NewTenantStore(db)
+	ctx := context.Background()
+
+	tenant := newTenant("Garage")
+	if err := ts.Create(ctx, tenant); err != nil {
+		t.Fatalf("create tenant: %v", err)
+	}
+	owner := newCustomer(tenant.ID, "Ivan Petrov")
+	if err := custs.Create(ctx, owner); err != nil {
+		t.Fatalf("create customer: %v", err)
+	}
+
+	t.Run("Create populates timestamps and Get round-trips", func(t *testing.T) {
+		c := newCar(tenant.ID, owner.ID, "CB1234AB")
+		c.VIN = "WVWZZZ1JZXW000001"
+		c.Make = "Volkswagen"
+		c.Model = "Golf"
+		c.Year = 2018
+		c.Mileage = 120000
+
+		if err := cars.Create(ctx, c); err != nil {
+			t.Fatalf("create car: %v", err)
+		}
+		if c.CreatedAt.IsZero() || c.UpdatedAt.IsZero() {
+			t.Fatalf("expected timestamps populated, got %+v", c)
+		}
+
+		got, err := cars.Get(ctx, tenant.ID, c.ID)
+		if err != nil {
+			t.Fatalf("get car: %v", err)
+		}
+		if got.Plate != c.Plate || got.Make != c.Make || got.Model != c.Model ||
+			got.Year != c.Year || got.Mileage != c.Mileage || got.CustomerID != owner.ID {
+			t.Fatalf("car mismatch: got %+v, want %+v", got, c)
+		}
+		if got.ArchivedAt != nil {
+			t.Fatalf("new car should not be archived")
+		}
+	})
+
+	t.Run("Get unknown id returns ErrNotFound", func(t *testing.T) {
+		_, err := cars.Get(ctx, tenant.ID, uuid.NewString())
+		if err != ErrNotFound {
+			t.Fatalf("expected ErrNotFound, got %v", err)
+		}
+	})
+
+	t.Run("Create rejects duplicate active plate", func(t *testing.T) {
+		first := newCar(tenant.ID, owner.ID, "DUP9999")
+		if err := cars.Create(ctx, first); err != nil {
+			t.Fatalf("create first: %v", err)
+		}
+		second := newCar(tenant.ID, owner.ID, "DUP9999")
+		if err := cars.Create(ctx, second); err != ErrDuplicatePlate {
+			t.Fatalf("expected ErrDuplicatePlate, got %v", err)
+		}
+
+		// Archiving the first frees the plate for re-registration.
+		if err := cars.Archive(ctx, tenant.ID, first.ID); err != nil {
+			t.Fatalf("archive first: %v", err)
+		}
+		third := newCar(tenant.ID, owner.ID, "DUP9999")
+		if err := cars.Create(ctx, third); err != nil {
+			t.Fatalf("re-create after archive: %v", err)
+		}
+	})
+
+	t.Run("Update writes fields and bumps updated_at", func(t *testing.T) {
+		c := newCar(tenant.ID, owner.ID, "UPD0001")
+		if err := cars.Create(ctx, c); err != nil {
+			t.Fatalf("create: %v", err)
+		}
+		firstUpdated := c.UpdatedAt
+
+		c.Make = "Toyota"
+		c.Mileage = 5000
+		if err := cars.Update(ctx, c); err != nil {
+			t.Fatalf("update: %v", err)
+		}
+		got, err := cars.Get(ctx, tenant.ID, c.ID)
+		if err != nil {
+			t.Fatalf("get after update: %v", err)
+		}
+		if got.Make != "Toyota" || got.Mileage != 5000 {
+			t.Fatalf("update not persisted: %+v", got)
+		}
+		if !got.UpdatedAt.After(firstUpdated) {
+			t.Fatalf("updated_at not bumped: first %v, now %v", firstUpdated, got.UpdatedAt)
+		}
+	})
+
+	t.Run("Update unknown id returns ErrNotFound", func(t *testing.T) {
+		ghost := newCar(tenant.ID, owner.ID, "GHOST01")
+		if err := cars.Update(ctx, ghost); err != ErrNotFound {
+			t.Fatalf("expected ErrNotFound, got %v", err)
+		}
+	})
+
+	t.Run("Update rejects duplicate active plate", func(t *testing.T) {
+		a := newCar(tenant.ID, owner.ID, "AAA1111")
+		b := newCar(tenant.ID, owner.ID, "BBB2222")
+		if err := cars.Create(ctx, a); err != nil {
+			t.Fatalf("create a: %v", err)
+		}
+		if err := cars.Create(ctx, b); err != nil {
+			t.Fatalf("create b: %v", err)
+		}
+		b.Plate = "AAA1111"
+		if err := cars.Update(ctx, b); err != ErrDuplicatePlate {
+			t.Fatalf("expected ErrDuplicatePlate, got %v", err)
+		}
+	})
+
+	t.Run("Archive hides from default list, second archive is ErrNotFound", func(t *testing.T) {
+		c := newCar(tenant.ID, owner.ID, "ARCH001")
+		if err := cars.Create(ctx, c); err != nil {
+			t.Fatalf("create: %v", err)
+		}
+		if err := cars.Archive(ctx, tenant.ID, c.ID); err != nil {
+			t.Fatalf("archive: %v", err)
+		}
+		got, err := cars.Get(ctx, tenant.ID, c.ID)
+		if err != nil {
+			t.Fatalf("get archived: %v", err)
+		}
+		if got.ArchivedAt == nil {
+			t.Fatalf("archived_at should be set")
+		}
+		if err := cars.Archive(ctx, tenant.ID, c.ID); err != ErrNotFound {
+			t.Fatalf("second archive: expected ErrNotFound, got %v", err)
+		}
+	})
+
+	t.Run("List paginates, searches, and filters archived, scoped to customer", func(t *testing.T) {
+		// Fresh tenant + customer so counts are deterministic.
+		lt := newTenant("ListGarage")
+		if err := ts.Create(ctx, lt); err != nil {
+			t.Fatalf("create list tenant: %v", err)
+		}
+		cust := newCustomer(lt.ID, "List Customer")
+		if err := custs.Create(ctx, cust); err != nil {
+			t.Fatalf("create list customer: %v", err)
+		}
+		other := newCustomer(lt.ID, "Other Customer")
+		if err := custs.Create(ctx, other); err != nil {
+			t.Fatalf("create other customer: %v", err)
+		}
+		// One car under a different customer of the SAME tenant — must not leak
+		// into cust's list.
+		if err := cars.Create(ctx, newCar(lt.ID, other.ID, "OTHER01")); err != nil {
+			t.Fatalf("create other car: %v", err)
+		}
+
+		plates := []string{"AAA0001", "BBB0002", "CCC0003", "DDD0004"}
+		for _, p := range plates {
+			car := newCar(lt.ID, cust.ID, p)
+			car.Make = "Make " + p
+			if err := cars.Create(ctx, car); err != nil {
+				t.Fatalf("create %s: %v", p, err)
+			}
+		}
+
+		page1, total, err := cars.List(ctx, lt.ID, cust.ID, CarListParams{Limit: 2, Offset: 0})
+		if err != nil {
+			t.Fatalf("list page 1: %v", err)
+		}
+		if total != 4 {
+			t.Fatalf("total: got %d, want 4 (other customer's car must not count)", total)
+		}
+		if len(page1) != 2 || page1[0].Plate != "AAA0001" || page1[1].Plate != "BBB0002" {
+			t.Fatalf("page 1 order wrong: %+v", plates2(page1))
+		}
+		page2, _, err := cars.List(ctx, lt.ID, cust.ID, CarListParams{Limit: 2, Offset: 2})
+		if err != nil {
+			t.Fatalf("list page 2: %v", err)
+		}
+		if len(page2) != 2 || page2[0].Plate != "CCC0003" {
+			t.Fatalf("page 2 wrong: %+v", plates2(page2))
+		}
+
+		found, total, err := cars.List(ctx, lt.ID, cust.ID, CarListParams{Search: "bbb0002", Limit: 10})
+		if err != nil {
+			t.Fatalf("search: %v", err)
+		}
+		if total != 1 || len(found) != 1 || found[0].Plate != "BBB0002" {
+			t.Fatalf("search wrong: total %d, %+v", total, plates2(found))
+		}
+
+		// Archive one; it drops from the default list but appears when included.
+		if err := cars.Archive(ctx, lt.ID, page1[0].ID); err != nil {
+			t.Fatalf("archive: %v", err)
+		}
+		_, activeTotal, err := cars.List(ctx, lt.ID, cust.ID, CarListParams{Limit: 10})
+		if err != nil {
+			t.Fatalf("list active: %v", err)
+		}
+		if activeTotal != 3 {
+			t.Fatalf("active total: got %d, want 3", activeTotal)
+		}
+		_, withArchivedTotal, err := cars.List(ctx, lt.ID, cust.ID, CarListParams{IncludeArchived: true, Limit: 10})
+		if err != nil {
+			t.Fatalf("list incl archived: %v", err)
+		}
+		if withArchivedTotal != 4 {
+			t.Fatalf("incl-archived total: got %d, want 4", withArchivedTotal)
+		}
+	})
+
+	t.Run("cross-tenant access is invisible", func(t *testing.T) {
+		otherTenant := newTenant("Other")
+		if err := ts.Create(ctx, otherTenant); err != nil {
+			t.Fatalf("create other tenant: %v", err)
+		}
+		mine := newCar(tenant.ID, owner.ID, "MINE001")
+		if err := cars.Create(ctx, mine); err != nil {
+			t.Fatalf("create mine: %v", err)
+		}
+
+		if _, err := cars.Get(ctx, otherTenant.ID, mine.ID); err != ErrNotFound {
+			t.Fatalf("cross-tenant Get: expected ErrNotFound, got %v", err)
+		}
+		poison := *mine
+		poison.TenantID = otherTenant.ID
+		poison.Make = "Hacked"
+		if err := cars.Update(ctx, &poison); err != ErrNotFound {
+			t.Fatalf("cross-tenant Update: expected ErrNotFound, got %v", err)
+		}
+		if err := cars.Archive(ctx, otherTenant.ID, mine.ID); err != ErrNotFound {
+			t.Fatalf("cross-tenant Archive: expected ErrNotFound, got %v", err)
+		}
+		got, err := cars.Get(ctx, tenant.ID, mine.ID)
+		if err != nil {
+			t.Fatalf("get mine: %v", err)
+		}
+		if got.Make != "" || got.ArchivedAt != nil {
+			t.Fatalf("car was mutated cross-tenant: %+v", got)
+		}
+	})
+}
+
+func plates2(cs []*domain.Car) []string {
+	out := make([]string, len(cs))
+	for i, c := range cs {
+		out[i] = c.Plate
+	}
+	return out
+}

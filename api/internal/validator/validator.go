@@ -18,6 +18,11 @@ const (
 	CodeTooShort     = "too_short"
 	CodeTooLong      = "too_long"
 	CodeInvalid      = "invalid"
+	// CodeDuplicate is not produced by a Check method — it is emitted by handlers
+	// when a database unique constraint rejects a write (e.g. a duplicate car
+	// plate). It lives here so the field-code registry stays in one place,
+	// mirrored by the client error-code table.
+	CodeDuplicate = "duplicate"
 )
 
 // Check holds validation state. A nil Check is valid and empty.
@@ -60,6 +65,13 @@ func (v *Check) MaxLength(field, value string, max int) {
 func (v *Check) MinLength(field, value string, min int) {
 	if utf8.RuneCountInString(value) < min {
 		v.add(field, CodeTooShort)
+	}
+}
+
+// Range checks that an integer field falls within [min, max] inclusive.
+func (v *Check) Range(field string, value, min, max int) {
+	if value < min || value > max {
+		v.add(field, CodeInvalid)
 	}
 }
 

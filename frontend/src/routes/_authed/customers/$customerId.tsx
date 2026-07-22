@@ -8,6 +8,7 @@ import { queryKeys } from "@/lib/queryKeys"
 import { Button } from "@/components/ui/button"
 import { CustomerFormDialog } from "@/components/customers/CustomerFormDialog"
 import { ArchiveCustomerDialog } from "@/components/customers/ArchiveCustomerDialog"
+import { CarsSection } from "@/components/cars/CarsSection"
 
 export const Route = createFileRoute("/_authed/customers/$customerId")({
   component: CustomerDetail,
@@ -108,6 +109,8 @@ function CustomerDetail() {
           <Field label={t`Notes`} value={c.notes} />
         </div>
       </dl>
+
+      <CarsSection customerId={c.id} />
 
       <CustomerFormDialog open={editOpen} onOpenChange={setEditOpen} customer={c} />
       <ArchiveCustomerDialog

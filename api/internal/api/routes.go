@@ -20,6 +20,7 @@ type Server struct {
 	tenants   *store.TenantStore
 	users     *store.UserStore
 	customers *store.CustomerStore
+	cars      *store.CarStore
 	audit     *store.AuditLogStore
 }
 
@@ -31,6 +32,7 @@ type ServerDeps struct {
 	Tenants   *store.TenantStore
 	Users     *store.UserStore
 	Customers *store.CustomerStore
+	Cars      *store.CarStore
 	Audit     *store.AuditLogStore
 }
 
@@ -48,6 +50,7 @@ func NewServer(deps ServerDeps) (*Server, error) {
 		tenants:   deps.Tenants,
 		users:     deps.Users,
 		customers: deps.Customers,
+		cars:      deps.Cars,
 		audit:     deps.Audit,
 	}, nil
 }
@@ -75,6 +78,15 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/customers/{id}", s.protected(domain.PermissionCustomersRead, s.getCustomer))
 	mux.Handle("PUT /api/v1/customers/{id}", s.protected(domain.PermissionCustomersWrite, s.updateCustomer))
 	mux.Handle("POST /api/v1/customers/{id}/archive", s.protected(domain.PermissionCustomersWrite, s.archiveCustomer))
+
+	// Cars — a car belongs to a customer, so list/create are nested under the
+	// customer; item ops (get/update/archive) address the car directly. Same
+	// read/write permission split as customers; archive is a POST soft-delete.
+	mux.Handle("GET /api/v1/customers/{customerId}/cars", s.protected(domain.PermissionCarsRead, s.listCars))
+	mux.Handle("POST /api/v1/customers/{customerId}/cars", s.protected(domain.PermissionCarsWrite, s.createCar))
+	mux.Handle("GET /api/v1/cars/{id}", s.protected(domain.PermissionCarsRead, s.getCar))
+	mux.Handle("PUT /api/v1/cars/{id}", s.protected(domain.PermissionCarsWrite, s.updateCar))
+	mux.Handle("POST /api/v1/cars/{id}/archive", s.protected(domain.PermissionCarsWrite, s.archiveCar))
 
 	// Unmatched API paths get problem+json — never the SPA shell.
 	mux.HandleFunc("GET /api/", s.notFound)

@@ -89,3 +89,48 @@ type UpdateCustomerRequest struct {
 	Address string `json:"address"`
 	Notes   string `json:"notes"`
 }
+
+// CarResponse is a car as seen by the client. It belongs to a customer
+// (CustomerID); ArchivedAt is null for active cars. year/mileage are 0 when
+// unknown (tygo maps them to number).
+type CarResponse struct {
+	ID         string     `json:"id"`
+	CustomerID string     `json:"customerId"`
+	Plate      string     `json:"plate"`
+	VIN        string     `json:"vin"`
+	Make       string     `json:"make"`
+	Model      string     `json:"model"`
+	Year       int        `json:"year"`
+	Mileage    int        `json:"mileage"`
+	ArchivedAt *time.Time `json:"archivedAt"`
+	CreatedAt  time.Time  `json:"createdAt"`
+	UpdatedAt  time.Time  `json:"updatedAt"`
+}
+
+// CarListResponse is the full body of the list endpoint (both keys read by the
+// client), mirroring CustomerListResponse.
+type CarListResponse struct {
+	Cars     []CarResponse `json:"cars"`
+	Metadata ListMetadata  `json:"metadata"`
+}
+
+// CreateCarRequest / UpdateCarRequest stay distinct types even though they share
+// a shape today (matching the customer pattern). CustomerID is not in the body:
+// on create it comes from the nested route path; it is immutable on update.
+type CreateCarRequest struct {
+	Plate   string `json:"plate"`
+	VIN     string `json:"vin"`
+	Make    string `json:"make"`
+	Model   string `json:"model"`
+	Year    int    `json:"year"`
+	Mileage int    `json:"mileage"`
+}
+
+type UpdateCarRequest struct {
+	Plate   string `json:"plate"`
+	VIN     string `json:"vin"`
+	Make    string `json:"make"`
+	Model   string `json:"model"`
+	Year    int    `json:"year"`
+	Mileage int    `json:"mileage"`
+}

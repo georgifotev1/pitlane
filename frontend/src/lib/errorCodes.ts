@@ -13,6 +13,7 @@ const messages: Record<string, string> = {
   too_short: "Стойността е твърде кратка.",
   too_long: "Стойността е твърде дълга.",
   invalid: "Невалидна стойност.",
+  duplicate: "Този регистрационен номер вече съществува.",
   // 422 top-level
   validation_failed: "Моля, проверете въведените данни.",
   // global codes

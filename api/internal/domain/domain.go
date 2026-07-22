@@ -22,6 +22,8 @@ type Permission string
 const (
 	PermissionCustomersRead  Permission = "customers:read"
 	PermissionCustomersWrite Permission = "customers:write"
+	PermissionCarsRead       Permission = "cars:read"
+	PermissionCarsWrite      Permission = "cars:write"
 	PermissionOffersRead     Permission = "offers:read"
 	PermissionOffersWrite    Permission = "offers:write"
 	PermissionRepairsRead    Permission = "repairs:read"
@@ -36,6 +38,7 @@ const (
 var RolePermissions = map[Role][]Permission{
 	RoleOwner: {
 		PermissionCustomersRead, PermissionCustomersWrite,
+		PermissionCarsRead, PermissionCarsWrite,
 		PermissionOffersRead, PermissionOffersWrite,
 		PermissionRepairsRead, PermissionRepairsWrite,
 		PermissionUsersRead, PermissionUsersWrite,
@@ -43,11 +46,13 @@ var RolePermissions = map[Role][]Permission{
 	},
 	RoleAdmin: {
 		PermissionCustomersRead, PermissionCustomersWrite,
+		PermissionCarsRead, PermissionCarsWrite,
 		PermissionOffersRead, PermissionOffersWrite,
 		PermissionRepairsRead, PermissionRepairsWrite,
 	},
 	RoleMechanic: {
 		PermissionCustomersRead,
+		PermissionCarsRead,
 		PermissionOffersRead,
 		PermissionRepairsRead, PermissionRepairsWrite,
 	},
@@ -107,6 +112,24 @@ type Customer struct {
 	Phone      string
 	Address    string
 	Notes      string
+	ArchivedAt *time.Time
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+// Car is a vehicle belonging to a Customer within a tenant. plate is unique per
+// tenant among active cars (see migration 0003). Optional fields are plain
+// values (empty string / 0 = unknown); ArchivedAt is the soft-delete marker.
+type Car struct {
+	ID         string
+	TenantID   string
+	CustomerID string
+	Plate      string
+	VIN        string
+	Make       string
+	Model      string
+	Year       int
+	Mileage    int
 	ArchivedAt *time.Time
 	CreatedAt  time.Time
 	UpdatedAt  time.Time

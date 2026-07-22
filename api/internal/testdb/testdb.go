@@ -85,7 +85,7 @@ func (d *DB) Cleanup(t *testing.T) {
 	defer db.Close()
 
 	_, err = db.ExecContext(ctx, `
-		TRUNCATE audit_log, password_reset_tokens, sessions, customers, users, tenants RESTART IDENTITY CASCADE;
+		TRUNCATE audit_log, password_reset_tokens, sessions, cars, customers, users, tenants RESTART IDENTITY CASCADE;
 	`)
 	if err != nil {
 		t.Fatalf("truncate tables: %v", err)

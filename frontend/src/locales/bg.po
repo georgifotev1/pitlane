@@ -13,6 +13,7 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#: src/components/cars/CarsSection.tsx
 #: src/routes/_authed/customers/index.tsx
 msgid "Actions"
 msgstr "Действия"
@@ -30,21 +31,29 @@ msgstr "Вече имате акаунт?"
 msgid "API unreachable:"
 msgstr "API е недостъпно:"
 
+#: src/components/cars/ArchiveCarDialog.tsx
+#: src/components/cars/CarsSection.tsx
 #: src/components/customers/ArchiveCustomerDialog.tsx
 #: src/routes/_authed/customers/$customerId.tsx
 #: src/routes/_authed/customers/index.tsx
 msgid "Archive"
 msgstr "Архивиране"
 
+#: src/components/cars/ArchiveCarDialog.tsx
+msgid "Archive car"
+msgstr "Архивиране на автомобил"
+
 #: src/components/customers/ArchiveCustomerDialog.tsx
 msgid "Archive customer"
 msgstr "Архивиране на клиент"
 
+#: src/components/cars/CarsSection.tsx
 #: src/routes/_authed/customers/$customerId.tsx
 #: src/routes/_authed/customers/index.tsx
 msgid "Archived"
 msgstr "Архивиран"
 
+#: src/components/cars/ArchiveCarDialog.tsx
 #: src/components/customers/ArchiveCustomerDialog.tsx
 msgid "Archiving…"
 msgstr "Архивиране…"
@@ -53,10 +62,16 @@ msgstr "Архивиране…"
 msgid "Back to customers"
 msgstr "Обратно към клиентите"
 
+#: src/components/cars/ArchiveCarDialog.tsx
+#: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/ArchiveCustomerDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
 msgid "Cancel"
 msgstr "Отказ"
+
+#: src/components/cars/CarsSection.tsx
+msgid "Cars"
+msgstr "Автомобили"
 
 #: src/routes/index.tsx
 msgid "Checking the API…"
@@ -72,9 +87,14 @@ msgstr "Фирма"
 msgid "Contact and notes for this customer."
 msgstr "Контакти и бележки за този клиент."
 
+#: src/components/cars/ArchiveCarDialog.tsx
 #: src/components/customers/ArchiveCustomerDialog.tsx
 msgid "Could not archive. Please try again."
 msgstr "Архивирането е неуспешно. Опитайте отново."
+
+#: src/components/cars/CarsSection.tsx
+msgid "Could not load cars."
+msgstr "Автомобилите не могат да бъдат заредени."
 
 #: src/routes/_authed/customers/index.tsx
 msgid "Could not load customers."
@@ -106,10 +126,15 @@ msgstr "Клиенти"
 msgid "Dashboard"
 msgstr "Табло"
 
+#: src/components/cars/CarsSection.tsx
 #: src/routes/_authed/customers/$customerId.tsx
 #: src/routes/_authed/customers/index.tsx
 msgid "Edit"
 msgstr "Редактиране"
+
+#: src/components/cars/CarFormDialog.tsx
+msgid "Edit car"
+msgstr "Редактиране на автомобил"
 
 #: src/components/customers/CustomerFormDialog.tsx
 msgid "Edit customer"
@@ -127,12 +152,28 @@ msgstr "Имейл"
 msgid "Garage name"
 msgstr "Име на гаража"
 
+#: src/components/cars/CarsSection.tsx
 #: src/routes/_authed.tsx
 #: src/routes/_authed/customers/$customerId.tsx
 #: src/routes/_authed/customers/index.tsx
 #: src/routes/_authed/dashboard.tsx
 msgid "Loading…"
 msgstr "Зареждане…"
+
+#: src/components/cars/CarFormDialog.tsx
+#: src/components/cars/CarsSection.tsx
+msgid "Make"
+msgstr "Марка"
+
+#: src/components/cars/CarFormDialog.tsx
+#: src/components/cars/CarsSection.tsx
+msgid "Mileage"
+msgstr "Пробег"
+
+#: src/components/cars/CarFormDialog.tsx
+#: src/components/cars/CarsSection.tsx
+msgid "Model"
+msgstr "Модел"
 
 #: src/routes/signup.tsx
 msgid "Must be at least 8 characters."
@@ -147,6 +188,11 @@ msgstr "Име"
 msgid "Name, company, email, phone"
 msgstr "Име, фирма, имейл, телефон"
 
+#: src/components/cars/CarFormDialog.tsx
+#: src/components/cars/CarsSection.tsx
+msgid "New car"
+msgstr "Нов автомобил"
+
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/routes/_authed/customers/index.tsx
 msgid "New customer"
@@ -159,6 +205,10 @@ msgstr "Нов потребител?"
 #: src/routes/_authed/customers/index.tsx
 msgid "Next"
 msgstr "Следваща"
+
+#: src/components/cars/CarsSection.tsx
+msgid "No cars yet."
+msgstr "Все още няма автомобили."
 
 #: src/routes/_authed/customers/index.tsx
 msgid "No customers found."
@@ -192,14 +242,21 @@ msgstr "Права"
 msgid "Phone"
 msgstr "Телефон"
 
+#: src/components/cars/CarFormDialog.tsx
+#: src/components/cars/CarsSection.tsx
+msgid "Plate"
+msgstr "Регистрационен номер"
+
 #: src/routes/_authed/customers/index.tsx
 msgid "Previous"
 msgstr "Предишна"
 
+#: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
 msgid "Save"
 msgstr "Запази"
 
+#: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
 msgid "Saving…"
 msgstr "Запазване…"
@@ -212,6 +269,7 @@ msgstr "Търсене"
 msgid "Set up a garage and your owner account."
 msgstr "Създайте гараж и вашия акаунт."
 
+#: src/components/cars/CarsSection.tsx
 #: src/routes/_authed/customers/index.tsx
 msgid "Show archived"
 msgstr "Показване на архивираните"
@@ -241,16 +299,39 @@ msgstr "Влезли сте като"
 msgid "Signing in…"
 msgstr "Влизане…"
 
+#: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/routes/login.tsx
 #: src/routes/signup.tsx
 msgid "This field is required."
 msgstr "Полето е задължително."
 
+#. placeholder {0}: car.plate
+#: src/components/cars/ArchiveCarDialog.tsx
+msgid "This hides {0} from the active list and frees its plate. You can still show archived cars with the toggle."
+msgstr "Това скрива {0} от активния списък и освобождава регистрационния номер. Можете да покажете архивираните автомобили чрез превключвателя."
+
 #. placeholder {0}: customer.name
 #: src/components/customers/ArchiveCustomerDialog.tsx
 msgid "This hides {0} from the active list. You can still view archived customers with the filter."
 msgstr "Това скрива {0} от активния списък. Можете да видите архивираните клиенти чрез филтъра."
+
+#: src/components/cars/CarFormDialog.tsx
+msgid "Vehicle details and mileage."
+msgstr "Данни за автомобила и пробег."
+
+#: src/components/cars/CarsSection.tsx
+msgid "Vehicles for this customer."
+msgstr "Автомобили на този клиент."
+
+#: src/components/cars/CarFormDialog.tsx
+msgid "VIN"
+msgstr "VIN"
+
+#: src/components/cars/CarFormDialog.tsx
+#: src/components/cars/CarsSection.tsx
+msgid "Year"
+msgstr "Година"
 
 #: src/routes/signup.tsx
 msgid "Your name"

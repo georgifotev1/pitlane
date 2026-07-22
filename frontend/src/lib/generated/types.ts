@@ -90,3 +90,50 @@ export interface UpdateCustomerRequest {
   address: string;
   notes: string;
 }
+/**
+ * CarResponse is a car as seen by the client. It belongs to a customer
+ * (CustomerID); ArchivedAt is null for active cars. year/mileage are 0 when
+ * unknown (tygo maps them to number).
+ */
+export interface CarResponse {
+  id: string;
+  customerId: string;
+  plate: string;
+  vin: string;
+  make: string;
+  model: string;
+  year: number /* int */;
+  mileage: number /* int */;
+  archivedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+/**
+ * CarListResponse is the full body of the list endpoint (both keys read by the
+ * client), mirroring CustomerListResponse.
+ */
+export interface CarListResponse {
+  cars: CarResponse[];
+  metadata: ListMetadata;
+}
+/**
+ * CreateCarRequest / UpdateCarRequest stay distinct types even though they share
+ * a shape today (matching the customer pattern). CustomerID is not in the body:
+ * on create it comes from the nested route path; it is immutable on update.
+ */
+export interface CreateCarRequest {
+  plate: string;
+  vin: string;
+  make: string;
+  model: string;
+  year: number /* int */;
+  mileage: number /* int */;
+}
+export interface UpdateCarRequest {
+  plate: string;
+  vin: string;
+  make: string;
+  model: string;
+  year: number /* int */;
+  mileage: number /* int */;
+}

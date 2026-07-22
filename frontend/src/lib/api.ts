@@ -1,4 +1,7 @@
 import type {
+  CarListResponse,
+  CarResponse,
+  CreateCarRequest,
   CreateCustomerRequest,
   CustomerListResponse,
   CustomerResponse,
@@ -6,6 +9,7 @@ import type {
   LoginRequest,
   SignupRequest,
   SignupResponse,
+  UpdateCarRequest,
   UpdateCustomerRequest,
   UserResponse,
 } from "@/lib/generated/types"
@@ -113,6 +117,24 @@ function customerListPath(q: CustomerListQuery): string {
   return `/customers?${params.toString()}`
 }
 
+// Cars reuse the same list-query shape as customers; list/create are nested
+// under a customer, so those take the customerId as their first argument.
+export type CarListQuery = {
+  page: number
+  pageSize: number
+  search: string
+  archived: boolean
+}
+
+function carListPath(customerId: string, q: CarListQuery): string {
+  const params = new URLSearchParams()
+  params.set("page", String(q.page))
+  params.set("pageSize", String(q.pageSize))
+  if (q.search) params.set("search", q.search)
+  if (q.archived) params.set("archived", "true")
+  return `/customers/${customerId}/cars?${params.toString()}`
+}
+
 export const api = {
   health: () => request<HealthResponse>("/healthz", "health"),
   signup: (data: SignupRequest) =>
@@ -148,5 +170,25 @@ export const api = {
       }),
     archive: (id: string) =>
       request<void>(`/customers/${id}/archive`, "", { method: "POST" }),
+  },
+
+  cars: {
+    list: (customerId: string, q: CarListQuery) =>
+      requestBody<CarListResponse>(carListPath(customerId, q)),
+    get: (id: string) => request<CarResponse>(`/cars/${id}`, "car"),
+    create: (customerId: string, data: CreateCarRequest) =>
+      request<CarResponse>(`/customers/${customerId}/cars`, "car", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: UpdateCarRequest) =>
+      request<CarResponse>(`/cars/${id}`, "car", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    archive: (id: string) =>
+      request<void>(`/cars/${id}/archive`, "", { method: "POST" }),
   },
 }
