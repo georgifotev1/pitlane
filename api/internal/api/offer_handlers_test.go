@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -105,6 +106,44 @@ func (tc *tenantClient) setOfferStatus(t *testing.T, id, status string) (*http.R
 		t.Fatalf("set status decode: %v", err)
 	}
 	return res, &env.Offer
+}
+
+func (tc *tenantClient) sendOffer(t *testing.T, id, recipient string) (*http.Response, *dto.OfferResponse) {
+	t.Helper()
+	body, _ := json.Marshal(dto.SendOfferRequest{Recipient: recipient})
+	res, err := tc.client.Post(
+		tc.api.server.URL+"/api/v1/offers/"+id+"/send",
+		"application/json", bytes.NewReader(body),
+	)
+	if err != nil {
+		t.Fatalf("send offer: %v", err)
+	}
+	raw, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	res.Body = io.NopCloser(bytes.NewReader(raw))
+	if res.StatusCode != http.StatusOK {
+		return res, nil
+	}
+	var env struct {
+		Offer dto.OfferResponse `json:"offer"`
+	}
+	if err := json.Unmarshal(raw, &env); err != nil {
+		t.Fatalf("send offer decode: %v", err)
+	}
+	return res, &env.Offer
+}
+
+// countSendJobs reads the River queue directly (the test pool connects as the
+// app role, which has SELECT on river_job) to prove the send endpoint enqueued
+// a job. The job is never worked here — that is internal/jobs' remit.
+func countSendJobs(t *testing.T, api *testAPI) int {
+	t.Helper()
+	var n int
+	if err := api.tdb.Pool.QueryRow(context.Background(),
+		`SELECT count(*) FROM river_job WHERE kind = $1`, "send_offer_email").Scan(&n); err != nil {
+		t.Fatalf("count send jobs: %v", err)
+	}
+	return n
 }
 
 func (tc *tenantClient) listOffers(t *testing.T, carID, query string) (*http.Response, *dto.OfferListResponse) {
@@ -228,10 +267,10 @@ func TestOfferCRUD(t *testing.T) {
 		}
 	})
 
-	t.Run("status draft→sent, then post-send edit is 409, offer untouched", func(t *testing.T) {
+	t.Run("send freezes the offer, then post-send edit is 409, offer untouched", func(t *testing.T) {
 		_, o := tc.createOffer(t, car.ID, twoItemOffer())
 
-		sres, sent := tc.setOfferStatus(t, o.ID, "sent")
+		sres, sent := tc.sendOffer(t, o.ID, "customer@example.com")
 		if sres.StatusCode != http.StatusOK {
 			t.Fatalf("send: status %d", sres.StatusCode)
 		}
@@ -274,9 +313,9 @@ func TestOfferCRUD(t *testing.T) {
 		}
 	})
 
-	t.Run("full lifecycle draft→sent→accepted", func(t *testing.T) {
+	t.Run("full lifecycle: send→accepted", func(t *testing.T) {
 		_, o := tc.createOffer(t, car.ID, twoItemOffer())
-		if res, _ := tc.setOfferStatus(t, o.ID, "sent"); res.StatusCode != http.StatusOK {
+		if res, _ := tc.sendOffer(t, o.ID, "customer@example.com"); res.StatusCode != http.StatusOK {
 			t.Fatalf("send: %d", res.StatusCode)
 		}
 		res, accepted := tc.setOfferStatus(t, o.ID, "accepted")
@@ -318,6 +357,82 @@ func TestOfferCRUD(t *testing.T) {
 		res.Body.Close()
 		if res.StatusCode != http.StatusUnauthorized {
 			t.Fatalf("status: got %d, want 401", res.StatusCode)
+		}
+	})
+}
+
+func TestOfferSend(t *testing.T) {
+	api := newTestAPI(t)
+	tc, _ := api.signup(t, "Гараж", "Owner", "owner@example.com", "password-123")
+	_, customer := tc.createCustomer(t, dto.CreateCustomerRequest{Name: "Иван", Email: "ivan@example.com"})
+	_, car := tc.createCar(t, customer.ID, dto.CreateCarRequest{Plate: "CB1234AB"})
+
+	t.Run("send a draft: 200 sent+pending+sentTo, exactly one job enqueued", func(t *testing.T) {
+		_, o := tc.createOffer(t, car.ID, twoItemOffer())
+		before := countSendJobs(t, api)
+
+		res, sent := tc.sendOffer(t, o.ID, "ivan@example.com")
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("send: status %d", res.StatusCode)
+		}
+		if sent.Status != "sent" || sent.SendStatus != "pending" || sent.SentTo != "ivan@example.com" {
+			t.Fatalf("wrong state after send: %+v", sent)
+		}
+		// Transactional enqueue: the state change committed with a job row.
+		if got := countSendJobs(t, api); got != before+1 {
+			t.Fatalf("expected one new send job, count went %d → %d", before, got)
+		}
+	})
+
+	t.Run("invalid recipient is 422 recipient=invalid_email, no job", func(t *testing.T) {
+		_, o := tc.createOffer(t, car.ID, twoItemOffer())
+		before := countSendJobs(t, api)
+		res, _ := tc.sendOffer(t, o.ID, "not-an-email")
+		if res.StatusCode != http.StatusUnprocessableEntity {
+			t.Fatalf("status: got %d, want 422", res.StatusCode)
+		}
+		if errs := problemErrors(t, res); errs["recipient"] != "invalid_email" {
+			t.Fatalf("expected recipient=invalid_email, got %+v", errs)
+		}
+		if got := countSendJobs(t, api); got != before {
+			t.Fatalf("a rejected send must not enqueue: %d → %d", before, got)
+		}
+	})
+
+	t.Run("re-sending a pending offer is 409", func(t *testing.T) {
+		_, o := tc.createOffer(t, car.ID, twoItemOffer())
+		if res, _ := tc.sendOffer(t, o.ID, "ivan@example.com"); res.StatusCode != http.StatusOK {
+			t.Fatalf("first send: %d", res.StatusCode)
+		}
+		res, _ := tc.sendOffer(t, o.ID, "ivan@example.com")
+		if res.StatusCode != http.StatusConflict {
+			t.Fatalf("re-send while pending: got %d, want 409", res.StatusCode)
+		}
+	})
+
+	t.Run("post-send edit is 409 (freeze-on-send)", func(t *testing.T) {
+		_, o := tc.createOffer(t, car.ID, twoItemOffer())
+		if res, _ := tc.sendOffer(t, o.ID, "ivan@example.com"); res.StatusCode != http.StatusOK {
+			t.Fatalf("send: %d", res.StatusCode)
+		}
+		res, _ := tc.updateOffer(t, o.ID, dto.UpdateOfferRequest{TaxRateBps: 1900, Items: twoItemOffer().Items})
+		if res.StatusCode != http.StatusConflict {
+			t.Fatalf("post-send edit: got %d, want 409", res.StatusCode)
+		}
+	})
+
+	t.Run("the status endpoint can no longer send (draft→sent is 409)", func(t *testing.T) {
+		_, o := tc.createOffer(t, car.ID, twoItemOffer())
+		res, _ := tc.setOfferStatus(t, o.ID, "sent")
+		if res.StatusCode != http.StatusConflict {
+			t.Fatalf("status draft→sent: got %d, want 409", res.StatusCode)
+		}
+	})
+
+	t.Run("send unknown offer is 404", func(t *testing.T) {
+		res, _ := tc.sendOffer(t, "00000000-0000-0000-0000-000000000000", "ivan@example.com")
+		if res.StatusCode != http.StatusNotFound {
+			t.Fatalf("status: got %d, want 404", res.StatusCode)
 		}
 	})
 }
@@ -372,9 +487,16 @@ func TestOfferTenantIsolation(t *testing.T) {
 	})
 
 	t.Run("B cannot change A's offer status", func(t *testing.T) {
-		res, _ := tcB.setOfferStatus(t, offerA.ID, "sent")
+		res, _ := tcB.setOfferStatus(t, offerA.ID, "accepted")
 		if res.StatusCode != http.StatusNotFound {
 			t.Fatalf("cross-tenant status: status %d, want 404", res.StatusCode)
+		}
+	})
+
+	t.Run("B cannot send A's offer", func(t *testing.T) {
+		res, _ := tcB.sendOffer(t, offerA.ID, "b@example.com")
+		if res.StatusCode != http.StatusNotFound {
+			t.Fatalf("cross-tenant send: status %d, want 404", res.StatusCode)
 		}
 	})
 

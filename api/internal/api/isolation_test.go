@@ -16,6 +16,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/gfotev/pitlane/internal/api/dto"
 	"github.com/gfotev/pitlane/internal/config"
+	"github.com/gfotev/pitlane/internal/jobs"
 	"github.com/gfotev/pitlane/internal/pdf"
 	"github.com/gfotev/pitlane/internal/store"
 	"github.com/gfotev/pitlane/internal/testdb"
@@ -57,17 +58,26 @@ func newTestAPI(t *testing.T) *testAPI {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
 	db := store.NewDB(tdb.Pool)
+	// An insert-only River client (never Started) backs the enqueuer, so
+	// POST /offers/{id}/send exercises the real transactional insert into
+	// river_job. Jobs are not worked in handler tests — they assert the row
+	// lands; the worker itself is tested in internal/jobs.
+	riverClient, err := jobs.NewInsertOnlyClient(tdb.Pool)
+	if err != nil {
+		t.Fatalf("river insert-only client: %v", err)
+	}
 	server, err := NewServer(ServerDeps{
-		Logger:    logger,
-		Cfg:       cfg,
-		Session:   sessionManager,
-		Tenants:   store.NewTenantStore(db),
-		Users:     store.NewUserStore(db),
-		Customers: store.NewCustomerStore(db),
-		Cars:      store.NewCarStore(db),
-		Offers:    store.NewOfferStore(db),
-		Audit:     store.NewAuditLogStore(db),
-		PDF:       pdf.NewRenderer(),
+		Logger:       logger,
+		Cfg:          cfg,
+		Session:      sessionManager,
+		Tenants:      store.NewTenantStore(db),
+		Users:        store.NewUserStore(db),
+		Customers:    store.NewCustomerStore(db),
+		Cars:         store.NewCarStore(db),
+		Offers:       store.NewOfferStore(db),
+		Audit:        store.NewAuditLogStore(db),
+		PDF:          pdf.NewRenderer(),
+		SendEnqueuer: jobs.NewOfferEmailEnqueuer(riverClient),
 	})
 	if err != nil {
 		t.Fatalf("new server: %v", err)

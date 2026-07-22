@@ -201,7 +201,15 @@ type UpdateOfferRequest struct {
 	Items      []OfferItemRequest `json:"items"`
 }
 
-// UpdateOfferStatusRequest advances an offer's lifecycle status.
+// UpdateOfferStatusRequest advances an offer's lifecycle status (the post-send
+// transitions: accepted | rejected | expired). Sending is a separate endpoint.
 type UpdateOfferStatusRequest struct {
 	Status string `json:"status"`
+}
+
+// SendOfferRequest emails a draft offer to a customer (or retries a failed
+// send). The recipient is prefilled from the customer on the client but is
+// editable, so it travels in the body and is validated as an email address.
+type SendOfferRequest struct {
+	Recipient string `json:"recipient"`
 }

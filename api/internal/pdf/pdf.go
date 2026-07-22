@@ -249,12 +249,21 @@ func formatCents(cents int64) string {
 	return s
 }
 
-// money appends the tenant currency to a formatted amount. BGN is shown with
-// the Bulgarian "лв." suffix; any other currency uses its code.
+// FormatMoney renders integer cents with the tenant currency in bg-BG style
+// ("1 234,56 €"). Exported so other server-side documents that must match the
+// PDF exactly — notably the offer email (Phase 7) — format money identically,
+// with no second implementation to drift.
+func FormatMoney(cents int64, currency string) string {
+	return money(cents, currency)
+}
+
+// money appends the tenant currency symbol to a formatted amount. Bulgaria
+// adopted the euro on 2026-01-01, so an unset or euro currency renders with the
+// "€" sign; any other ISO code is shown verbatim.
 func money(cents int64, currency string) string {
 	suffix := currency
-	if currency == "" || currency == "BGN" {
-		suffix = "лв."
+	if currency == "" || currency == "EUR" {
+		suffix = "€"
 	}
 	return formatCents(cents) + " " + suffix
 }
@@ -277,6 +286,12 @@ func kindLabel(k domain.OfferItemKind) string {
 	default:
 		return "Друго"
 	}
+}
+
+// ShortID is the compact human-facing offer number (first UUID segment) printed
+// on the PDF. Exported so the offer email cites the same number as the document.
+func ShortID(id string) string {
+	return shortID(id)
 }
 
 // shortID returns the first segment of a UUID for a compact human-facing

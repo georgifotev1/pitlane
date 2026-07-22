@@ -2,12 +2,27 @@ package store
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/gfotev/pitlane/internal/domain"
 	"github.com/gfotev/pitlane/internal/testdb"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
+
+// fakeEnqueuer stands in for the real River enqueuer in store tests. It counts
+// calls and can be told to fail, which lets MarkSending's transactional-enqueue
+// contract be exercised without a River client.
+type fakeEnqueuer struct {
+	calls   int
+	failErr error
+}
+
+func (f *fakeEnqueuer) EnqueueOfferEmail(_ context.Context, _ pgx.Tx, _, _ string) error {
+	f.calls++
+	return f.failErr
+}
 
 func newOffer(tenantID, carID string) *domain.Offer {
 	return &domain.Offer{
@@ -148,8 +163,14 @@ func TestOfferStore(t *testing.T) {
 		if _, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusAccepted); err != ErrInvalidStatusTransition {
 			t.Fatalf("expected ErrInvalidStatusTransition, got %v", err)
 		}
+		// draft → sent is NOT a status-machine move: sending is the only path
+		// to sent (MarkSending), so SetStatus rejects it too.
+		if _, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusSent); err != ErrInvalidStatusTransition {
+			t.Fatalf("expected ErrInvalidStatusTransition for draft→sent, got %v", err)
+		}
 
-		sent, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusSent)
+		// Reach sent through the send path, then the post-send machine applies.
+		sent, err := offers.MarkSending(ctx, tenant.ID, o.ID, "customer@example.com", &fakeEnqueuer{})
 		if err != nil {
 			t.Fatalf("send: %v", err)
 		}
@@ -157,7 +178,7 @@ func TestOfferStore(t *testing.T) {
 			t.Fatalf("status not sent: %s", sent.Status)
 		}
 		if len(sent.Items) != 2 {
-			t.Fatalf("SetStatus should return items, got %d", len(sent.Items))
+			t.Fatalf("MarkSending should return items, got %d", len(sent.Items))
 		}
 
 		accepted, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusAccepted)
@@ -185,7 +206,7 @@ func TestOfferStore(t *testing.T) {
 		if err := offers.Create(ctx, o); err != nil {
 			t.Fatalf("create: %v", err)
 		}
-		if _, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusSent); err != nil {
+		if _, err := offers.MarkSending(ctx, tenant.ID, o.ID, "customer@example.com", &fakeEnqueuer{}); err != nil {
 			t.Fatalf("send: %v", err)
 		}
 
@@ -266,8 +287,114 @@ func TestOfferStore(t *testing.T) {
 		if err := offers2.Update(ctx2, &poison); err != ErrNotFound {
 			t.Fatalf("cross-tenant Update: expected ErrNotFound, got %v", err)
 		}
-		if _, err := offers2.SetStatus(ctx2, other, mine.ID, domain.OfferStatusSent); err != ErrNotFound {
+		if _, err := offers2.SetStatus(ctx2, other, mine.ID, domain.OfferStatusAccepted); err != ErrNotFound {
 			t.Fatalf("cross-tenant SetStatus: expected ErrNotFound, got %v", err)
+		}
+		if _, err := offers2.MarkSending(ctx2, other, mine.ID, "x@example.com", &fakeEnqueuer{}); err != ErrNotFound {
+			t.Fatalf("cross-tenant MarkSending: expected ErrNotFound, got %v", err)
+		}
+	})
+
+	t.Run("MarkSending sends a draft, enqueues once, then blocks a second send", func(t *testing.T) {
+		o := newOffer(tenant.ID, car.ID)
+		if err := offers.Create(ctx, o); err != nil {
+			t.Fatalf("create: %v", err)
+		}
+		enq := &fakeEnqueuer{}
+		sent, err := offers.MarkSending(ctx, tenant.ID, o.ID, "customer@example.com", enq)
+		if err != nil {
+			t.Fatalf("send: %v", err)
+		}
+		if sent.Status != domain.OfferStatusSent || sent.SendStatus != domain.SendStatusPending {
+			t.Fatalf("wrong state after send: status=%s send=%s", sent.Status, sent.SendStatus)
+		}
+		if sent.SentTo != "customer@example.com" {
+			t.Fatalf("sent_to not recorded: %q", sent.SentTo)
+		}
+		if enq.calls != 1 {
+			t.Fatalf("expected exactly one enqueue, got %d", enq.calls)
+		}
+		// A second send while pending is not allowed (only failed retries are).
+		if _, err := offers.MarkSending(ctx, tenant.ID, o.ID, "customer@example.com", enq); err != ErrOfferNotSendable {
+			t.Fatalf("expected ErrOfferNotSendable on re-send, got %v", err)
+		}
+	})
+
+	t.Run("MarkSending rolls back the state change when enqueue fails", func(t *testing.T) {
+		o := newOffer(tenant.ID, car.ID)
+		if err := offers.Create(ctx, o); err != nil {
+			t.Fatalf("create: %v", err)
+		}
+		boom := errors.New("enqueue boom")
+		if _, err := offers.MarkSending(ctx, tenant.ID, o.ID, "customer@example.com", &fakeEnqueuer{failErr: boom}); !errors.Is(err, boom) {
+			t.Fatalf("expected enqueue error, got %v", err)
+		}
+		// The offer must be untouched — no half-sent state (transactional enqueue).
+		got, err := offers.Get(ctx, tenant.ID, o.ID)
+		if err != nil {
+			t.Fatalf("get: %v", err)
+		}
+		if got.Status != domain.OfferStatusDraft || got.SendStatus != domain.SendStatusPending || got.SentTo != "" {
+			t.Fatalf("state leaked past a failed enqueue: %+v", got)
+		}
+	})
+
+	t.Run("MarkSent then a failed retry then MarkSent again", func(t *testing.T) {
+		o := newOffer(tenant.ID, car.ID)
+		if err := offers.Create(ctx, o); err != nil {
+			t.Fatalf("create: %v", err)
+		}
+		if _, err := offers.MarkSending(ctx, tenant.ID, o.ID, "customer@example.com", &fakeEnqueuer{}); err != nil {
+			t.Fatalf("send: %v", err)
+		}
+		if err := offers.MarkSent(ctx, tenant.ID, o.ID); err != nil {
+			t.Fatalf("mark sent: %v", err)
+		}
+		got, err := offers.Get(ctx, tenant.ID, o.ID)
+		if err != nil {
+			t.Fatalf("get: %v", err)
+		}
+		if got.SendStatus != domain.SendStatusSent || got.SentAt == nil {
+			t.Fatalf("not marked sent: send=%s sentAt=%v", got.SendStatus, got.SentAt)
+		}
+
+		// A delivered offer cannot be re-sent (only failed sends can retry).
+		if _, err := offers.MarkSending(ctx, tenant.ID, o.ID, "customer@example.com", &fakeEnqueuer{}); err != ErrOfferNotSendable {
+			t.Fatalf("expected ErrOfferNotSendable for delivered offer, got %v", err)
+		}
+	})
+
+	t.Run("MarkSendFailed enables a retry that re-enqueues", func(t *testing.T) {
+		o := newOffer(tenant.ID, car.ID)
+		if err := offers.Create(ctx, o); err != nil {
+			t.Fatalf("create: %v", err)
+		}
+		if _, err := offers.MarkSending(ctx, tenant.ID, o.ID, "customer@example.com", &fakeEnqueuer{}); err != nil {
+			t.Fatalf("send: %v", err)
+		}
+		if err := offers.MarkSendFailed(ctx, tenant.ID, o.ID); err != nil {
+			t.Fatalf("mark failed: %v", err)
+		}
+
+		enq := &fakeEnqueuer{}
+		retried, err := offers.MarkSending(ctx, tenant.ID, o.ID, "other@example.com", enq)
+		if err != nil {
+			t.Fatalf("retry: %v", err)
+		}
+		if retried.SendStatus != domain.SendStatusPending || retried.SentTo != "other@example.com" {
+			t.Fatalf("retry did not reset send state: %+v", retried)
+		}
+		if enq.calls != 1 {
+			t.Fatalf("retry should enqueue once, got %d", enq.calls)
+		}
+	})
+
+	t.Run("MarkSent/MarkSendFailed on unknown id return ErrNotFound", func(t *testing.T) {
+		if err := offers.MarkSent(ctx, tenant.ID, uuid.NewString()); err != ErrNotFound {
+			t.Fatalf("MarkSent: expected ErrNotFound, got %v", err)
+		}
+		if err := offers.MarkSendFailed(ctx, tenant.ID, uuid.NewString()); err != ErrNotFound {
+			t.Fatalf("MarkSendFailed: expected ErrNotFound, got %v", err)
 		}
 	})
 }

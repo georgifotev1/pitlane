@@ -210,8 +210,17 @@ export interface UpdateOfferRequest {
   items: OfferItemRequest[];
 }
 /**
- * UpdateOfferStatusRequest advances an offer's lifecycle status.
+ * UpdateOfferStatusRequest advances an offer's lifecycle status (the post-send
+ * transitions: accepted | rejected | expired). Sending is a separate endpoint.
  */
 export interface UpdateOfferStatusRequest {
   status: string;
+}
+/**
+ * SendOfferRequest emails a draft offer to a customer (or retries a failed
+ * send). The recipient is prefilled from the customer on the client but is
+ * editable, so it travels in the body and is validated as an email address.
+ */
+export interface SendOfferRequest {
+  recipient: string;
 }

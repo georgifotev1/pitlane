@@ -29,6 +29,15 @@ function CarDetail() {
     retry: false,
   })
 
+  // The car's customer supplies the default send-to email for offers. Dependent
+  // on the car load (needs customerId); a miss just leaves the field empty.
+  const customerId = query.data?.customerId
+  const customerQuery = useQuery({
+    queryKey: queryKeys.customers.detail(customerId ?? ""),
+    queryFn: () => api.customers.get(customerId!),
+    enabled: !!customerId,
+  })
+
   if (query.isPending) {
     return (
       <p className="p-6 text-sm text-muted-foreground">
@@ -89,7 +98,7 @@ function CarDetail() {
         </div>
       </dl>
 
-      <OffersSection carId={car.id} />
+      <OffersSection carId={car.id} defaultRecipient={customerQuery.data?.email ?? ""} />
     </main>
   )
 }

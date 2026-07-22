@@ -17,7 +17,7 @@ func sampleData() OfferData {
 			Name:      "Автосервиз Пъклен",
 			Address:   "ул. Витоша 15, София",
 			VATNumber: "BG123456789",
-			Currency:  "BGN",
+			Currency:  "EUR",
 		},
 		Customer: &domain.Customer{
 			Name:    "Иван Петров",
@@ -77,7 +77,7 @@ func TestRenderOffer(t *testing.T) {
 func TestRenderOfferMinimal(t *testing.T) {
 	r := NewRenderer()
 	d := OfferData{
-		Tenant:   &domain.Tenant{Name: "Гараж", Currency: "BGN"},
+		Tenant:   &domain.Tenant{Name: "Гараж", Currency: "EUR"},
 		Customer: &domain.Customer{Name: "Клиент"},
 		Car:      &domain.Car{Plate: "X1"},
 		Offer: &domain.Offer{
@@ -116,6 +116,25 @@ func TestFormatCents(t *testing.T) {
 	for _, c := range cases {
 		if got := formatCents(c.in); got != c.want {
 			t.Errorf("formatCents(%d) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
+func TestMoney(t *testing.T) {
+	cases := []struct {
+		cents    int64
+		currency string
+		want     string
+	}{
+		// Bulgaria is on the euro: EUR and an unset currency both render "€".
+		{15000, "EUR", "150,00 €"},
+		{123456, "", "1 234,56 €"},
+		// A foreign currency keeps its ISO code; the lev is gone entirely.
+		{15000, "USD", "150,00 USD"},
+	}
+	for _, c := range cases {
+		if got := money(c.cents, c.currency); got != c.want {
+			t.Errorf("money(%d, %q) = %q, want %q", c.cents, c.currency, got, c.want)
 		}
 	}
 }

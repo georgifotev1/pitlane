@@ -72,7 +72,6 @@ func TestOfferRecomputeEmpty(t *testing.T) {
 
 func TestOfferStatusTransitions(t *testing.T) {
 	allow := []struct{ from, to OfferStatus }{
-		{OfferStatusDraft, OfferStatusSent},
 		{OfferStatusSent, OfferStatusAccepted},
 		{OfferStatusSent, OfferStatusRejected},
 		{OfferStatusSent, OfferStatusExpired},
@@ -84,6 +83,9 @@ func TestOfferStatusTransitions(t *testing.T) {
 	}
 
 	deny := []struct{ from, to OfferStatus }{
+		// draft → sent is NOT a status-machine move: sending is the only path to
+		// sent (POST /offers/{id}/send), so SetStatus must reject it.
+		{OfferStatusDraft, OfferStatusSent},
 		{OfferStatusDraft, OfferStatusAccepted}, // must be sent first
 		{OfferStatusDraft, OfferStatusDraft},    // no-op is not a transition
 		{OfferStatusSent, OfferStatusDraft},     // cannot un-send

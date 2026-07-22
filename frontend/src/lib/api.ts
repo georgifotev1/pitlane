@@ -232,12 +232,22 @@ export const api = {
     // disposition; omit it for a download.
     pdfUrl: (id: string, opts?: { inline?: boolean }) =>
       `${BASE}/offers/${id}/pdf${opts?.inline ? "?disposition=inline" : ""}`,
-    // status is the lifecycle transition endpoint (draft→sent→accepted|…).
+    // status is the post-send lifecycle endpoint (accepted|rejected|expired).
+    // It cannot send — that is a separate, email-backed action below.
     setStatus: (id: string, status: string) =>
       request<OfferResponse>(`/offers/${id}/status`, "offer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
+      }),
+    // send emails the offer PDF to the recipient (freeze-on-send). It is also
+    // the retry path for a failed delivery. Returns the offer with its updated
+    // sendStatus so the UI reflects the pending state immediately.
+    send: (id: string, recipient: string) =>
+      request<OfferResponse>(`/offers/${id}/send`, "offer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipient }),
       }),
   },
 }

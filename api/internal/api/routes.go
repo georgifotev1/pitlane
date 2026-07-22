@@ -21,9 +21,10 @@ type Server struct {
 	users     *store.UserStore
 	customers *store.CustomerStore
 	cars      *store.CarStore
-	offers    *store.OfferStore
-	audit     *store.AuditLogStore
-	pdf       offerRenderer
+	offers       *store.OfferStore
+	audit        *store.AuditLogStore
+	pdf          offerRenderer
+	sendEnqueuer offerEmailEnqueuer
 }
 
 // ServerDeps bundles the runtime dependencies the HTTP layer needs.
@@ -35,9 +36,10 @@ type ServerDeps struct {
 	Users     *store.UserStore
 	Customers *store.CustomerStore
 	Cars      *store.CarStore
-	Offers    *store.OfferStore
-	Audit     *store.AuditLogStore
-	PDF       offerRenderer
+	Offers       *store.OfferStore
+	Audit        *store.AuditLogStore
+	PDF          offerRenderer
+	SendEnqueuer offerEmailEnqueuer
 }
 
 func NewServer(deps ServerDeps) (*Server, error) {
@@ -55,9 +57,10 @@ func NewServer(deps ServerDeps) (*Server, error) {
 		users:     deps.Users,
 		customers: deps.Customers,
 		cars:      deps.Cars,
-		offers:    deps.Offers,
-		audit:     deps.Audit,
-		pdf:       deps.PDF,
+		offers:       deps.Offers,
+		audit:        deps.Audit,
+		pdf:          deps.PDF,
+		sendEnqueuer: deps.SendEnqueuer,
 	}, nil
 }
 
@@ -103,6 +106,9 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/offers/{id}", s.protected(domain.PermissionOffersRead, s.getOffer))
 	mux.Handle("PUT /api/v1/offers/{id}", s.protected(domain.PermissionOffersWrite, s.updateOffer))
 	mux.Handle("POST /api/v1/offers/{id}/status", s.protected(domain.PermissionOffersWrite, s.updateOfferStatus))
+	// Send emails the offer PDF to the customer; it is the sole draft→sent path
+	// (freeze-on-send) and also drives retries of a failed delivery.
+	mux.Handle("POST /api/v1/offers/{id}/send", s.protected(domain.PermissionOffersWrite, s.sendOffer))
 	// PDF is a read: gated by offers:read, streamed on demand (never stored).
 	mux.Handle("GET /api/v1/offers/{id}/pdf", s.protected(domain.PermissionOffersRead, s.offerPDF))
 

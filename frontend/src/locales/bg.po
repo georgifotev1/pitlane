@@ -86,6 +86,7 @@ msgstr "Обратно към клиентите"
 #: src/components/customers/ArchiveCustomerDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/components/offers/OfferFormDialog.tsx
+#: src/components/offers/SendOfferDialog.tsx
 msgid "Cancel"
 msgstr "Отказ"
 
@@ -145,6 +146,10 @@ msgstr "Създаване…"
 msgid "Customer not found."
 msgstr "Клиентът не е намерен."
 
+#: src/components/offers/SendOfferDialog.tsx
+msgid "customer@example.com"
+msgstr "klient@primer.com"
+
 #: src/routes/_authed/customers/index.tsx
 #: src/routes/_authed/dashboard.tsx
 msgid "Customers"
@@ -196,6 +201,10 @@ msgstr "Редактиране на оферта"
 #: src/routes/signup.tsx
 msgid "Email"
 msgstr "Имейл"
+
+#: src/components/offers/OffersSection.tsx
+msgid "Emailed"
+msgstr "Изпратен имейл"
 
 #: src/components/offers/OffersSection.tsx
 msgid "Expire"
@@ -372,6 +381,10 @@ msgstr "Бр."
 msgid "Quantity"
 msgstr "Количество"
 
+#: src/components/offers/SendOfferDialog.tsx
+msgid "Recipient email"
+msgstr "Имейл на получателя"
+
 #: src/components/offers/OffersSection.tsx
 msgid "Reject"
 msgstr "Отхвърляне"
@@ -387,6 +400,14 @@ msgstr "Премахване на ред"
 #: src/components/offers/OffersSection.tsx
 msgid "Repair quotes for this car."
 msgstr "Оферти за ремонт на този автомобил."
+
+#: src/components/offers/OffersSection.tsx
+msgid "Retry"
+msgstr "Повторен опит"
+
+#: src/components/offers/SendOfferDialog.tsx
+msgid "Retry sending"
+msgstr "Повторно изпращане"
 
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
@@ -405,8 +426,22 @@ msgid "Search"
 msgstr "Търсене"
 
 #: src/components/offers/OffersSection.tsx
+#: src/components/offers/SendOfferDialog.tsx
 msgid "Send"
 msgstr "Изпращане"
+
+#: src/components/offers/OffersSection.tsx
+msgid "Send failed"
+msgstr "Неуспешно изпращане"
+
+#: src/components/offers/SendOfferDialog.tsx
+msgid "Send offer"
+msgstr "Изпращане на оферта"
+
+#: src/components/offers/OffersSection.tsx
+#: src/components/offers/SendOfferDialog.tsx
+msgid "Sending…"
+msgstr "Изпраща се…"
 
 #: src/components/offers/OffersSection.tsx
 msgid "Sent"
@@ -469,6 +504,10 @@ msgstr "Ставка ДДС (%)"
 #: src/components/offers/OffersSection.tsx
 msgid "The action could not be completed."
 msgstr "Действието не може да бъде изпълнено."
+
+#: src/components/offers/SendOfferDialog.tsx
+msgid "The offer PDF will be emailed to the customer. Once sent, the offer can no longer be edited."
+msgstr "PDF файлът с офертата ще бъде изпратен на клиента по имейл. След изпращане офертата не може да бъде редактирана."
 
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table"
 import { OfferFormDialog } from "@/components/offers/OfferFormDialog"
 import { OfferPdfDialog } from "@/components/offers/OfferPdfDialog"
+import { SendOfferDialog } from "@/components/offers/SendOfferDialog"
 
 // A car has few offers, so we fetch a generous single page and render them all
 // — no pagination UI (the API still supports it, matching CarsSection).
@@ -43,12 +44,32 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-export function OffersSection({ carId }: { carId: string }) {
+// SendStatusBadge surfaces the email-delivery lifecycle (send_status) for offers
+// that have been sent. It is meaningless on a draft, so nothing renders there.
+function SendStatusBadge({ status, sendStatus }: { status: string; sendStatus: string }) {
+  if (status === "draft") return null
+  const tone =
+    sendStatus === "sent"
+      ? "bg-primary/10 text-primary"
+      : sendStatus === "failed"
+        ? "bg-destructive/10 text-destructive"
+        : "bg-muted text-muted-foreground"
+  return (
+    <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}>
+      {sendStatus === "pending" && <Trans>Sending…</Trans>}
+      {sendStatus === "sent" && <Trans>Emailed</Trans>}
+      {sendStatus === "failed" && <Trans>Send failed</Trans>}
+    </span>
+  )
+}
+
+export function OffersSection({ carId, defaultRecipient }: { carId: string; defaultRecipient: string }) {
   const { t } = useLingui()
   const qc = useQueryClient()
   const [createOpen, setCreateOpen] = useState(false)
   const [editing, setEditing] = useState<OfferResponse | undefined>()
   const [previewing, setPreviewing] = useState<OfferResponse | undefined>()
+  const [sending, setSending] = useState<OfferResponse | undefined>()
   const [statusError, setStatusError] = useState<string>("")
 
   const listQuery = { page: 1, pageSize: PAGE_SIZE }
@@ -136,7 +157,10 @@ export function OffersSection({ carId }: { carId: string }) {
               return (
                 <TableRow key={offer.id}>
                   <TableCell>
-                    <StatusBadge status={offer.status} />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <StatusBadge status={offer.status} />
+                      <SendStatusBadge status={offer.status} sendStatus={offer.sendStatus} />
+                    </div>
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-medium">
                     {formatMoney(offer.totalCents)}
@@ -167,10 +191,7 @@ export function OffersSection({ carId }: { carId: string }) {
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={busy}
-                            onClick={() =>
-                              statusMutation.mutate({ id: offer.id, status: "sent" })
-                            }
+                            onClick={() => setSending(offer)}
                           >
                             <SendIcon />
                             <Trans>Send</Trans>
@@ -179,6 +200,16 @@ export function OffersSection({ carId }: { carId: string }) {
                       )}
                       {offer.status === "sent" && (
                         <>
+                          {offer.sendStatus === "failed" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setSending(offer)}
+                            >
+                              <SendIcon />
+                              <Trans>Retry</Trans>
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
@@ -231,6 +262,12 @@ export function OffersSection({ carId }: { carId: string }) {
         open={previewing !== undefined}
         onOpenChange={(open) => !open && setPreviewing(undefined)}
         offerId={previewing?.id}
+      />
+      <SendOfferDialog
+        open={sending !== undefined}
+        onOpenChange={(open) => !open && setSending(undefined)}
+        offer={sending}
+        defaultRecipient={defaultRecipient}
       />
     </section>
   )

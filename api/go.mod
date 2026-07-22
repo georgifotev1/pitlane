@@ -11,8 +11,10 @@ require (
 	github.com/pressly/goose/v3 v3.27.2
 	github.com/riverqueue/river v0.40.0
 	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.40.0
+	github.com/riverqueue/river/rivertype v0.40.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.43.0
-	golang.org/x/crypto v0.52.0
+	github.com/wneessen/go-mail v0.8.1
+	golang.org/x/crypto v0.54.0
 	golang.org/x/image v0.37.0
 	golang.org/x/time v0.15.0
 )
@@ -73,7 +75,6 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/riverqueue/river/riverdriver v0.40.0 // indirect
 	github.com/riverqueue/river/rivershared v0.40.0 // indirect
-	github.com/riverqueue/river/rivertype v0.40.0 // indirect
 	github.com/rogpeppe/go-internal v1.15.0 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.26.5 // indirect

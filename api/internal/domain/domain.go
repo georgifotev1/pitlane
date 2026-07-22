@@ -236,11 +236,15 @@ func TaxCents(subtotalCents int64, taxRateBps int) int64 {
 	return (subtotalCents*int64(taxRateBps) + 5000) / 10000
 }
 
-// offerTransitions is the allowed status machine: draft → sent, and sent →
-// accepted | rejected | expired. accepted/rejected/expired are terminal.
+// offerTransitions is the allowed status machine for the generic status
+// endpoint: sent → accepted | rejected | expired. accepted/rejected/expired
+// are terminal. The draft → sent transition is deliberately absent: an offer
+// only becomes `sent` by actually being emailed (POST /offers/{id}/send,
+// Phase 7), so a `sent` offer always carries a recipient and a dispatched
+// send job — the freeze-on-send ≡ emailed-PDF invariant (ADR §14) holds by
+// construction. SetStatus therefore cannot send; only the send path can.
 var offerTransitions = map[OfferStatus][]OfferStatus{
-	OfferStatusDraft: {OfferStatusSent},
-	OfferStatusSent:  {OfferStatusAccepted, OfferStatusRejected, OfferStatusExpired},
+	OfferStatusSent: {OfferStatusAccepted, OfferStatusRejected, OfferStatusExpired},
 }
 
 // CanTransitionTo reports whether an offer may move from its current status to

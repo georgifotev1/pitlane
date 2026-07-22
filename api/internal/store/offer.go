@@ -19,6 +19,21 @@ var ErrOfferNotDraft = errors.New("offer is not a draft")
 // the lifecycle machine (domain.offerTransitions). The handler maps it to a 409.
 var ErrInvalidStatusTransition = errors.New("invalid status transition")
 
+// ErrOfferNotSendable is returned when a send is attempted on an offer that is
+// neither a fresh draft (initial send) nor a previously-failed send (retry).
+// The handler maps it to a 409.
+var ErrOfferNotSendable = errors.New("offer is not in a sendable state")
+
+// OfferEmailEnqueuer enqueues the send-offer-email background job. MarkSending
+// calls it INSIDE the same transaction that flips the offer to sent, so the
+// state change and the job either both commit or both roll back — River's
+// transactional-enqueue guarantee (ADR §17). The concrete implementation lives
+// in internal/jobs; the interface lives here because the store is the consumer
+// (ADR §106: interfaces where consumed).
+type OfferEmailEnqueuer interface {
+	EnqueueOfferEmail(ctx context.Context, tx pgx.Tx, tenantID, offerID string) error
+}
+
 // OfferStore follows the CarStore pattern: column list + scan helper co-located,
 // every method runs inside WithTenant, every query filters on tenant_id. An
 // offer owns its items, so writes replace the item set wholesale inside the
@@ -228,6 +243,109 @@ func (s *OfferStore) SetStatus(ctx context.Context, tenantID, id string, next do
 		return nil
 	})
 	return offer, err
+}
+
+// MarkSending transitions an offer into the "being sent" state and enqueues its
+// email job atomically. It is the ONLY path from draft → sent: the generic
+// status machine cannot send (see domain.offerTransitions), so a sent offer is
+// always one that was actually dispatched.
+//
+// Two states are sendable:
+//   - draft: the initial send. status → sent (freezing content), send_status →
+//     pending, sent_to recorded.
+//   - sent + send_status=failed: a retry after a delivery failure. status stays
+//     sent, send_status → pending, sent_to refreshed.
+//
+// Anything else (send already pending, already delivered, or a terminal
+// lifecycle state) returns ErrOfferNotSendable. The row is locked FOR UPDATE so
+// a concurrent send/edit cannot race the gate. The enqueue runs in the same tx,
+// so a failure to enqueue rolls the state change back with it — there is never
+// a sent offer without a job. On success the reloaded offer (with items) is
+// returned.
+func (s *OfferStore) MarkSending(ctx context.Context, tenantID, id, sentTo string, enq OfferEmailEnqueuer) (*domain.Offer, error) {
+	var offer *domain.Offer
+	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
+		var status domain.OfferStatus
+		var sendStatus domain.SendStatus
+		err := tx.QueryRow(ctx,
+			`SELECT status, send_status FROM offers WHERE id = $1 AND tenant_id = $2 FOR UPDATE`,
+			id, tenantID,
+		).Scan(&status, &sendStatus)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrNotFound
+			}
+			return err
+		}
+
+		initialSend := status == domain.OfferStatusDraft
+		retry := status == domain.OfferStatusSent && sendStatus == domain.SendStatusFailed
+		if !initialSend && !retry {
+			return ErrOfferNotSendable
+		}
+
+		if _, err := tx.Exec(ctx, `
+			UPDATE offers
+			SET status = $3, send_status = $4, sent_to = $5, updated_at = now()
+			WHERE id = $1 AND tenant_id = $2
+		`, id, tenantID, string(domain.OfferStatusSent), string(domain.SendStatusPending), sentTo); err != nil {
+			return fmt.Errorf("mark offer sending: %w", err)
+		}
+
+		// Enqueue in THIS tx: if it fails, the status/send_status change above
+		// rolls back with it, so we never leave a sent offer without a job.
+		if err := enq.EnqueueOfferEmail(ctx, tx, tenantID, id); err != nil {
+			return fmt.Errorf("enqueue offer email: %w", err)
+		}
+
+		o, err := getOfferTx(ctx, tx, tenantID, id)
+		if err != nil {
+			return err
+		}
+		offer = o
+		return nil
+	})
+	return offer, err
+}
+
+// MarkSent records a successful delivery: send_status → sent, sent_at stamped.
+// Called by the SendOfferEmail worker once the SMTP server accepts the message.
+// It matches on id+tenant only (not the prior send_status) so a River re-run
+// (at-least-once delivery) simply re-stamps rather than erroring.
+func (s *OfferStore) MarkSent(ctx context.Context, tenantID, id string) error {
+	return s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
+		ct, err := tx.Exec(ctx, `
+			UPDATE offers SET send_status = $3, sent_at = now(), updated_at = now()
+			WHERE id = $1 AND tenant_id = $2
+		`, id, tenantID, string(domain.SendStatusSent))
+		if err != nil {
+			return fmt.Errorf("mark offer sent: %w", err)
+		}
+		if ct.RowsAffected() == 0 {
+			return ErrNotFound
+		}
+		return nil
+	})
+}
+
+// MarkSendFailed records a terminal delivery failure (send_status → failed),
+// surfaced in the UI as a retry affordance. The worker calls it only after
+// River has exhausted the job's retries, so it does not clobber a send that is
+// still mid-retry.
+func (s *OfferStore) MarkSendFailed(ctx context.Context, tenantID, id string) error {
+	return s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
+		ct, err := tx.Exec(ctx, `
+			UPDATE offers SET send_status = $3, updated_at = now()
+			WHERE id = $1 AND tenant_id = $2
+		`, id, tenantID, string(domain.SendStatusFailed))
+		if err != nil {
+			return fmt.Errorf("mark offer send failed: %w", err)
+		}
+		if ct.RowsAffected() == 0 {
+			return ErrNotFound
+		}
+		return nil
+	})
 }
 
 // getOfferTx loads one offer plus its items within an existing tenant tx.

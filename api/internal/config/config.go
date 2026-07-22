@@ -21,7 +21,8 @@ type Config struct {
 		Lifetime time.Duration
 	}
 
-	// TODO(phase 7): consumed by the SMTP mailer.
+	// Consumed by the SMTP mailer (Phase 7). Dev points at Mailpit
+	// (no auth, plaintext); prod at a provider like Resend (auth + STARTTLS).
 	SMTP struct {
 		Host     string
 		Port     int
@@ -87,6 +88,15 @@ func Load() (Config, error) {
 	}
 	if cfg.Env == "production" && len(cfg.Session.Secret) < 32 {
 		errs = append(errs, errors.New("SESSION_SECRET must be at least 32 bytes in production"))
+	}
+	// Offer email is MVP scope (ADR §14): a real deployment must be able to send.
+	if cfg.Env == "production" {
+		if cfg.SMTP.Host == "" {
+			errs = append(errs, errors.New("SMTP_HOST is required in production"))
+		}
+		if cfg.SMTP.From == "" {
+			errs = append(errs, errors.New("SMTP_FROM is required in production"))
+		}
 	}
 
 	return cfg, errors.Join(errs...)

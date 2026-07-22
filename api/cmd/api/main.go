@@ -15,6 +15,7 @@ import (
 	"github.com/gfotev/pitlane/internal/api"
 	"github.com/gfotev/pitlane/internal/config"
 	"github.com/gfotev/pitlane/internal/jobs"
+	"github.com/gfotev/pitlane/internal/mailer"
 	"github.com/gfotev/pitlane/internal/pdf"
 	"github.com/gfotev/pitlane/internal/store"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -74,9 +75,36 @@ func serve() error {
 	}
 	logger.Info("database connected")
 
+	// Stores share the one pool. Built before River because the send-offer
+	// worker depends on them (it loads the offer graph to render + mail the PDF).
+	db := store.NewDB(pool)
+	tenants := store.NewTenantStore(db)
+	users := store.NewUserStore(db)
+	customers := store.NewCustomerStore(db)
+	cars := store.NewCarStore(db)
+	offers := store.NewOfferStore(db)
+	audit := store.NewAuditLogStore(db)
+	pdfRenderer := pdf.NewRenderer()
+	mailSender := mailer.NewSMTP(mailer.Config{
+		Host:     cfg.SMTP.Host,
+		Port:     cfg.SMTP.Port,
+		Username: cfg.SMTP.Username,
+		Password: cfg.SMTP.Password,
+		From:     cfg.SMTP.From,
+	})
+
 	// River runs in the same binary as the API (single-artifact deployment).
-	// Its schema must already exist — River refuses to start unmigrated.
-	riverClient, err := jobs.NewClient(pool)
+	// Its schema must already exist — River refuses to start unmigrated. The
+	// worker set now carries the real SendOfferEmail job (Phase 7).
+	riverClient, err := jobs.NewClient(pool, jobs.WorkerDeps{
+		Offers:    offers,
+		Cars:      cars,
+		Customers: customers,
+		Tenants:   tenants,
+		PDF:       pdfRenderer,
+		Mailer:    mailSender,
+		Logger:    logger,
+	})
 	if err != nil {
 		return err
 	}
@@ -96,19 +124,18 @@ func serve() error {
 	sessionManager.Cookie.SameSite = http.SameSiteLaxMode
 	sessionManager.Cookie.Path = "/"
 
-	// Wire stores.
-	db := store.NewDB(pool)
 	server, err := api.NewServer(api.ServerDeps{
-		Logger:    logger,
-		Cfg:       cfg,
-		Session:   sessionManager,
-		Tenants:   store.NewTenantStore(db),
-		Users:     store.NewUserStore(db),
-		Customers: store.NewCustomerStore(db),
-		Cars:      store.NewCarStore(db),
-		Offers:    store.NewOfferStore(db),
-		Audit:     store.NewAuditLogStore(db),
-		PDF:       pdf.NewRenderer(),
+		Logger:       logger,
+		Cfg:          cfg,
+		Session:      sessionManager,
+		Tenants:      tenants,
+		Users:        users,
+		Customers:    customers,
+		Cars:         cars,
+		Offers:       offers,
+		Audit:        audit,
+		PDF:          pdfRenderer,
+		SendEnqueuer: jobs.NewOfferEmailEnqueuer(riverClient),
 	})
 	if err != nil {
 		return fmt.Errorf("server: %w", err)

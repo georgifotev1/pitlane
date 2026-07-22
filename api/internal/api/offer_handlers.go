@@ -224,6 +224,74 @@ func (s *Server) updateOfferStatus(w http.ResponseWriter, r *http.Request) {
 	renderJSON(w, http.StatusOK, envelope{"offer": offerResponse(o)})
 }
 
+// offerEmailEnqueuer binds a per-send Reply-To and hands back a
+// store.OfferEmailEnqueuer that MarkSending drives inside its transaction. The
+// concrete implementation (internal/jobs) wraps the River client; defining the
+// seam here keeps the api package independent of jobs and River (ADR §106).
+type offerEmailEnqueuer interface {
+	WithReplyTo(replyTo string) store.OfferEmailEnqueuer
+}
+
+// sendOffer emails an offer's PDF to the customer and, on the initial send,
+// freezes it as sent. It flips the offer to sent + send_status=pending + sent_to
+// and enqueues the delivery job in ONE transaction (ADR §17): the offer is
+// never marked sent without a dispatched job, nor a job without the state.
+//
+// This is the only path from draft → sent (the generic status endpoint cannot
+// send), so every sent offer has a recipient and a real dispatch. The recipient
+// is prefilled from the customer on the client but editable, so it is validated
+// here. Reply-To is the sending user's email (ADR §14: From is the app domain,
+// replies reach the garage). A non-sendable offer is 409; an unknown one is 404.
+func (s *Server) sendOffer(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromContext(r.Context())
+	userID := userIDFromContext(r.Context())
+	id := r.PathValue("id")
+	log := loggerFromContext(r.Context(), s.logger)
+
+	var req dto.SendOfferRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		renderProblem(w, r, http.StatusBadRequest, CodeInvalidJSON, "invalid JSON body")
+		return
+	}
+	req.Recipient = strings.TrimSpace(req.Recipient)
+
+	v := validator.New()
+	v.Email("recipient", req.Recipient)
+	if !v.Valid() {
+		renderValidation(w, r, v.Errors())
+		return
+	}
+
+	// Reply-To is the staff member who sent it (tenants carry no contact email
+	// yet). Best-effort: a lookup miss just drops the header, never blocks send.
+	replyTo := ""
+	if user, err := s.users.GetByID(r.Context(), tenantID, userID); err == nil {
+		replyTo = user.Email
+	} else {
+		log.Warn("send offer: load sender for reply-to", "err", err)
+	}
+
+	o, err := s.offers.MarkSending(r.Context(), tenantID, id, req.Recipient, s.sendEnqueuer.WithReplyTo(replyTo))
+	if err != nil {
+		switch {
+		case errors.Is(err, store.ErrNotFound):
+			renderProblem(w, r, http.StatusNotFound, CodeNotFound, "offer not found")
+		case errors.Is(err, store.ErrOfferNotSendable):
+			renderProblem(w, r, http.StatusConflict, CodeConflict, "offer is not in a sendable state")
+		default:
+			log.Error("send offer", "err", err)
+			renderProblem(w, r, http.StatusInternalServerError, CodeInternalError, "internal server error")
+		}
+		return
+	}
+
+	_ = s.audit.Insert(r.Context(), tenantID, userID, "offer.send", "offer", id, map[string]any{
+		"recipient": req.Recipient,
+	})
+
+	renderJSON(w, http.StatusOK, envelope{"offer": offerResponse(o)})
+}
+
 // carExists guards the nested offer routes: it confirms the path's car belongs
 // to this tenant, rendering a 404 (and returning false) if not. Mirrors
 // customerExists for the cars slice.
