@@ -208,6 +208,73 @@ func TestTwoTenantIsolation(t *testing.T) {
 	})
 }
 
+// TestRLSEnforcedAtDatabase probes the RLS layer directly, bypassing the
+// WithTenant helper and the store's `WHERE tenant_id = $1` filters. Those app
+// filters are the FIRST tenancy layer; this test guards the SECOND (Postgres
+// RLS). The two-tenant API tests above pass whether or not RLS is enabled,
+// because every store query filters on tenant_id itself — so only a raw probe
+// like this can catch RLS silently reverting to off (as it was before 0005,
+// when FORCE was set but ENABLE was never issued).
+func TestRLSEnforcedAtDatabase(t *testing.T) {
+	api := newTestAPI(t)
+	ctx := context.Background()
+
+	// Two tenants, each with exactly one user row (the signup owner).
+	_, userA := api.signup(t, "Garage A", "Owner A", "a@example.com", "password-aaa")
+	_, _ = api.signup(t, "Garage B", "Owner B", "b@example.com", "password-bbb")
+
+	// A single raw connection. We switch into the non-owner pitlane_app role the
+	// same way WithTenant does (SET ROLE) — the test harness pool connects as the
+	// database superuser, which bypasses RLS, so relying on its role would make
+	// this probe vacuous. What we deliberately DON'T do is call WithTenant or add
+	// a `WHERE tenant_id` filter: the database policy is then the only thing
+	// standing between this connection and every tenant's rows.
+	conn, err := api.tdb.Pool.Acquire(ctx)
+	if err != nil {
+		t.Fatalf("acquire conn: %v", err)
+	}
+	defer conn.Release()
+	if _, err := conn.Exec(ctx, "SET ROLE pitlane_app"); err != nil {
+		t.Fatalf("set role pitlane_app: %v", err)
+	}
+
+	t.Run("no tenant context errors", func(t *testing.T) {
+		// With RLS on, the USING clause evaluates current_setting('app.tenant_id'),
+		// which is unset on this fresh session and raises. With RLS off, the query
+		// would happily count every tenant's users.
+		var n int
+		if err := conn.QueryRow(ctx, "SELECT count(*) FROM users").Scan(&n); err == nil {
+			t.Fatalf("expected an error with no app.tenant_id set (RLS disabled?), got count=%d", n)
+		}
+	})
+
+	t.Run("fake tenant sees zero rows", func(t *testing.T) {
+		if _, err := conn.Exec(ctx, "SET app.tenant_id = '00000000-0000-0000-0000-000000000000'"); err != nil {
+			t.Fatalf("set fake tenant: %v", err)
+		}
+		var n int
+		if err := conn.QueryRow(ctx, "SELECT count(*) FROM users").Scan(&n); err != nil {
+			t.Fatalf("count users: %v", err)
+		}
+		if n != 0 {
+			t.Fatalf("a fake tenant must see 0 users (RLS disabled?), got %d", n)
+		}
+	})
+
+	t.Run("real tenant sees only its own row", func(t *testing.T) {
+		if _, err := conn.Exec(ctx, "SELECT set_config('app.tenant_id', $1, false)", userA.TenantID); err != nil {
+			t.Fatalf("set tenant A: %v", err)
+		}
+		var n int
+		if err := conn.QueryRow(ctx, "SELECT count(*) FROM users").Scan(&n); err != nil {
+			t.Fatalf("count users: %v", err)
+		}
+		if n != 1 {
+			t.Fatalf("tenant A must see exactly its own 1 user, got %d", n)
+		}
+	})
+}
+
 func TestAuthEdgeCases(t *testing.T) {
 	api := newTestAPI(t)
 
