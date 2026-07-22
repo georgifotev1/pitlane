@@ -143,3 +143,131 @@ func IsValidRole(s string) bool {
 	}
 	return false
 }
+
+// OfferStatus is the lifecycle state of an offer (migration 0004 CHECK).
+// Content is mutable only while draft.
+type OfferStatus string
+
+const (
+	OfferStatusDraft    OfferStatus = "draft"
+	OfferStatusSent     OfferStatus = "sent"
+	OfferStatusAccepted OfferStatus = "accepted"
+	OfferStatusRejected OfferStatus = "rejected"
+	OfferStatusExpired  OfferStatus = "expired"
+)
+
+// SendStatus tracks the email-delivery lifecycle, surfaced for River-job
+// visibility (Phase 7). Meaningless until the offer is sent.
+type SendStatus string
+
+const (
+	SendStatusPending SendStatus = "pending"
+	SendStatusSent    SendStatus = "sent"
+	SendStatusFailed  SendStatus = "failed"
+)
+
+// OfferItemKind classifies a line for PDF grouping and later reporting.
+type OfferItemKind string
+
+const (
+	OfferItemKindPart  OfferItemKind = "part"
+	OfferItemKindLabor OfferItemKind = "labor"
+	OfferItemKindOther OfferItemKind = "other"
+)
+
+// Offer is a repair quote written for one Car (the customer is reached through
+// the car). Money is integer cents; the Subtotal/Tax/Total snapshots are
+// derived from Items and recomputed on every draft write via Recompute, so the
+// stored figures always match the lines and freeze at send.
+type Offer struct {
+	ID            string
+	TenantID      string
+	CarID         string
+	Status        OfferStatus
+	SendStatus    SendStatus
+	SentTo        string
+	SentAt        *time.Time
+	TaxRateBps    int
+	SubtotalCents int64
+	TaxCents      int64
+	TotalCents    int64
+	Notes         string
+	Items         []OfferItem
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+// OfferItem is one line of an offer. LineTotalCents is derived
+// (UnitPriceCents * Quantity) and set by Recompute, never trusted from input.
+type OfferItem struct {
+	ID             string
+	TenantID       string
+	OfferID        string
+	Kind           OfferItemKind
+	Description    string
+	Quantity       int
+	UnitPriceCents int64
+	LineTotalCents int64
+	SortOrder      int
+	CreatedAt      time.Time
+}
+
+// Recompute is the single source of truth for offer math. It sets each item's
+// LineTotalCents from its unit price and quantity, sums them into
+// SubtotalCents, applies the snapshotted tax rate, and totals. The store calls
+// it on every draft write so the DB snapshot never drifts from the lines.
+func (o *Offer) Recompute() {
+	var subtotal int64
+	for i := range o.Items {
+		line := o.Items[i].UnitPriceCents * int64(o.Items[i].Quantity)
+		o.Items[i].LineTotalCents = line
+		subtotal += line
+	}
+	o.SubtotalCents = subtotal
+	o.TaxCents = TaxCents(subtotal, o.TaxRateBps)
+	o.TotalCents = subtotal + o.TaxCents
+}
+
+// TaxCents applies a basis-points rate to a cent amount, rounding half up to
+// the nearest cent (1900 bps = 19%). Both inputs are non-negative (DB CHECKs),
+// so half-up is unambiguous and rounding happens exactly once, at the offer
+// level — line math stays exact.
+func TaxCents(subtotalCents int64, taxRateBps int) int64 {
+	return (subtotalCents*int64(taxRateBps) + 5000) / 10000
+}
+
+// offerTransitions is the allowed status machine: draft → sent, and sent →
+// accepted | rejected | expired. accepted/rejected/expired are terminal.
+var offerTransitions = map[OfferStatus][]OfferStatus{
+	OfferStatusDraft: {OfferStatusSent},
+	OfferStatusSent:  {OfferStatusAccepted, OfferStatusRejected, OfferStatusExpired},
+}
+
+// CanTransitionTo reports whether an offer may move from its current status to
+// next.
+func (s OfferStatus) CanTransitionTo(next OfferStatus) bool {
+	for _, allowed := range offerTransitions[s] {
+		if allowed == next {
+			return true
+		}
+	}
+	return false
+}
+
+// IsValidOfferStatus reports whether a string is one of the known statuses.
+func IsValidOfferStatus(s string) bool {
+	switch OfferStatus(s) {
+	case OfferStatusDraft, OfferStatusSent, OfferStatusAccepted, OfferStatusRejected, OfferStatusExpired:
+		return true
+	}
+	return false
+}
+
+// IsValidOfferItemKind reports whether a string is one of the known kinds.
+func IsValidOfferItemKind(s string) bool {
+	switch OfferItemKind(s) {
+	case OfferItemKindPart, OfferItemKindLabor, OfferItemKindOther:
+		return true
+	}
+	return false
+}
