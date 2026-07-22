@@ -3,14 +3,18 @@ import type {
   CarResponse,
   CreateCarRequest,
   CreateCustomerRequest,
+  CreateOfferRequest,
   CustomerListResponse,
   CustomerResponse,
   HealthResponse,
   LoginRequest,
+  OfferListResponse,
+  OfferResponse,
   SignupRequest,
   SignupResponse,
   UpdateCarRequest,
   UpdateCustomerRequest,
+  UpdateOfferRequest,
   UserResponse,
 } from "@/lib/generated/types"
 
@@ -135,6 +139,20 @@ function carListPath(customerId: string, q: CarListQuery): string {
   return `/customers/${customerId}/cars?${params.toString()}`
 }
 
+// Offers are nested under a car and have no search/archive filters — just
+// pagination — so their list query is simpler than customers'/cars'.
+export type OfferListQuery = {
+  page: number
+  pageSize: number
+}
+
+function offerListPath(carId: string, q: OfferListQuery): string {
+  const params = new URLSearchParams()
+  params.set("page", String(q.page))
+  params.set("pageSize", String(q.pageSize))
+  return `/cars/${carId}/offers?${params.toString()}`
+}
+
 export const api = {
   health: () => request<HealthResponse>("/healthz", "health"),
   signup: (data: SignupRequest) =>
@@ -190,5 +208,30 @@ export const api = {
       }),
     archive: (id: string) =>
       request<void>(`/cars/${id}/archive`, "", { method: "POST" }),
+  },
+
+  offers: {
+    list: (carId: string, q: OfferListQuery) =>
+      requestBody<OfferListResponse>(offerListPath(carId, q)),
+    get: (id: string) => request<OfferResponse>(`/offers/${id}`, "offer"),
+    create: (carId: string, data: CreateOfferRequest) =>
+      request<OfferResponse>(`/cars/${carId}/offers`, "offer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: UpdateOfferRequest) =>
+      request<OfferResponse>(`/offers/${id}`, "offer", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    // status is the lifecycle transition endpoint (draft→sent→accepted|…).
+    setStatus: (id: string, status: string) =>
+      request<OfferResponse>(`/offers/${id}/status`, "offer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      }),
   },
 }

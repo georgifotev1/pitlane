@@ -13,10 +13,24 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#: src/components/offers/OffersSection.tsx
+msgid "Accept"
+msgstr "Приемане"
+
+#: src/components/offers/OffersSection.tsx
+msgid "Accepted"
+msgstr "Прието"
+
 #: src/components/cars/CarsSection.tsx
+#: src/components/offers/OfferFormDialog.tsx
+#: src/components/offers/OffersSection.tsx
 #: src/routes/_authed/customers/index.tsx
 msgid "Actions"
 msgstr "Действия"
+
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Add line"
+msgstr "Добавяне на ред"
 
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/routes/_authed/customers/$customerId.tsx
@@ -48,6 +62,7 @@ msgid "Archive customer"
 msgstr "Архивиране на клиент"
 
 #: src/components/cars/CarsSection.tsx
+#: src/routes/_authed/cars/$carId.tsx
 #: src/routes/_authed/customers/$customerId.tsx
 #: src/routes/_authed/customers/index.tsx
 msgid "Archived"
@@ -58,6 +73,10 @@ msgstr "Архивиран"
 msgid "Archiving…"
 msgstr "Архивиране…"
 
+#: src/routes/_authed/cars/$carId.tsx
+msgid "Back to customer"
+msgstr "Обратно към клиента"
+
 #: src/routes/_authed/customers/$customerId.tsx
 msgid "Back to customers"
 msgstr "Обратно към клиентите"
@@ -66,8 +85,13 @@ msgstr "Обратно към клиентите"
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/ArchiveCustomerDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
+#: src/components/offers/OfferFormDialog.tsx
 msgid "Cancel"
 msgstr "Отказ"
+
+#: src/routes/_authed/cars/$carId.tsx
+msgid "Car not found."
+msgstr "Автомобилът не е намерен."
 
 #: src/components/cars/CarsSection.tsx
 msgid "Cars"
@@ -100,6 +124,10 @@ msgstr "Автомобилите не могат да бъдат зареден�
 msgid "Could not load customers."
 msgstr "Клиентите не могат да бъдат заредени."
 
+#: src/components/offers/OffersSection.tsx
+msgid "Could not load offers."
+msgstr "Офертите не могат да бъдат заредени."
+
 #: src/routes/signup.tsx
 msgid "Create garage"
 msgstr "Създай гараж"
@@ -126,7 +154,20 @@ msgstr "Клиенти"
 msgid "Dashboard"
 msgstr "Табло"
 
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Description"
+msgstr "Описание"
+
+#: src/components/offers/OffersSection.tsx
+msgid "Draft"
+msgstr "Чернова"
+
+#: src/components/offers/OfferFormDialog.tsx
+msgid "e.g. Brake pads"
+msgstr "напр. Накладки"
+
 #: src/components/cars/CarsSection.tsx
+#: src/components/offers/OffersSection.tsx
 #: src/routes/_authed/customers/$customerId.tsx
 #: src/routes/_authed/customers/index.tsx
 msgid "Edit"
@@ -140,6 +181,10 @@ msgstr "Редактиране на автомобил"
 msgid "Edit customer"
 msgstr "Редактиране на клиент"
 
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Edit offer"
+msgstr "Редактиране на оферта"
+
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/routes/_authed/customers/$customerId.tsx
 #: src/routes/_authed/customers/index.tsx
@@ -148,12 +193,34 @@ msgstr "Редактиране на клиент"
 msgid "Email"
 msgstr "Имейл"
 
+#: src/components/offers/OffersSection.tsx
+msgid "Expire"
+msgstr "Маркиране като изтекла"
+
+#: src/components/offers/OffersSection.tsx
+msgid "Expired"
+msgstr "Изтекла"
+
 #: src/routes/signup.tsx
 msgid "Garage name"
 msgstr "Име на гаража"
 
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Kind"
+msgstr "Вид"
+
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Labor"
+msgstr "Труд"
+
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Line items and totals for this repair quote."
+msgstr "Редове и суми за тази оферта за ремонт."
+
 #: src/components/cars/CarsSection.tsx
+#: src/components/offers/OffersSection.tsx
 #: src/routes/_authed.tsx
+#: src/routes/_authed/cars/$carId.tsx
 #: src/routes/_authed/customers/$customerId.tsx
 #: src/routes/_authed/customers/index.tsx
 #: src/routes/_authed/dashboard.tsx
@@ -162,16 +229,19 @@ msgstr "Зареждане…"
 
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/cars/CarsSection.tsx
+#: src/routes/_authed/cars/$carId.tsx
 msgid "Make"
 msgstr "Марка"
 
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/cars/CarsSection.tsx
+#: src/routes/_authed/cars/$carId.tsx
 msgid "Mileage"
 msgstr "Пробег"
 
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/cars/CarsSection.tsx
+#: src/routes/_authed/cars/$carId.tsx
 msgid "Model"
 msgstr "Модел"
 
@@ -202,6 +272,11 @@ msgstr "Нов клиент"
 msgid "New here?"
 msgstr "Нов потребител?"
 
+#: src/components/offers/OfferFormDialog.tsx
+#: src/components/offers/OffersSection.tsx
+msgid "New offer"
+msgstr "Нова оферта"
+
 #: src/routes/_authed/customers/index.tsx
 msgid "Next"
 msgstr "Следваща"
@@ -214,14 +289,32 @@ msgstr "Все още няма автомобили."
 msgid "No customers found."
 msgstr "Няма намерени клиенти."
 
+#: src/components/offers/OffersSection.tsx
+msgid "No offers yet."
+msgstr "Все още няма оферти."
+
 #: src/components/customers/CustomerFormDialog.tsx
+#: src/components/offers/OfferFormDialog.tsx
+#: src/components/offers/OffersSection.tsx
 #: src/routes/_authed/customers/$customerId.tsx
 msgid "Notes"
 msgstr "Бележки"
 
+#: src/components/offers/OffersSection.tsx
+msgid "Offers"
+msgstr "Оферти"
+
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Other"
+msgstr "Друго"
+
 #: src/routes/_authed/customers/index.tsx
 msgid "Page {page} of {totalPages} · {total} total"
 msgstr "Страница {page} от {totalPages} · общо {total}"
+
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Part"
+msgstr "Част"
 
 #: src/routes/login.tsx
 #: src/routes/signup.tsx
@@ -251,19 +344,53 @@ msgstr "Регистрационен номер"
 msgid "Previous"
 msgstr "Предишна"
 
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Qty"
+msgstr "Бр."
+
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Quantity"
+msgstr "Количество"
+
+#: src/components/offers/OffersSection.tsx
+msgid "Reject"
+msgstr "Отхвърляне"
+
+#: src/components/offers/OffersSection.tsx
+msgid "Rejected"
+msgstr "Отхвърлена"
+
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Remove line"
+msgstr "Премахване на ред"
+
+#: src/components/offers/OffersSection.tsx
+msgid "Repair quotes for this car."
+msgstr "Оферти за ремонт на този автомобил."
+
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
+#: src/components/offers/OfferFormDialog.tsx
 msgid "Save"
 msgstr "Запази"
 
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
+#: src/components/offers/OfferFormDialog.tsx
 msgid "Saving…"
 msgstr "Запазване…"
 
 #: src/routes/_authed/customers/index.tsx
 msgid "Search"
 msgstr "Търсене"
+
+#: src/components/offers/OffersSection.tsx
+msgid "Send"
+msgstr "Изпращане"
+
+#: src/components/offers/OffersSection.tsx
+msgid "Sent"
+msgstr "Изпратена"
 
 #: src/routes/signup.tsx
 msgid "Set up a garage and your owner account."
@@ -299,8 +426,33 @@ msgstr "Влезли сте като"
 msgid "Signing in…"
 msgstr "Влизане…"
 
+#: src/components/offers/OffersSection.tsx
+msgid "Status"
+msgstr "Статус"
+
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Subtotal"
+msgstr "Междинна сума"
+
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Tax"
+msgstr "ДДС"
+
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Tax and total are calculated on save."
+msgstr "ДДС и общата сума се изчисляват при запис."
+
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Tax rate (%)"
+msgstr "Ставка ДДС (%)"
+
+#: src/components/offers/OffersSection.tsx
+msgid "The action could not be completed."
+msgstr "Действието не може да бъде изпълнено."
+
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
+#: src/components/offers/OfferFormDialog.tsx
 #: src/routes/login.tsx
 #: src/routes/signup.tsx
 msgid "This field is required."
@@ -316,6 +468,15 @@ msgstr "Това скрива {0} от активния списък и осво
 msgid "This hides {0} from the active list. You can still view archived customers with the filter."
 msgstr "Това скрива {0} от активния списък. Можете да видите архивираните клиенти чрез филтъра."
 
+#: src/components/offers/OfferFormDialog.tsx
+#: src/components/offers/OffersSection.tsx
+msgid "Total"
+msgstr "Общо"
+
+#: src/components/offers/OfferFormDialog.tsx
+msgid "Unit price"
+msgstr "Единична цена"
+
 #: src/components/cars/CarFormDialog.tsx
 msgid "Vehicle details and mileage."
 msgstr "Данни за автомобила и пробег."
@@ -325,11 +486,13 @@ msgid "Vehicles for this customer."
 msgstr "Автомобили на този клиент."
 
 #: src/components/cars/CarFormDialog.tsx
+#: src/routes/_authed/cars/$carId.tsx
 msgid "VIN"
 msgstr "VIN"
 
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/cars/CarsSection.tsx
+#: src/routes/_authed/cars/$carId.tsx
 msgid "Year"
 msgstr "Година"
 

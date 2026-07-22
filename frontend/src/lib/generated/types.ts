@@ -137,3 +137,81 @@ export interface UpdateCarRequest {
   year: number /* int */;
   mileage: number /* int */;
 }
+/**
+ * OfferItemResponse is one line of an offer. Money is integer cents (tygo maps
+ * int64 → number). lineTotalCents is derived server-side (unitPrice × quantity).
+ */
+export interface OfferItemResponse {
+  id: string;
+  kind: string;
+  description: string;
+  quantity: number /* int */;
+  unitPriceCents: number /* int64 */;
+  lineTotalCents: number /* int64 */;
+  sortOrder: number /* int */;
+}
+/**
+ * OfferResponse is an offer as seen by the client. All money is integer cents;
+ * the subtotal/tax/total snapshots are computed server-side and frozen at send.
+ * sentAt is null until the offer is emailed (Phase 7). Items is empty on list
+ * responses (detail fetch loads the lines).
+ */
+export interface OfferResponse {
+  id: string;
+  carId: string;
+  status: string;
+  sendStatus: string;
+  sentTo: string;
+  sentAt?: string;
+  taxRateBps: number /* int */;
+  subtotalCents: number /* int64 */;
+  taxCents: number /* int64 */;
+  totalCents: number /* int64 */;
+  notes: string;
+  items: OfferItemResponse[];
+  createdAt: string;
+  updatedAt: string;
+}
+/**
+ * OfferListResponse is the full body of the list endpoint (both keys read by
+ * the client), mirroring CarListResponse.
+ */
+export interface OfferListResponse {
+  offers: OfferResponse[];
+  metadata: ListMetadata;
+}
+/**
+ * OfferItemRequest is one line in a create/update payload. lineTotalCents and
+ * the offer totals are never accepted from the client — they are recomputed.
+ */
+export interface OfferItemRequest {
+  kind: string;
+  description: string;
+  quantity: number /* int */;
+  unitPriceCents: number /* int64 */;
+}
+/**
+ * CreateOfferRequest creates a draft offer under the car named in the route.
+ * The tax rate is snapshotted from the tenant default at creation, so it is not
+ * part of the create body.
+ */
+export interface CreateOfferRequest {
+  notes: string;
+  items: OfferItemRequest[];
+}
+/**
+ * UpdateOfferRequest is a full replace of a draft offer's editable fields.
+ * taxRateBps is editable while the offer is a draft (the create snapshot can be
+ * adjusted before sending).
+ */
+export interface UpdateOfferRequest {
+  notes: string;
+  taxRateBps: number /* int */;
+  items: OfferItemRequest[];
+}
+/**
+ * UpdateOfferStatusRequest advances an offer's lifecycle status.
+ */
+export interface UpdateOfferStatusRequest {
+  status: string;
+}

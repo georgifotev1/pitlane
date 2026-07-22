@@ -134,3 +134,74 @@ type UpdateCarRequest struct {
 	Year    int    `json:"year"`
 	Mileage int    `json:"mileage"`
 }
+
+// OfferItemResponse is one line of an offer. Money is integer cents (tygo maps
+// int64 → number). lineTotalCents is derived server-side (unitPrice × quantity).
+type OfferItemResponse struct {
+	ID             string `json:"id"`
+	Kind           string `json:"kind"`
+	Description    string `json:"description"`
+	Quantity       int    `json:"quantity"`
+	UnitPriceCents int64  `json:"unitPriceCents"`
+	LineTotalCents int64  `json:"lineTotalCents"`
+	SortOrder      int    `json:"sortOrder"`
+}
+
+// OfferResponse is an offer as seen by the client. All money is integer cents;
+// the subtotal/tax/total snapshots are computed server-side and frozen at send.
+// sentAt is null until the offer is emailed (Phase 7). Items is empty on list
+// responses (detail fetch loads the lines).
+type OfferResponse struct {
+	ID            string              `json:"id"`
+	CarID         string              `json:"carId"`
+	Status        string              `json:"status"`
+	SendStatus    string              `json:"sendStatus"`
+	SentTo        string              `json:"sentTo"`
+	SentAt        *time.Time          `json:"sentAt"`
+	TaxRateBps    int                 `json:"taxRateBps"`
+	SubtotalCents int64               `json:"subtotalCents"`
+	TaxCents      int64               `json:"taxCents"`
+	TotalCents    int64               `json:"totalCents"`
+	Notes         string              `json:"notes"`
+	Items         []OfferItemResponse `json:"items"`
+	CreatedAt     time.Time           `json:"createdAt"`
+	UpdatedAt     time.Time           `json:"updatedAt"`
+}
+
+// OfferListResponse is the full body of the list endpoint (both keys read by
+// the client), mirroring CarListResponse.
+type OfferListResponse struct {
+	Offers   []OfferResponse `json:"offers"`
+	Metadata ListMetadata    `json:"metadata"`
+}
+
+// OfferItemRequest is one line in a create/update payload. lineTotalCents and
+// the offer totals are never accepted from the client — they are recomputed.
+type OfferItemRequest struct {
+	Kind           string `json:"kind"`
+	Description    string `json:"description"`
+	Quantity       int    `json:"quantity"`
+	UnitPriceCents int64  `json:"unitPriceCents"`
+}
+
+// CreateOfferRequest creates a draft offer under the car named in the route.
+// The tax rate is snapshotted from the tenant default at creation, so it is not
+// part of the create body.
+type CreateOfferRequest struct {
+	Notes string             `json:"notes"`
+	Items []OfferItemRequest `json:"items"`
+}
+
+// UpdateOfferRequest is a full replace of a draft offer's editable fields.
+// taxRateBps is editable while the offer is a draft (the create snapshot can be
+// adjusted before sending).
+type UpdateOfferRequest struct {
+	Notes      string             `json:"notes"`
+	TaxRateBps int                `json:"taxRateBps"`
+	Items      []OfferItemRequest `json:"items"`
+}
+
+// UpdateOfferStatusRequest advances an offer's lifecycle status.
+type UpdateOfferStatusRequest struct {
+	Status string `json:"status"`
+}

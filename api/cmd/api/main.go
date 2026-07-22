@@ -105,6 +105,7 @@ func serve() error {
 		Users:     store.NewUserStore(db),
 		Customers: store.NewCustomerStore(db),
 		Cars:      store.NewCarStore(db),
+		Offers:    store.NewOfferStore(db),
 		Audit:     store.NewAuditLogStore(db),
 	})
 	if err != nil {

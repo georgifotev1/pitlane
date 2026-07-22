@@ -24,6 +24,7 @@ const messages: Record<string, string> = {
   authentication_required: "Необходимо е влизане в профила.",
   permission_denied: "Нямате право за това действие.",
   not_found: "Ресурсът не е намерен.",
+  conflict: "Действието е в конфликт с текущото състояние (офертата вече е изпратена).",
   rate_limit_exceeded: "Твърде много заявки. Изчакайте и опитайте отново.",
 }
 

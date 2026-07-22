@@ -1,0 +1,222 @@
+import { useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Trans, useLingui } from "@lingui/react/macro"
+import { PlusIcon, PencilIcon, SendIcon } from "lucide-react"
+import type { OfferResponse } from "@/lib/generated/types"
+import { api, ProblemError } from "@/lib/api"
+import { queryKeys } from "@/lib/queryKeys"
+import { errorCodeToMessage } from "@/lib/errorCodes"
+import { formatMoney } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { OfferFormDialog } from "@/components/offers/OfferFormDialog"
+
+// A car has few offers, so we fetch a generous single page and render them all
+// — no pagination UI (the API still supports it, matching CarsSection).
+const PAGE_SIZE = 100
+
+function StatusBadge({ status }: { status: string }) {
+  // Amber-ish for draft, neutral for terminal states; kept simple with the
+  // existing muted palette so no new tokens are needed.
+  const tone =
+    status === "accepted"
+      ? "bg-primary/10 text-primary"
+      : status === "rejected" || status === "expired"
+        ? "bg-destructive/10 text-destructive"
+        : "bg-muted text-muted-foreground"
+  return (
+    <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}>
+      {status === "draft" && <Trans>Draft</Trans>}
+      {status === "sent" && <Trans>Sent</Trans>}
+      {status === "accepted" && <Trans>Accepted</Trans>}
+      {status === "rejected" && <Trans>Rejected</Trans>}
+      {status === "expired" && <Trans>Expired</Trans>}
+    </span>
+  )
+}
+
+export function OffersSection({ carId }: { carId: string }) {
+  const { t } = useLingui()
+  const qc = useQueryClient()
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editing, setEditing] = useState<OfferResponse | undefined>()
+  const [statusError, setStatusError] = useState<string>("")
+
+  const listQuery = { page: 1, pageSize: PAGE_SIZE }
+  const query = useQuery({
+    queryKey: queryKeys.offers.listForCar(carId, listQuery),
+    queryFn: () => api.offers.list(carId, listQuery),
+  })
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.offers.setStatus(id, status),
+    onMutate: () => setStatusError(""),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: queryKeys.offers.all() })
+    },
+    onError: (err) => {
+      const code = err instanceof ProblemError ? err.code : undefined
+      setStatusError(errorCodeToMessage(code) || t`The action could not be completed.`)
+    },
+  })
+
+  const offers = query.data?.offers ?? []
+
+  return (
+    <section className="flex flex-col gap-4">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold">
+            <Trans>Offers</Trans>
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            <Trans>Repair quotes for this car.</Trans>
+          </p>
+        </div>
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <PlusIcon />
+          <Trans>New offer</Trans>
+        </Button>
+      </header>
+
+      {statusError && <p className="text-sm text-destructive">{statusError}</p>}
+
+      <div className="rounded-lg border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>
+                <Trans>Status</Trans>
+              </TableHead>
+              <TableHead className="text-right">
+                <Trans>Total</Trans>
+              </TableHead>
+              <TableHead>
+                <Trans>Notes</Trans>
+              </TableHead>
+              <TableHead className="text-right">
+                <Trans>Actions</Trans>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {query.isPending && (
+              <TableRow>
+                <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                  <Trans>Loading…</Trans>
+                </TableCell>
+              </TableRow>
+            )}
+            {query.isError && (
+              <TableRow>
+                <TableCell colSpan={4} className="py-8 text-center text-destructive">
+                  <Trans>Could not load offers.</Trans>
+                </TableCell>
+              </TableRow>
+            )}
+            {query.isSuccess && offers.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                  <Trans>No offers yet.</Trans>
+                </TableCell>
+              </TableRow>
+            )}
+            {offers.map((offer) => {
+              const busy = statusMutation.isPending
+              return (
+                <TableRow key={offer.id}>
+                  <TableCell>
+                    <StatusBadge status={offer.status} />
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-medium">
+                    {formatMoney(offer.totalCents)}
+                  </TableCell>
+                  <TableCell className="max-w-xs truncate text-muted-foreground">
+                    {offer.notes || "—"}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-1">
+                      {offer.status === "draft" && (
+                        <>
+                          <Button
+                            size="icon-sm"
+                            variant="ghost"
+                            aria-label={t`Edit`}
+                            onClick={() => setEditing(offer)}
+                          >
+                            <PencilIcon />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() =>
+                              statusMutation.mutate({ id: offer.id, status: "sent" })
+                            }
+                          >
+                            <SendIcon />
+                            <Trans>Send</Trans>
+                          </Button>
+                        </>
+                      )}
+                      {offer.status === "sent" && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() =>
+                              statusMutation.mutate({ id: offer.id, status: "accepted" })
+                            }
+                          >
+                            <Trans>Accept</Trans>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={busy}
+                            onClick={() =>
+                              statusMutation.mutate({ id: offer.id, status: "rejected" })
+                            }
+                          >
+                            <Trans>Reject</Trans>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={busy}
+                            onClick={() =>
+                              statusMutation.mutate({ id: offer.id, status: "expired" })
+                            }
+                          >
+                            <Trans>Expire</Trans>
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      <OfferFormDialog open={createOpen} onOpenChange={setCreateOpen} carId={carId} />
+      <OfferFormDialog
+        open={editing !== undefined}
+        onOpenChange={(open) => !open && setEditing(undefined)}
+        carId={carId}
+        offer={editing}
+      />
+    </section>
+  )
+}

@@ -21,6 +21,7 @@ type Server struct {
 	users     *store.UserStore
 	customers *store.CustomerStore
 	cars      *store.CarStore
+	offers    *store.OfferStore
 	audit     *store.AuditLogStore
 }
 
@@ -33,6 +34,7 @@ type ServerDeps struct {
 	Users     *store.UserStore
 	Customers *store.CustomerStore
 	Cars      *store.CarStore
+	Offers    *store.OfferStore
 	Audit     *store.AuditLogStore
 }
 
@@ -51,6 +53,7 @@ func NewServer(deps ServerDeps) (*Server, error) {
 		users:     deps.Users,
 		customers: deps.Customers,
 		cars:      deps.Cars,
+		offers:    deps.Offers,
 		audit:     deps.Audit,
 	}, nil
 }
@@ -87,6 +90,16 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/cars/{id}", s.protected(domain.PermissionCarsRead, s.getCar))
 	mux.Handle("PUT /api/v1/cars/{id}", s.protected(domain.PermissionCarsWrite, s.updateCar))
 	mux.Handle("POST /api/v1/cars/{id}/archive", s.protected(domain.PermissionCarsWrite, s.archiveCar))
+
+	// Offers — an offer belongs to a car, so list/create are nested under the
+	// car; item ops (get/update/status) address the offer directly. Same
+	// read/write split. Offers are never deleted (ADR §Deletion policy); the
+	// status endpoint drives the draft→sent→accepted|rejected|expired machine.
+	mux.Handle("GET /api/v1/cars/{carId}/offers", s.protected(domain.PermissionOffersRead, s.listOffers))
+	mux.Handle("POST /api/v1/cars/{carId}/offers", s.protected(domain.PermissionOffersWrite, s.createOffer))
+	mux.Handle("GET /api/v1/offers/{id}", s.protected(domain.PermissionOffersRead, s.getOffer))
+	mux.Handle("PUT /api/v1/offers/{id}", s.protected(domain.PermissionOffersWrite, s.updateOffer))
+	mux.Handle("POST /api/v1/offers/{id}/status", s.protected(domain.PermissionOffersWrite, s.updateOfferStatus))
 
 	// Unmatched API paths get problem+json — never the SPA shell.
 	mux.HandleFunc("GET /api/", s.notFound)

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { Link } from "@tanstack/react-router"
 import { Trans, useLingui } from "@lingui/react/macro"
 import { PlusIcon, PencilIcon, ArchiveIcon } from "lucide-react"
 import type { CarResponse } from "@/lib/generated/types"
@@ -121,7 +122,13 @@ export function CarsSection({ customerId }: { customerId: string }) {
             {cars.map((car) => (
               <TableRow key={car.id}>
                 <TableCell className="font-medium">
-                  {car.plate}
+                  <Link
+                    to="/cars/$carId"
+                    params={{ carId: car.id }}
+                    className="underline-offset-4 hover:underline"
+                  >
+                    {car.plate}
+                  </Link>
                   {car.archivedAt && (
                     <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                       <Trans>Archived</Trans>

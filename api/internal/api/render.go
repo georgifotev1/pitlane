@@ -18,6 +18,7 @@ const (
 	CodeAuthentication      = "authentication_required"
 	CodePermissionDenied    = "permission_denied"
 	CodeNotFound            = "not_found"
+	CodeConflict            = "conflict"
 	CodeRateLimited         = "rate_limit_exceeded"
 	CodeValidationFailed    = "validation_failed"
 )
