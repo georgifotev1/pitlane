@@ -15,6 +15,7 @@ import (
 	"github.com/gfotev/pitlane/internal/api"
 	"github.com/gfotev/pitlane/internal/config"
 	"github.com/gfotev/pitlane/internal/jobs"
+	"github.com/gfotev/pitlane/internal/pdf"
 	"github.com/gfotev/pitlane/internal/store"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -107,6 +108,7 @@ func serve() error {
 		Cars:      store.NewCarStore(db),
 		Offers:    store.NewOfferStore(db),
 		Audit:     store.NewAuditLogStore(db),
+		PDF:       pdf.NewRenderer(),
 	})
 	if err != nil {
 		return fmt.Errorf("server: %w", err)

@@ -23,6 +23,7 @@ type Server struct {
 	cars      *store.CarStore
 	offers    *store.OfferStore
 	audit     *store.AuditLogStore
+	pdf       offerRenderer
 }
 
 // ServerDeps bundles the runtime dependencies the HTTP layer needs.
@@ -36,6 +37,7 @@ type ServerDeps struct {
 	Cars      *store.CarStore
 	Offers    *store.OfferStore
 	Audit     *store.AuditLogStore
+	PDF       offerRenderer
 }
 
 func NewServer(deps ServerDeps) (*Server, error) {
@@ -55,6 +57,7 @@ func NewServer(deps ServerDeps) (*Server, error) {
 		cars:      deps.Cars,
 		offers:    deps.Offers,
 		audit:     deps.Audit,
+		pdf:       deps.PDF,
 	}, nil
 }
 
@@ -100,6 +103,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/offers/{id}", s.protected(domain.PermissionOffersRead, s.getOffer))
 	mux.Handle("PUT /api/v1/offers/{id}", s.protected(domain.PermissionOffersWrite, s.updateOffer))
 	mux.Handle("POST /api/v1/offers/{id}/status", s.protected(domain.PermissionOffersWrite, s.updateOfferStatus))
+	// PDF is a read: gated by offers:read, streamed on demand (never stored).
+	mux.Handle("GET /api/v1/offers/{id}/pdf", s.protected(domain.PermissionOffersRead, s.offerPDF))
 
 	// Unmatched API paths get problem+json — never the SPA shell.
 	mux.HandleFunc("GET /api/", s.notFound)

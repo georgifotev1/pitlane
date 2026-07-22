@@ -158,6 +158,10 @@ msgstr "Табло"
 msgid "Description"
 msgstr "Описание"
 
+#: src/components/offers/OfferPdfDialog.tsx
+msgid "Download"
+msgstr "Изтегляне"
+
 #: src/components/offers/OffersSection.tsx
 msgid "Draft"
 msgstr "Чернова"
@@ -300,6 +304,14 @@ msgstr "Все още няма оферти."
 msgid "Notes"
 msgstr "Бележки"
 
+#: src/components/offers/OfferPdfDialog.tsx
+msgid "Offer PDF"
+msgstr "PDF на офертата"
+
+#: src/components/offers/OfferPdfDialog.tsx
+msgid "Offer PDF preview"
+msgstr "Преглед на PDF на офертата"
+
 #: src/components/offers/OffersSection.tsx
 msgid "Offers"
 msgstr "Оферти"
@@ -339,6 +351,14 @@ msgstr "Телефон"
 #: src/components/cars/CarsSection.tsx
 msgid "Plate"
 msgstr "Регистрационен номер"
+
+#: src/components/offers/OffersSection.tsx
+msgid "Preview PDF"
+msgstr "Преглед на PDF"
+
+#: src/components/offers/OfferPdfDialog.tsx
+msgid "Preview the quote, then download or print it."
+msgstr "Прегледайте офертата, след което я изтеглете или отпечатайте."
 
 #: src/routes/_authed/customers/index.tsx
 msgid "Previous"

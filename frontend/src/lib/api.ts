@@ -226,6 +226,12 @@ export const api = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       }),
+    // pdfUrl is the API path for an offer's PDF. The browser hits it directly
+    // (iframe src / download anchor) so the session cookie rides along — no
+    // fetch+blob dance (ADR §13). `inline` requests the in-browser preview
+    // disposition; omit it for a download.
+    pdfUrl: (id: string, opts?: { inline?: boolean }) =>
+      `${BASE}/offers/${id}/pdf${opts?.inline ? "?disposition=inline" : ""}`,
     // status is the lifecycle transition endpoint (draft→sent→accepted|…).
     setStatus: (id: string, status: string) =>
       request<OfferResponse>(`/offers/${id}/status`, "offer", {

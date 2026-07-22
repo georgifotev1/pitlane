@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Trans, useLingui } from "@lingui/react/macro"
-import { PlusIcon, PencilIcon, SendIcon } from "lucide-react"
+import { PlusIcon, PencilIcon, SendIcon, FileTextIcon } from "lucide-react"
 import type { OfferResponse } from "@/lib/generated/types"
 import { api, ProblemError } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { OfferFormDialog } from "@/components/offers/OfferFormDialog"
+import { OfferPdfDialog } from "@/components/offers/OfferPdfDialog"
 
 // A car has few offers, so we fetch a generous single page and render them all
 // — no pagination UI (the API still supports it, matching CarsSection).
@@ -47,6 +48,7 @@ export function OffersSection({ carId }: { carId: string }) {
   const qc = useQueryClient()
   const [createOpen, setCreateOpen] = useState(false)
   const [editing, setEditing] = useState<OfferResponse | undefined>()
+  const [previewing, setPreviewing] = useState<OfferResponse | undefined>()
   const [statusError, setStatusError] = useState<string>("")
 
   const listQuery = { page: 1, pageSize: PAGE_SIZE }
@@ -144,6 +146,14 @@ export function OffersSection({ carId }: { carId: string }) {
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        aria-label={t`Preview PDF`}
+                        onClick={() => setPreviewing(offer)}
+                      >
+                        <FileTextIcon />
+                      </Button>
                       {offer.status === "draft" && (
                         <>
                           <Button
@@ -216,6 +226,11 @@ export function OffersSection({ carId }: { carId: string }) {
         onOpenChange={(open) => !open && setEditing(undefined)}
         carId={carId}
         offer={editing}
+      />
+      <OfferPdfDialog
+        open={previewing !== undefined}
+        onOpenChange={(open) => !open && setPreviewing(undefined)}
+        offerId={previewing?.id}
       />
     </section>
   )

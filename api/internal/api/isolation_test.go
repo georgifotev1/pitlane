@@ -16,6 +16,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/gfotev/pitlane/internal/api/dto"
 	"github.com/gfotev/pitlane/internal/config"
+	"github.com/gfotev/pitlane/internal/pdf"
 	"github.com/gfotev/pitlane/internal/store"
 	"github.com/gfotev/pitlane/internal/testdb"
 	"github.com/google/uuid"
@@ -66,6 +67,7 @@ func newTestAPI(t *testing.T) *testAPI {
 		Cars:      store.NewCarStore(db),
 		Offers:    store.NewOfferStore(db),
 		Audit:     store.NewAuditLogStore(db),
+		PDF:       pdf.NewRenderer(),
 	})
 	if err != nil {
 		t.Fatalf("new server: %v", err)
