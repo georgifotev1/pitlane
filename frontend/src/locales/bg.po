@@ -34,6 +34,10 @@ msgstr "Действия"
 msgid "Add line"
 msgstr "Добавяне на ред"
 
+#: src/components/history/HistorySection.tsx
+msgid "Add note"
+msgstr "Добавяне на бележка"
+
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/routes/_authed/customers/$customerId.tsx
 msgid "Address"
@@ -79,6 +83,10 @@ msgstr "Архивиран"
 msgid "Archiving…"
 msgstr "Архивиране…"
 
+#: src/components/attachments/AttachmentsSection.tsx
+msgid "Attachments"
+msgstr "Прикачени файлове"
+
 #: src/routes/_authed/repairs/$repairId.tsx
 msgid "Back to car"
 msgstr "Обратно към автомобила"
@@ -99,6 +107,7 @@ msgstr "Обратно към таблото"
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/ArchiveCustomerDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
+#: src/components/history/HistorySection.tsx
 #: src/components/offers/OfferFormDialog.tsx
 #: src/components/offers/SendOfferDialog.tsx
 #: src/components/repairs/CompleteRepairDialog.tsx
@@ -165,6 +174,10 @@ msgstr "Преобразувай в ремонт"
 msgid "Could not archive. Please try again."
 msgstr "Архивирането е неуспешно. Опитайте отново."
 
+#: src/components/attachments/AttachmentsSection.tsx
+msgid "Could not load attachments."
+msgstr "Прикачените файлове не могат да бъдат заредени."
+
 #: src/components/cars/CarsSection.tsx
 msgid "Could not load cars."
 msgstr "Автомобилите не могат да бъдат заредени."
@@ -180,6 +193,10 @@ msgstr "Офертите не могат да бъдат заредени."
 #: src/routes/_authed/repairs/index.tsx
 msgid "Could not load repairs."
 msgstr "Ремонтите не можаха да се заредят."
+
+#: src/components/history/HistorySection.tsx
+msgid "Could not load service history."
+msgstr "Сервизната история не може да бъде заредена."
 
 #: src/routes/signup.tsx
 msgid "Create garage"
@@ -215,6 +232,11 @@ msgstr "Клиенти"
 msgid "Dashboard"
 msgstr "Табло"
 
+#: src/components/history/HistorySection.tsx
+msgid "Date"
+msgstr "Дата"
+
+#: src/components/history/HistorySection.tsx
 #: src/components/offers/OfferFormDialog.tsx
 #: src/components/repairs/RepairFormDialog.tsx
 #: src/routes/_authed/repairs/$repairId.tsx
@@ -237,6 +259,10 @@ msgstr "напр. 145000"
 #: src/components/repairs/RepairFormDialog.tsx
 msgid "e.g. Brake pads"
 msgstr "напр. Накладки"
+
+#: src/components/history/HistorySection.tsx
+msgid "e.g. Dealer service"
+msgstr "напр. Сервизно обслужване при дилър"
 
 #: src/components/cars/CarsSection.tsx
 #: src/components/offers/OffersSection.tsx
@@ -282,6 +308,10 @@ msgstr "Маркиране като изтекла"
 msgid "Expired"
 msgstr "Изтекла"
 
+#: src/components/attachments/AttachmentsSection.tsx
+msgid "File is too large. Maximum size is 10 MB."
+msgstr "Файлът е твърде голям. Максималният размер е 10 MB."
+
 #: src/routes/signup.tsx
 msgid "Garage name"
 msgstr "Име на гаража"
@@ -319,6 +349,14 @@ msgstr "Редове и суми за тази оферта за ремонт."
 msgid "Line total"
 msgstr "Сума на реда"
 
+#: src/components/attachments/AttachmentsSection.tsx
+msgid "Loading attachments…"
+msgstr "Зареждане на прикачените файлове…"
+
+#: src/components/history/HistorySection.tsx
+msgid "Loading history…"
+msgstr "Зареждане на историята…"
+
 #: src/components/cars/CarsSection.tsx
 #: src/components/offers/OffersSection.tsx
 #: src/routes/_authed.tsx
@@ -346,6 +384,12 @@ msgstr "Пробег"
 #: src/components/repairs/CompleteRepairDialog.tsx
 msgid "Mileage (km)"
 msgstr "Пробег (км)"
+
+#. placeholder {0}: entry.mileage.toLocaleString("bg-BG")
+#. placeholder {1}: formatMoney(entry.totalCents)
+#: src/components/history/HistorySection.tsx
+msgid "Mileage {0} km · Total {1}"
+msgstr "Пробег {0} км · Общо {1}"
 
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/cars/CarsSection.tsx
@@ -390,6 +434,10 @@ msgstr "Нова оферта"
 msgid "Next"
 msgstr "Следваща"
 
+#: src/components/attachments/AttachmentsSection.tsx
+msgid "No attachments yet."
+msgstr "Все още няма прикачени файлове."
+
 #: src/components/cars/CarsSection.tsx
 msgid "No cars yet."
 msgstr "Все още няма автомобили."
@@ -397,6 +445,10 @@ msgstr "Все още няма автомобили."
 #: src/routes/_authed/customers/index.tsx
 msgid "No customers found."
 msgstr "Няма намерени клиенти."
+
+#: src/components/history/HistorySection.tsx
+msgid "No history entries yet. Completed repairs and manual notes will appear here."
+msgstr "Все още няма записи в историята. Тук ще се появяват завършените ремонти и ръчно добавените бележки."
 
 #: src/components/offers/OffersSection.tsx
 msgid "No offers yet."
@@ -525,6 +577,7 @@ msgstr "Премахване на ред"
 msgid "Reopen"
 msgstr "Отвори отново"
 
+#: src/components/history/HistorySection.tsx
 #: src/routes/_authed/repairs/$repairId.tsx
 msgid "Repair"
 msgstr "Ремонт"
@@ -552,6 +605,7 @@ msgstr "Повторно изпращане"
 
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
+#: src/components/history/HistorySection.tsx
 #: src/components/offers/OfferFormDialog.tsx
 #: src/components/repairs/RepairFormDialog.tsx
 msgid "Save"
@@ -589,6 +643,10 @@ msgstr "Изпраща се…"
 #: src/components/offers/OffersSection.tsx
 msgid "Sent"
 msgstr "Изпратена"
+
+#: src/components/history/HistorySection.tsx
+msgid "Service history"
+msgstr "Сервизна история"
 
 #: src/routes/signup.tsx
 msgid "Set up a garage and your owner account."
@@ -659,6 +717,14 @@ msgstr "Ставка ДДС (%)"
 msgid "The action could not be completed."
 msgstr "Действието не може да бъде изпълнено."
 
+#: src/components/attachments/AttachmentsSection.tsx
+msgid "The file could not be uploaded."
+msgstr "Файлът не можа да бъде качен."
+
+#: src/components/history/HistorySection.tsx
+msgid "The note could not be saved."
+msgstr "Бележката не можа да бъде запазена."
+
 #: src/components/offers/SendOfferDialog.tsx
 msgid "The offer PDF will be emailed to the customer. Once sent, the offer can no longer be edited."
 msgstr "PDF файлът с офертата ще бъде изпратен на клиента по имейл. След изпращане офертата не може да бъде редактирана."
@@ -682,6 +748,10 @@ msgstr "Това скрива {0} от активния списък и осво
 msgid "This hides {0} from the active list. You can still view archived customers with the filter."
 msgstr "Това скрива {0} от активния списък. Можете да видите архивираните клиенти чрез филтъра."
 
+#: src/components/history/HistorySection.tsx
+msgid "Title"
+msgstr "Заглавие"
+
 #: src/components/offers/OfferFormDialog.tsx
 #: src/components/offers/OffersSection.tsx
 #: src/components/repairs/RepairFormDialog.tsx
@@ -696,6 +766,10 @@ msgstr "Общо"
 msgid "Unit price"
 msgstr "Единична цена"
 
+#: src/components/attachments/AttachmentsSection.tsx
+msgid "Upload"
+msgstr "Качване"
+
 #: src/components/cars/CarFormDialog.tsx
 msgid "Vehicle details and mileage."
 msgstr "Данни за автомобила и пробег."
@@ -708,6 +782,10 @@ msgstr "Автомобили на този клиент."
 #: src/routes/_authed/cars/$carId.tsx
 msgid "VIN"
 msgstr "VIN"
+
+#: src/components/history/HistorySection.tsx
+msgid "What was done?"
+msgstr "Какво е свършено?"
 
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/cars/CarsSection.tsx

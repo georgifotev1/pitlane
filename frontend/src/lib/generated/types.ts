@@ -310,3 +310,65 @@ export interface UpdateRepairStatusRequest {
 export interface CompleteRepairRequest {
   mileage: number /* int */;
 }
+/**
+ * HistoryEntryResponse is one row in the service-history timeline. It is a
+ * union: either a completed repair or a manual history note.
+ */
+export interface HistoryEntryResponse {
+  type: string;
+  id: string;
+  title: string;
+  description: string;
+  recordedAt: string;
+  mileage: number /* int */;
+  totalCents: number /* int64 */;
+}
+/**
+ * HistoryResponse is the full timeline for a car.
+ */
+export interface HistoryResponse {
+  history: HistoryEntryResponse[];
+}
+/**
+ * HistoryNoteResponse is a single manual history note.
+ */
+export interface HistoryNoteResponse {
+  id: string;
+  carId: string;
+  title: string;
+  description: string;
+  recordedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+/**
+ * CreateHistoryNoteRequest / UpdateHistoryNoteRequest share a shape.
+ */
+export interface CreateHistoryNoteRequest {
+  title: string;
+  description: string;
+  recordedAt: string;
+}
+export interface UpdateHistoryNoteRequest {
+  title: string;
+  description: string;
+  recordedAt: string;
+}
+/**
+ * AttachmentResponse is the metadata for an uploaded file.
+ */
+export interface AttachmentResponse {
+  id: string;
+  carId?: string;
+  repairId?: string;
+  name: string;
+  sizeBytes: number /* int64 */;
+  contentType: string;
+  createdAt: string;
+}
+/**
+ * AttachmentListResponse is the list of attachments for a car or repair.
+ */
+export interface AttachmentListResponse {
+  attachments: AttachmentResponse[];
+}

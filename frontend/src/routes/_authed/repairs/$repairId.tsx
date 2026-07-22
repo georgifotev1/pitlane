@@ -19,6 +19,7 @@ import {
 import { RepairStatusBadge } from "@/components/repairs/RepairStatusBadge"
 import { RepairFormDialog } from "@/components/repairs/RepairFormDialog"
 import { CompleteRepairDialog } from "@/components/repairs/CompleteRepairDialog"
+import { AttachmentsSection } from "@/components/attachments/AttachmentsSection"
 
 export const Route = createFileRoute("/_authed/repairs/$repairId")({
   component: RepairDetail,
@@ -245,6 +246,8 @@ function RepairDetail() {
         repair={repair}
         currentMileage={carQuery.data?.mileage ?? 0}
       />
+
+      <AttachmentsSection repairId={repair.id} />
     </main>
   )
 }

@@ -292,3 +292,60 @@ type UpdateRepairStatusRequest struct {
 type CompleteRepairRequest struct {
 	Mileage int `json:"mileage"`
 }
+
+// HistoryEntryResponse is one row in the service-history timeline. It is a
+// union: either a completed repair or a manual history note.
+type HistoryEntryResponse struct {
+	Type        string `json:"type"`
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	RecordedAt  string `json:"recordedAt"`
+	Mileage     int    `json:"mileage"`
+	TotalCents  int64  `json:"totalCents"`
+}
+
+// HistoryResponse is the full timeline for a car.
+type HistoryResponse struct {
+	History []HistoryEntryResponse `json:"history"`
+}
+
+// HistoryNoteResponse is a single manual history note.
+type HistoryNoteResponse struct {
+	ID          string `json:"id"`
+	CarID       string `json:"carId"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	RecordedAt  string `json:"recordedAt"`
+	CreatedAt   string `json:"createdAt"`
+	UpdatedAt   string `json:"updatedAt"`
+}
+
+// CreateHistoryNoteRequest / UpdateHistoryNoteRequest share a shape.
+type CreateHistoryNoteRequest struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	RecordedAt  string `json:"recordedAt"`
+}
+
+type UpdateHistoryNoteRequest struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	RecordedAt  string `json:"recordedAt"`
+}
+
+// AttachmentResponse is the metadata for an uploaded file.
+type AttachmentResponse struct {
+	ID          string  `json:"id"`
+	CarID       *string `json:"carId"`
+	RepairID    *string `json:"repairId"`
+	Name        string  `json:"name"`
+	SizeBytes   int64   `json:"sizeBytes"`
+	ContentType string  `json:"contentType"`
+	CreatedAt   string  `json:"createdAt"`
+}
+
+// AttachmentListResponse is the list of attachments for a car or repair.
+type AttachmentListResponse struct {
+	Attachments []AttachmentResponse `json:"attachments"`
+}

@@ -31,5 +31,15 @@ export const queryKeys = {
     all: () => ["repairs"] as const,
     list: (q: RepairListQuery) => ["repairs", "list", q] as const,
     detail: (id: string) => ["repairs", "detail", id] as const,
+    attachments: (repairId: string) => ["repairs", "attachments", repairId] as const,
+  },
+  history: {
+    all: () => ["history"] as const,
+    forCar: (carId: string) => ["history", "car", carId] as const,
+  },
+  attachments: {
+    all: () => ["attachments"] as const,
+    forCar: (carId: string) => ["attachments", "car", carId] as const,
+    forRepair: (repairId: string) => ["attachments", "repair", repairId] as const,
   },
 } as const;

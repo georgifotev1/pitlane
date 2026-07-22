@@ -8,6 +8,7 @@ import (
 	"github.com/gfotev/pitlane/internal/api/dto"
 	"github.com/gfotev/pitlane/internal/config"
 	"github.com/gfotev/pitlane/internal/domain"
+	"github.com/gfotev/pitlane/internal/filestore"
 	"github.com/gfotev/pitlane/internal/store"
 )
 
@@ -23,9 +24,12 @@ type Server struct {
 	cars      *store.CarStore
 	offers       *store.OfferStore
 	repairs      *store.RepairStore
+	history      *store.HistoryStore
+	attachments  *store.AttachmentStore
 	audit        *store.AuditLogStore
 	pdf          offerRenderer
 	sendEnqueuer offerEmailEnqueuer
+	files        filestore.Store
 }
 
 // ServerDeps bundles the runtime dependencies the HTTP layer needs.
@@ -39,9 +43,12 @@ type ServerDeps struct {
 	Cars      *store.CarStore
 	Offers       *store.OfferStore
 	Repairs      *store.RepairStore
+	History      *store.HistoryStore
+	Attachments  *store.AttachmentStore
 	Audit        *store.AuditLogStore
 	PDF          offerRenderer
 	SendEnqueuer offerEmailEnqueuer
+	Files        filestore.Store
 }
 
 func NewServer(deps ServerDeps) (*Server, error) {
@@ -61,9 +68,12 @@ func NewServer(deps ServerDeps) (*Server, error) {
 		cars:      deps.Cars,
 		offers:       deps.Offers,
 		repairs:      deps.Repairs,
+		history:      deps.History,
+		attachments:  deps.Attachments,
 		audit:        deps.Audit,
 		pdf:          deps.PDF,
 		sendEnqueuer: deps.SendEnqueuer,
+		files:        deps.Files,
 	}, nil
 }
 
@@ -131,6 +141,24 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PUT /api/v1/repairs/{id}", s.protected(domain.PermissionRepairsWrite, s.updateRepair))
 	mux.Handle("POST /api/v1/repairs/{id}/status", s.protected(domain.PermissionRepairsWrite, s.updateRepairStatus))
 	mux.Handle("POST /api/v1/repairs/{id}/complete", s.protected(domain.PermissionRepairsWrite, s.completeRepair))
+	// Attachments nested under repairs.
+	mux.Handle("GET /api/v1/repairs/{repairId}/attachments", s.protected(domain.PermissionAttachmentsRead, s.listRepairAttachments))
+	mux.Handle("POST /api/v1/repairs/{repairId}/attachments", s.protected(domain.PermissionAttachmentsWrite, s.uploadRepairAttachment))
+
+	// Service history + attachments for cars. History is read-only derived data plus
+	// manual notes; attachments are photos/documents on the car.
+	mux.Handle("GET /api/v1/cars/{carId}/history", s.protected(domain.PermissionHistoryRead, s.getCarHistory))
+	mux.Handle("POST /api/v1/cars/{carId}/history/notes", s.protected(domain.PermissionHistoryWrite, s.createHistoryNote))
+	mux.Handle("GET /api/v1/cars/{carId}/attachments", s.protected(domain.PermissionAttachmentsRead, s.listCarAttachments))
+	mux.Handle("POST /api/v1/cars/{carId}/attachments", s.protected(domain.PermissionAttachmentsWrite, s.uploadCarAttachment))
+
+	// Attachment item ops are addressed directly by id.
+	mux.Handle("GET /api/v1/attachments/{id}", s.protected(domain.PermissionAttachmentsRead, s.downloadAttachment))
+	mux.Handle("DELETE /api/v1/attachments/{id}", s.protected(domain.PermissionAttachmentsWrite, s.deleteAttachment))
+
+	// History note item ops are addressed directly by id.
+	mux.Handle("PUT /api/v1/history/notes/{id}", s.protected(domain.PermissionHistoryWrite, s.updateHistoryNote))
+	mux.Handle("DELETE /api/v1/history/notes/{id}", s.protected(domain.PermissionHistoryWrite, s.deleteHistoryNote))
 
 	// Unmatched API paths get problem+json — never the SPA shell.
 	mux.HandleFunc("GET /api/", s.notFound)

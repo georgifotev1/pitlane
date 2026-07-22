@@ -16,6 +16,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/gfotev/pitlane/internal/api/dto"
 	"github.com/gfotev/pitlane/internal/config"
+	"github.com/gfotev/pitlane/internal/filestore"
 	"github.com/gfotev/pitlane/internal/jobs"
 	"github.com/gfotev/pitlane/internal/pdf"
 	"github.com/gfotev/pitlane/internal/store"
@@ -76,9 +77,12 @@ func newTestAPI(t *testing.T) *testAPI {
 		Cars:         store.NewCarStore(db),
 		Offers:       store.NewOfferStore(db),
 		Repairs:      store.NewRepairStore(db),
+		History:      store.NewHistoryStore(db),
+		Attachments:  store.NewAttachmentStore(db),
 		Audit:        store.NewAuditLogStore(db),
 		PDF:          pdf.NewRenderer(),
 		SendEnqueuer: jobs.NewOfferEmailEnqueuer(riverClient),
+		Files:        filestore.NewMemoryStore(),
 	})
 	if err != nil {
 		t.Fatalf("new server: %v", err)
@@ -285,6 +289,26 @@ func TestRLSEnforcedAtDatabase(t *testing.T) {
 		}
 		if n != 1 {
 			t.Fatalf("tenant A must see exactly its own 1 user, got %d", n)
+		}
+	})
+
+	// Phase 9 tables must also be protected by RLS.
+	t.Run("history_notes and attachments are RLS-protected", func(t *testing.T) {
+		if _, err := conn.Exec(ctx, "SET app.tenant_id = '00000000-0000-0000-0000-000000000000'"); err != nil {
+			t.Fatalf("set fake tenant: %v", err)
+		}
+		var n int
+		if err := conn.QueryRow(ctx, "SELECT count(*) FROM history_notes").Scan(&n); err != nil {
+			t.Fatalf("count history_notes: %v", err)
+		}
+		if n != 0 {
+			t.Fatalf("fake tenant must see 0 history_notes, got %d", n)
+		}
+		if err := conn.QueryRow(ctx, "SELECT count(*) FROM attachments").Scan(&n); err != nil {
+			t.Fatalf("count attachments: %v", err)
+		}
+		if n != 0 {
+			t.Fatalf("fake tenant must see 0 attachments, got %d", n)
 		}
 	})
 }

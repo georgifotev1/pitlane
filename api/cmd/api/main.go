@@ -14,6 +14,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/gfotev/pitlane/internal/api"
 	"github.com/gfotev/pitlane/internal/config"
+	"github.com/gfotev/pitlane/internal/filestore"
 	"github.com/gfotev/pitlane/internal/jobs"
 	"github.com/gfotev/pitlane/internal/mailer"
 	"github.com/gfotev/pitlane/internal/pdf"
@@ -84,8 +85,21 @@ func serve() error {
 	cars := store.NewCarStore(db)
 	offers := store.NewOfferStore(db)
 	repairs := store.NewRepairStore(db)
+	history := store.NewHistoryStore(db)
+	attachments := store.NewAttachmentStore(db)
 	audit := store.NewAuditLogStore(db)
 	pdfRenderer := pdf.NewRenderer()
+
+	fileStore, err := filestore.NewS3(filestore.Config{
+		Endpoint:        cfg.R2.Endpoint,
+		Region:          cfg.R2.Region,
+		Bucket:          cfg.R2.Bucket,
+		AccessKeyID:     cfg.R2.AccessKeyID,
+		SecretAccessKey: cfg.R2.SecretAccessKey,
+	})
+	if err != nil {
+		return fmt.Errorf("file store: %w", err)
+	}
 	mailSender := mailer.NewSMTP(mailer.Config{
 		Host:     cfg.SMTP.Host,
 		Port:     cfg.SMTP.Port,
@@ -135,9 +149,12 @@ func serve() error {
 		Cars:         cars,
 		Offers:       offers,
 		Repairs:      repairs,
+		History:      history,
+		Attachments:  attachments,
 		Audit:        audit,
 		PDF:          pdfRenderer,
 		SendEnqueuer: jobs.NewOfferEmailEnqueuer(riverClient),
+		Files:        fileStore,
 	})
 	if err != nil {
 		return fmt.Errorf("server: %w", err)

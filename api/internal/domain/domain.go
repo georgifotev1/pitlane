@@ -24,13 +24,17 @@ const (
 	PermissionCustomersWrite Permission = "customers:write"
 	PermissionCarsRead       Permission = "cars:read"
 	PermissionCarsWrite      Permission = "cars:write"
-	PermissionOffersRead     Permission = "offers:read"
-	PermissionOffersWrite    Permission = "offers:write"
-	PermissionRepairsRead    Permission = "repairs:read"
-	PermissionRepairsWrite   Permission = "repairs:write"
-	PermissionUsersRead      Permission = "users:read"
-	PermissionUsersWrite     Permission = "users:write"
-	PermissionSettingsWrite  Permission = "settings:write"
+	PermissionOffersRead      Permission = "offers:read"
+	PermissionOffersWrite     Permission = "offers:write"
+	PermissionRepairsRead     Permission = "repairs:read"
+	PermissionRepairsWrite    Permission = "repairs:write"
+	PermissionHistoryRead     Permission = "history:read"
+	PermissionHistoryWrite    Permission = "history:write"
+	PermissionAttachmentsRead Permission = "attachments:read"
+	PermissionAttachmentsWrite Permission = "attachments:write"
+	PermissionUsersRead       Permission = "users:read"
+	PermissionUsersWrite      Permission = "users:write"
+	PermissionSettingsWrite   Permission = "settings:write"
 )
 
 // RolePermissions maps each role to the permissions it holds. The owner can do
@@ -41,6 +45,8 @@ var RolePermissions = map[Role][]Permission{
 		PermissionCarsRead, PermissionCarsWrite,
 		PermissionOffersRead, PermissionOffersWrite,
 		PermissionRepairsRead, PermissionRepairsWrite,
+		PermissionHistoryRead, PermissionHistoryWrite,
+		PermissionAttachmentsRead, PermissionAttachmentsWrite,
 		PermissionUsersRead, PermissionUsersWrite,
 		PermissionSettingsWrite,
 	},
@@ -49,12 +55,17 @@ var RolePermissions = map[Role][]Permission{
 		PermissionCarsRead, PermissionCarsWrite,
 		PermissionOffersRead, PermissionOffersWrite,
 		PermissionRepairsRead, PermissionRepairsWrite,
+		PermissionHistoryRead, PermissionHistoryWrite,
+		PermissionAttachmentsRead, PermissionAttachmentsWrite,
+		PermissionUsersRead, PermissionUsersWrite,
 	},
 	RoleMechanic: {
 		PermissionCustomersRead,
 		PermissionCarsRead,
 		PermissionOffersRead,
 		PermissionRepairsRead, PermissionRepairsWrite,
+		PermissionHistoryRead, PermissionHistoryWrite,
+		PermissionAttachmentsRead, PermissionAttachmentsWrite,
 	},
 }
 
@@ -375,4 +386,31 @@ func IsValidRepairStatus(s string) bool {
 		return true
 	}
 	return false
+}
+
+// HistoryNote is a manual external-work entry attached to a car. It is the only
+// table in the derived service-history model; the other half is completed repairs.
+type HistoryNote struct {
+	ID          string
+	TenantID    string
+	CarID       string
+	Title       string
+	Description string
+	RecordedAt  time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// Attachment is a photo or document stored in R2 (MinIO locally), linked to
+// either a car or a repair. Exactly one of CarID or RepairID is set.
+type Attachment struct {
+	ID          string
+	TenantID    string
+	CarID       *string
+	RepairID    *string
+	Name        string
+	StorageKey  string
+	SizeBytes   int64
+	ContentType string
+	CreatedAt   time.Time
 }

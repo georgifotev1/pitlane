@@ -5,6 +5,8 @@ import { ArrowLeftIcon } from "lucide-react"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { OffersSection } from "@/components/offers/OffersSection"
+import { HistorySection } from "@/components/history/HistorySection"
+import { AttachmentsSection } from "@/components/attachments/AttachmentsSection"
 
 export const Route = createFileRoute("/_authed/cars/$carId")({
   component: CarDetail,
@@ -99,6 +101,10 @@ function CarDetail() {
       </dl>
 
       <OffersSection carId={car.id} defaultRecipient={customerQuery.data?.email ?? ""} />
+
+      <HistorySection carId={car.id} />
+
+      <AttachmentsSection carId={car.id} />
     </main>
   )
 }

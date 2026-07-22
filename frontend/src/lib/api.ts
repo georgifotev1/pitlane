@@ -1,12 +1,17 @@
 import type {
+  AttachmentListResponse,
+  AttachmentResponse,
   CarListResponse,
   CarResponse,
   CreateCarRequest,
   CreateCustomerRequest,
+  CreateHistoryNoteRequest,
   CreateOfferRequest,
   CustomerListResponse,
   CustomerResponse,
   HealthResponse,
+  HistoryNoteResponse,
+  HistoryResponse,
   LoginRequest,
   OfferListResponse,
   OfferResponse,
@@ -16,6 +21,7 @@ import type {
   SignupResponse,
   UpdateCarRequest,
   UpdateCustomerRequest,
+  UpdateHistoryNoteRequest,
   UpdateOfferRequest,
   UpdateRepairRequest,
   UserResponse,
@@ -298,5 +304,49 @@ export const api = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mileage }),
       }),
+    attachments: {
+      list: (repairId: string) =>
+        requestBody<AttachmentListResponse>(`/repairs/${repairId}/attachments`),
+      upload: (repairId: string, file: File) =>
+        uploadAttachment(`/repairs/${repairId}/attachments`, file),
+    },
   },
+
+  history: {
+    list: (carId: string) => requestBody<HistoryResponse>(`/cars/${carId}/history`),
+    createNote: (carId: string, data: CreateHistoryNoteRequest) =>
+      request<HistoryNoteResponse>(`/cars/${carId}/history/notes`, "note", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    updateNote: (id: string, data: UpdateHistoryNoteRequest) =>
+      request<HistoryNoteResponse>(`/history/notes/${id}`, "note", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    deleteNote: (id: string) =>
+      request<void>(`/history/notes/${id}`, "", { method: "DELETE" }),
+  },
+
+  attachments: {
+    listByCar: (carId: string) =>
+      requestBody<AttachmentListResponse>(`/cars/${carId}/attachments`),
+    uploadToCar: (carId: string, file: File) =>
+      uploadAttachment(`/cars/${carId}/attachments`, file),
+    downloadUrl: (id: string) => `${BASE}/attachments/${id}`,
+    delete: (id: string) =>
+      request<void>(`/attachments/${id}`, "", { method: "DELETE" }),
+  },
+}
+
+// uploadAttachment streams a File as multipart/form-data to the given path.
+function uploadAttachment(path: string, file: File): Promise<AttachmentResponse> {
+  const body = new FormData()
+  body.set("file", file)
+  return request<AttachmentResponse>(path, "attachment", {
+    method: "POST",
+    body,
+  })
 }
