@@ -233,6 +233,89 @@ func TestCarStore(t *testing.T) {
 		}
 	})
 
+	t.Run("ListAll spans customers, enriches names, and filters", func(t *testing.T) {
+		// Fresh tenant so counts are deterministic. Two customers, one car each;
+		// a second fixture's tenant must never appear.
+		lt := newTenant("BoardGarage")
+		if err := ts.Create(ctx, lt); err != nil {
+			t.Fatalf("create board tenant: %v", err)
+		}
+		custA := newCustomer(lt.ID, "Ana Ivanova")
+		if err := custs.Create(ctx, custA); err != nil {
+			t.Fatalf("create customer A: %v", err)
+		}
+		custB := newCustomer(lt.ID, "Boris Dimitrov")
+		if err := custs.Create(ctx, custB); err != nil {
+			t.Fatalf("create customer B: %v", err)
+		}
+		carA := newCar(lt.ID, custA.ID, "AAA1111")
+		carA.Make = "Volkswagen"
+		if err := cars.Create(ctx, carA); err != nil {
+			t.Fatalf("create car A: %v", err)
+		}
+		carB := newCar(lt.ID, custB.ID, "BBB2222")
+		carB.Make = "Toyota"
+		if err := cars.Create(ctx, carB); err != nil {
+			t.Fatalf("create car B: %v", err)
+		}
+
+		board, total, err := cars.ListAll(ctx, lt.ID, CarListParams{Limit: 10, Offset: 0})
+		if err != nil {
+			t.Fatalf("list all: %v", err)
+		}
+		if total != 2 || len(board) != 2 {
+			t.Fatalf("board: got total=%d len=%d, want 2/2", total, len(board))
+		}
+		// Plate order, enriched with the owning customer's name.
+		if board[0].Car.Plate != "AAA1111" || board[0].CustomerName != "Ana Ivanova" {
+			t.Fatalf("row 0 wrong: %+v", board[0])
+		}
+		if board[1].Car.Plate != "BBB2222" || board[1].CustomerName != "Boris Dimitrov" {
+			t.Fatalf("row 1 wrong: %+v", board[1])
+		}
+
+		// Search crosses customers.
+		found, total, err := cars.ListAll(ctx, lt.ID, CarListParams{Search: "toyota", Limit: 10})
+		if err != nil {
+			t.Fatalf("search: %v", err)
+		}
+		if total != 1 || len(found) != 1 || found[0].Car.ID != carB.ID {
+			t.Fatalf("search wrong: total=%d len=%d", total, len(found))
+		}
+
+		// Archived cars drop from the default board but appear when included.
+		if err := cars.Archive(ctx, lt.ID, carA.ID); err != nil {
+			t.Fatalf("archive A: %v", err)
+		}
+		_, activeTotal, err := cars.ListAll(ctx, lt.ID, CarListParams{Limit: 10})
+		if err != nil {
+			t.Fatalf("list active: %v", err)
+		}
+		if activeTotal != 1 {
+			t.Fatalf("active total: got %d, want 1", activeTotal)
+		}
+		withArchived, inclTotal, err := cars.ListAll(ctx, lt.ID, CarListParams{IncludeArchived: true, Limit: 10})
+		if err != nil {
+			t.Fatalf("list incl archived: %v", err)
+		}
+		if inclTotal != 2 || withArchived[0].Car.ArchivedAt == nil {
+			t.Fatalf("incl-archived wrong: total=%d row0=%+v", inclTotal, withArchived[0].Car)
+		}
+
+		// Cross-tenant: another tenant's board is empty here.
+		otherTenant := newTenant("OtherBoard")
+		if err := ts.Create(ctx, otherTenant); err != nil {
+			t.Fatalf("create other tenant: %v", err)
+		}
+		foreign, total, err := cars.ListAll(ctx, otherTenant.ID, CarListParams{Limit: 10})
+		if err != nil {
+			t.Fatalf("foreign board: %v", err)
+		}
+		if total != 0 || len(foreign) != 0 {
+			t.Fatalf("tenant leak: got total=%d len=%d, want 0/0", total, len(foreign))
+		}
+	})
+
 	t.Run("cross-tenant access is invisible", func(t *testing.T) {
 		otherTenant := newTenant("Other")
 		if err := ts.Create(ctx, otherTenant); err != nil {

@@ -214,6 +214,52 @@ type SendOfferRequest struct {
 	Recipient string `json:"recipient"`
 }
 
+// OfferSummaryResponse is one row of the tenant-wide offers board. It carries
+// the car plate and customer name (joined server-side) so the board renders
+// without extra round-trips, but not the line items (the car detail page
+// loads those).
+type OfferSummaryResponse struct {
+	ID           string    `json:"id"`
+	CarID        string    `json:"carId"`
+	CarPlate     string    `json:"carPlate"`
+	CustomerName string    `json:"customerName"`
+	Status       string    `json:"status"`
+	SendStatus   string    `json:"sendStatus"`
+	TotalCents   int64     `json:"totalCents"`
+	Notes        string    `json:"notes"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
+
+// OfferBoardResponse is the full body of the offers board endpoint (both keys
+// read by the client), mirroring RepairListResponse.
+type OfferBoardResponse struct {
+	Offers   []OfferSummaryResponse `json:"offers"`
+	Metadata ListMetadata           `json:"metadata"`
+}
+
+// CarSummaryResponse is one row of the tenant-wide cars board. It carries the
+// owning customer's name (joined server-side) so the board renders without
+// extra round-trips.
+type CarSummaryResponse struct {
+	ID           string     `json:"id"`
+	CustomerID   string     `json:"customerId"`
+	CustomerName string     `json:"customerName"`
+	Plate        string     `json:"plate"`
+	Make         string     `json:"make"`
+	Model        string     `json:"model"`
+	Year         int        `json:"year"`
+	Mileage      int        `json:"mileage"`
+	ArchivedAt   *time.Time `json:"archivedAt"`
+	CreatedAt    time.Time  `json:"createdAt"`
+}
+
+// CarBoardResponse is the full body of the cars board endpoint (both keys read
+// by the client), mirroring the other list responses.
+type CarBoardResponse struct {
+	Cars     []CarSummaryResponse `json:"cars"`
+	Metadata ListMetadata         `json:"metadata"`
+}
+
 // RepairItemResponse is one line of a repair. Same shape as OfferItemResponse:
 // the copy made at conversion is faithful. Money is integer cents.
 type RepairItemResponse struct {

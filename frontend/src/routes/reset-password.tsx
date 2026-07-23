@@ -7,6 +7,7 @@ import { applyServerErrors } from "@/lib/formErrors.ts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AuthLayout } from "@/components/layout/AuthLayout";
 
 type ResetSearch = {
   token: string;
@@ -45,61 +46,51 @@ function ResetPasswordPage() {
   // A link with no token is unusable — say so instead of showing a dead form.
   if (!token) {
     return (
-      <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 p-6">
-        <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">
-            <Trans>Invalid link</Trans>
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            <Trans>
-              This reset link is missing its token. Please request a new one.
-            </Trans>
-          </p>
-        </div>
-        <Link
-          to="/forgot-password"
-          className="text-center text-sm font-medium text-foreground underline-offset-4 hover:underline"
-        >
-          <Trans>Request a new link</Trans>
-        </Link>
-      </main>
+      <AuthLayout
+        title={<Trans>Invalid link</Trans>}
+        description={
+          <Trans>
+            This reset link is missing its token. Please request a new one.
+          </Trans>
+        }
+        footer={
+          <Link
+            to="/forgot-password"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            <Trans>Request a new link</Trans>
+          </Link>
+        }
+      />
     );
   }
 
   if (reset.isSuccess) {
     return (
-      <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 p-6">
-        <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">
-            <Trans>Password updated</Trans>
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            <Trans>
-              Your password has been changed. Sign in with your new password.
-            </Trans>
-          </p>
-        </div>
-        <Link to="/login">
-          <Button className="w-full">
-            <Trans>Sign in</Trans>
-          </Button>
-        </Link>
-      </main>
+      <AuthLayout
+        title={<Trans>Password updated</Trans>}
+        description={
+          <Trans>
+            Your password has been changed. Sign in with your new password.
+          </Trans>
+        }
+      >
+        <Button className="w-full" render={<Link to="/login" />}>
+          <Trans>Sign in</Trans>
+        </Button>
+      </AuthLayout>
     );
   }
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 p-6">
-      <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">
-          <Trans>Choose a new password</Trans>
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          <Trans>
-            Signing in on other devices will require the new password.
-          </Trans>
-        </p>
-      </div>
+    <AuthLayout
+      title={<Trans>Choose a new password</Trans>}
+      description={
+        <Trans>
+          Signing in on other devices will require the new password.
+        </Trans>
+      }
+    >
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => reset.mutate(values))}
@@ -159,6 +150,6 @@ function ResetPasswordPage() {
           )}
         </Button>
       </form>
-    </main>
+    </AuthLayout>
   );
 }

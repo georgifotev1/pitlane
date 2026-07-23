@@ -1,33 +1,36 @@
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { useEffect } from "react"
 import { Trans } from "@lingui/react/macro"
-import { api } from "@/lib/api"
+import { api, ProblemError } from "@/lib/api"
+import { queryKeys } from "@/lib/queryKeys"
 
 export const Route = createFileRoute("/")({
   component: Index,
 })
 
+// The root route is a dispatch, not a page: signed-in users land on the
+// dashboard, everyone else on the login screen. The healthz probe that lived
+// here in Phase 0 did its job — the shell is the home now.
 function Index() {
-  const health = useQuery({ queryKey: ["health"], queryFn: api.health })
+  const navigate = useNavigate()
+  const me = useQuery({
+    queryKey: queryKeys.auth.me(),
+    queryFn: api.me,
+    retry: false,
+  })
+
+  useEffect(() => {
+    if (me.isSuccess) {
+      navigate({ to: "/dashboard" })
+    } else if (me.isError && me.error instanceof ProblemError && me.error.status === 401) {
+      navigate({ to: "/login" })
+    }
+  }, [me.isSuccess, me.isError, me.error, navigate])
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-md flex-col items-center justify-center gap-2 p-6 text-center">
-      <h1 className="text-3xl font-bold tracking-tight">pitlane</h1>
-      {health.isPending && (
-        <p className="text-muted-foreground">
-          <Trans>Checking the API…</Trans>
-        </p>
-      )}
-      {health.isError && (
-        <p className="text-destructive">
-          <Trans>API unreachable:</Trans> {health.error.message}
-        </p>
-      )}
-      {health.isSuccess && (
-        <p className="text-muted-foreground">
-          API {health.data.status} · {health.data.environment}
-        </p>
-      )}
+    <main className="flex min-h-svh items-center justify-center text-sm text-muted-foreground">
+      <Trans>Loading…</Trans>
     </main>
   )
 }

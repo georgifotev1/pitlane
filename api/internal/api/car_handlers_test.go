@@ -286,3 +286,92 @@ func TestCarTenantIsolation(t *testing.T) {
 		}
 	})
 }
+
+// listAllCars hits the tenant-wide board endpoint (not the nested list).
+func (tc *tenantClient) listAllCars(t *testing.T, query string) (*http.Response, *dto.CarBoardResponse) {
+	t.Helper()
+	res, err := tc.client.Get(tc.api.server.URL + "/api/v1/cars" + query)
+	if err != nil {
+		t.Fatalf("list cars board: %v", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return res, nil
+	}
+	var out dto.CarBoardResponse
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatalf("list cars board decode: %v", err)
+	}
+	return res, &out
+}
+
+func TestCarBoard(t *testing.T) {
+	api := newTestAPI(t)
+	tcA, _ := api.signup(t, "Garage A", "Owner A", "a@example.com", "password-aaa")
+	tcB, _ := api.signup(t, "Garage B", "Owner B", "b@example.com", "password-bbb")
+
+	_, custA := tcA.createCustomer(t, dto.CreateCustomerRequest{Name: "Ana Ivanova"})
+	_, custB := tcA.createCustomer(t, dto.CreateCustomerRequest{Name: "Boris Dimitrov"})
+	_, carA := tcA.createCar(t, custA.ID, dto.CreateCarRequest{Plate: "AAA001", Make: "Volkswagen"})
+	_, _ = tcA.createCar(t, custB.ID, dto.CreateCarRequest{Plate: "BBB002", Make: "Toyota"})
+
+	t.Run("board spans customers, plate order, enriched with names", func(t *testing.T) {
+		_, board := tcA.listAllCars(t, "")
+		if board.Metadata.Total != 2 || len(board.Cars) != 2 {
+			t.Fatalf("board: got total=%d len=%d, want 2/2", board.Metadata.Total, len(board.Cars))
+		}
+		if board.Cars[0].Plate != "AAA001" || board.Cars[0].CustomerName != "Ana Ivanova" {
+			t.Fatalf("row 0 wrong: %+v", board.Cars[0])
+		}
+		if board.Cars[1].Plate != "BBB002" || board.Cars[1].CustomerName != "Boris Dimitrov" {
+			t.Fatalf("row 1 wrong: %+v", board.Cars[1])
+		}
+	})
+
+	t.Run("search crosses customers", func(t *testing.T) {
+		_, board := tcA.listAllCars(t, "?search=toyota")
+		if board.Metadata.Total != 1 || board.Cars[0].Plate != "BBB002" {
+			t.Fatalf("search: got %+v, want only BBB002", board.Cars)
+		}
+	})
+
+	t.Run("archived cars hide by default, appear with archived=true", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPost, api.server.URL+"/api/v1/cars/"+carA.ID+"/archive", nil)
+		res, err := tcA.client.Do(req)
+		if err != nil {
+			t.Fatalf("archive: %v", err)
+		}
+		res.Body.Close()
+		if res.StatusCode != http.StatusNoContent {
+			t.Fatalf("archive: status %d, want 204", res.StatusCode)
+		}
+
+		_, active := tcA.listAllCars(t, "")
+		if active.Metadata.Total != 1 || active.Cars[0].Plate != "BBB002" {
+			t.Fatalf("active board: got %+v, want only BBB002", active.Cars)
+		}
+		_, withArchived := tcA.listAllCars(t, "?archived=true")
+		if withArchived.Metadata.Total != 2 || withArchived.Cars[0].ArchivedAt == nil {
+			t.Fatalf("archived board wrong: %+v", withArchived.Cars)
+		}
+	})
+
+	t.Run("B's board does not include A's cars", func(t *testing.T) {
+		_, board := tcB.listAllCars(t, "?archived=true")
+		if board.Metadata.Total != 0 || len(board.Cars) != 0 {
+			t.Fatalf("tenant leak: got %+v, want empty", board)
+		}
+	})
+
+	t.Run("board requires auth", func(t *testing.T) {
+		tc := api.newClient()
+		res, err := tc.client.Get(api.server.URL + "/api/v1/cars")
+		if err != nil {
+			t.Fatalf("board: %v", err)
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("status: got %d, want 401", res.StatusCode)
+		}
+	})
+}

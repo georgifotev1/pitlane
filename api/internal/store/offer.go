@@ -83,6 +83,78 @@ type OfferListParams struct {
 	Offset int
 }
 
+// OfferSummary is a board row: the offer plus the car plate and customer name
+// it belongs to, joined in for display so the client need not fan out N reads.
+// Items are not loaded for the board (Get loads them for the detail view).
+type OfferSummary struct {
+	Offer        *domain.Offer
+	CarPlate     string
+	CustomerName string
+}
+
+// OfferBoardParams controls the tenant-wide board query. Status "" means
+// "all statuses"; zero Limit means "no rows" (the handler clamps).
+type OfferBoardParams struct {
+	Status string
+	Limit  int
+	Offset int
+}
+
+// ListAll returns a tenant-wide page of offers (newest first), optionally
+// filtered by status, plus the total count matching the filter. Each row is
+// enriched with the car plate and customer name via joins that stay in-tenant
+// (composite keys), so the board renders without extra round-trips.
+func (s *OfferStore) ListAll(ctx context.Context, tenantID string, p OfferBoardParams) ([]OfferSummary, int, error) {
+	var out []OfferSummary
+	var total int
+
+	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
+		// $1 tenant, $2 status ('' = any).
+		const where = `WHERE o.tenant_id = $1 AND ($2 = '' OR o.status = $2)`
+
+		if err := tx.QueryRow(ctx,
+			`SELECT count(*) FROM offers o `+where,
+			tenantID, p.Status,
+		).Scan(&total); err != nil {
+			return fmt.Errorf("count offers: %w", err)
+		}
+
+		rows, err := tx.Query(ctx,
+			`SELECT o.id, o.tenant_id, o.car_id, o.status, o.send_status, o.sent_to, o.sent_at,
+			        o.tax_rate_bps, o.subtotal_cents, o.tax_cents, o.total_cents, o.notes,
+			        o.created_at, o.updated_at,
+			        c.plate, cust.name
+			 FROM offers o
+			 JOIN cars c ON c.id = o.car_id AND c.tenant_id = o.tenant_id
+			 JOIN customers cust ON cust.id = c.customer_id AND cust.tenant_id = c.tenant_id
+			 `+where+`
+			 ORDER BY o.created_at DESC, o.id DESC
+			 LIMIT $3 OFFSET $4`,
+			tenantID, p.Status, p.Limit, p.Offset,
+		)
+		if err != nil {
+			return fmt.Errorf("list offers board: %w", err)
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var o domain.Offer
+			var plate, customerName string
+			if err := rows.Scan(
+				&o.ID, &o.TenantID, &o.CarID, &o.Status, &o.SendStatus, &o.SentTo, &o.SentAt,
+				&o.TaxRateBps, &o.SubtotalCents, &o.TaxCents, &o.TotalCents, &o.Notes,
+				&o.CreatedAt, &o.UpdatedAt,
+				&plate, &customerName,
+			); err != nil {
+				return fmt.Errorf("scan offer summary: %w", err)
+			}
+			out = append(out, OfferSummary{Offer: &o, CarPlate: plate, CustomerName: customerName})
+		}
+		return rows.Err()
+	})
+	return out, total, err
+}
+
 // List returns a page of a car's offers (newest first) plus the total count,
 // both scoped to tenant_id AND car_id. Items are not loaded for the list view.
 func (s *OfferStore) List(ctx context.Context, tenantID, carID string, p OfferListParams) ([]*domain.Offer, int, error) {

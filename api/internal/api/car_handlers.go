@@ -55,6 +55,40 @@ func (s *Server) listCars(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// listAllCars returns a tenant-wide page of cars (the board), plate order,
+// with search and archived filters mirroring the nested list. Each row is
+// enriched with the owning customer's name so the board renders without extra
+// round-trips.
+func (s *Server) listAllCars(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromContext(r.Context())
+
+	page := clampAtLeast(queryInt(r, "page", 1), 1)
+	pageSize := clampRange(queryInt(r, "pageSize", defaultPageSize), 1, maxPageSize)
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	includeArchived := r.URL.Query().Get("archived") == "true"
+
+	summaries, total, err := s.cars.ListAll(r.Context(), tenantID, store.CarListParams{
+		Search:          search,
+		IncludeArchived: includeArchived,
+		Limit:           pageSize,
+		Offset:          (page - 1) * pageSize,
+	})
+	if err != nil {
+		loggerFromContext(r.Context(), s.logger).Error("list cars board", "err", err)
+		renderProblem(w, r, http.StatusInternalServerError, CodeInternalError, "internal server error")
+		return
+	}
+
+	items := make([]dto.CarSummaryResponse, 0, len(summaries))
+	for _, sm := range summaries {
+		items = append(items, carSummaryResponse(sm))
+	}
+	renderJSON(w, http.StatusOK, envelope{
+		"cars":     items,
+		"metadata": dto.ListMetadata{Page: page, PageSize: pageSize, Total: total},
+	})
+}
+
 // getCar returns one car or 404.
 func (s *Server) getCar(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantIDFromContext(r.Context())
@@ -220,6 +254,22 @@ func (s *Server) customerExists(w http.ResponseWriter, r *http.Request, tenantID
 	loggerFromContext(r.Context(), s.logger).Error("check customer for car", "err", err)
 	renderProblem(w, r, http.StatusInternalServerError, CodeInternalError, "internal server error")
 	return false
+}
+
+func carSummaryResponse(sm store.CarSummary) dto.CarSummaryResponse {
+	c := sm.Car
+	return dto.CarSummaryResponse{
+		ID:           c.ID,
+		CustomerID:   c.CustomerID,
+		CustomerName: sm.CustomerName,
+		Plate:        c.Plate,
+		Make:         c.Make,
+		Model:        c.Model,
+		Year:         c.Year,
+		Mileage:      c.Mileage,
+		ArchivedAt:   c.ArchivedAt,
+		CreatedAt:    c.CreatedAt,
+	}
 }
 
 func carResponse(c *domain.Car) dto.CarResponse {

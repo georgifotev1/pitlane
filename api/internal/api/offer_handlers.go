@@ -60,6 +60,43 @@ func (s *Server) listOffers(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// listAllOffers returns a tenant-wide page of offers (the board), newest
+// first, optionally filtered by status. Each row is enriched with car plate +
+// customer name. An unknown status filter is a 422 rather than a silent empty
+// list (same discipline as the repairs board).
+func (s *Server) listAllOffers(w http.ResponseWriter, r *http.Request) {
+	tenantID := tenantIDFromContext(r.Context())
+
+	status := r.URL.Query().Get("status")
+	if status != "" && !domain.IsValidOfferStatus(status) {
+		renderValidation(w, r, map[string]string{"status": validator.CodeInvalid})
+		return
+	}
+
+	page := clampAtLeast(queryInt(r, "page", 1), 1)
+	pageSize := clampRange(queryInt(r, "pageSize", defaultPageSize), 1, maxPageSize)
+
+	summaries, total, err := s.offers.ListAll(r.Context(), tenantID, store.OfferBoardParams{
+		Status: status,
+		Limit:  pageSize,
+		Offset: (page - 1) * pageSize,
+	})
+	if err != nil {
+		loggerFromContext(r.Context(), s.logger).Error("list offers board", "err", err)
+		renderProblem(w, r, http.StatusInternalServerError, CodeInternalError, "internal server error")
+		return
+	}
+
+	items := make([]dto.OfferSummaryResponse, 0, len(summaries))
+	for _, sm := range summaries {
+		items = append(items, offerSummaryResponse(sm))
+	}
+	renderJSON(w, http.StatusOK, envelope{
+		"offers":   items,
+		"metadata": dto.ListMetadata{Page: page, PageSize: pageSize, Total: total},
+	})
+}
+
 // getOffer returns one offer with its line items, or 404.
 func (s *Server) getOffer(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenantIDFromContext(r.Context())
@@ -375,6 +412,21 @@ func offerResponse(o *domain.Offer) dto.OfferResponse {
 		Items:         items,
 		CreatedAt:     o.CreatedAt,
 		UpdatedAt:     o.UpdatedAt,
+	}
+}
+
+func offerSummaryResponse(sm store.OfferSummary) dto.OfferSummaryResponse {
+	o := sm.Offer
+	return dto.OfferSummaryResponse{
+		ID:           o.ID,
+		CarID:        o.CarID,
+		CarPlate:     sm.CarPlate,
+		CustomerName: sm.CustomerName,
+		Status:       string(o.Status),
+		SendStatus:   string(o.SendStatus),
+		TotalCents:   o.TotalCents,
+		Notes:        o.Notes,
+		CreatedAt:    o.CreatedAt,
 	}
 }
 

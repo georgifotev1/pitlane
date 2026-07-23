@@ -119,8 +119,28 @@ History: SQL view/query (completed repairs ∪ `history_notes`), notes CRUD (RLS
 Reset per ADR §Security: hashed tokens, 1h, single-use, all-sessions destroyed, enumeration-safe, per-email throttle (Postgres), River-sent email; frontend `/forgot-password` + `/reset-password?token=` routes. Invitations: owner invites email+role, invite token → account completion; role management UI (permission-gated).
 **Gate:** full reset via Mailpit; second use of token fails; mechanic invited then blocked from owner action — verified by the owner manually. **STOP.**
 
+---
+
+## Phase 10.5 — App shell & UX overhaul (owner-directed, inserted 2026-07-23)
+
+**Objective:** the app gains real navigation and a coherent visual identity before the hardening pass. Owner directive after hands-on testing of Phase 10: "no navigation at all". No backend/DTO changes; no new npm dependencies; ADR untouched (shadcn components added per-screen per §28).
+
+Decisions (owner-approved): shadcn sidebar block; dark sidebar + orange accent expressed **only** by tuning existing shadcn CSS variables; dashboard from existing endpoints only; no dark-mode toggle yet.
+
+Slices:
+1. **Tokens** — `--primary`/`--ring` → orange; `--sidebar*` → near-black with orange accents (`:root` + `.dark` kept coherent). `shadcn add sidebar sheet dropdown-menu avatar badge skeleton breadcrumb card separator tooltip` — `package.json` verified unchanged.
+2. **Shell** — `components/layout/AppSidebar.tsx` (brand, nav with fuzzy active states, `users:read`-gated Team) + `AppUserMenu.tsx` (avatar initials, role label, sign-out moved here from dashboard); `_authed.tsx` wraps the outlet in `SidebarProvider`/`SidebarInset`; per-page `<main>` wrappers stripped; `TooltipProvider` at root.
+3. **Route hygiene** — `/` is an auth-aware redirect (healthz debug page retired); root `notFoundComponent` 404 *(pulled forward from Phase 11)*.
+4. **Dashboard** — permissions debug block removed; stat cards (customers total, active-repairs total) + active repairs list via `repairs.list` status probes; "New customer" quick action.
+5. **Scaffolding** — `PageHeader` on all section pages; `Breadcrumb` on detail pages replaces ad-hoc back links; all status chips unified on `Badge` (draft/open → secondary, sent/in-progress → primary, terminal → outline, failed → destructive).
+6. **Auth & states** — `AuthLayout` (brand card) on login/signup/forgot/reset/accept-invite; table `Skeleton` rows; dashboard skeletons; customers first-run empty state with CTA *(states pass pulled forward from Phase 11)*.
+
+**Gate:** `tsc -b` clean; `go vet`/`go test` green (backend untouched); `pnpm build` green; catalogs extracted, BG translations owner-reviewed, compiled; `pnpm audit` shows two **pre-existing** moderate/high advisories inside the `shadcn` CLI's own dependency tree (build-time tool, not shipped runtime; lockfile untouched by this phase) — flagged to owner, fix deferred to a dependency decision; manual owner walkthrough incl. mobile viewport. **STOP.**
+
+---
+
 ## Phase 11 — Hardening + release candidate
-River periodic jobs (expired tokens, audit prune). Global rate limiter verified (429 + Retry-After; burst fits SPA page-mount). CSP audited against built bundle (no violations in console). Loading/empty/error states pass on every route; 404 route; problem+json rendering audited. `pnpm install --frozen-lockfile` + audit in `make audit`; Renovate config. Log line review (request/tenant/user IDs everywhere). Restore rehearsal from `scripts/backup.sh` output. Ops section in README.
+River periodic jobs (expired tokens, audit prune). Global rate limiter verified (429 + Retry-After; burst fits SPA page-mount). CSP audited against built bundle (no violations in console). Loading/empty/error states **audit** on every route (the pass itself landed in Phase 10.5 — here we only verify nothing regressed) and 404 route (same — shipped in 10.5); problem+json rendering audited. `pnpm install --frozen-lockfile` + audit in `make audit`; Renovate config. Log line review (request/tenant/user IDs everywhere). Restore rehearsal from `scripts/backup.sh` output. Ops section in README.
 **Gate:** `make audit && make test` all green from a clean clone; owner walkthrough of the full app; tag `v0.1.0-rc1`. **STOP — app is done pending a server.**
 
 ---

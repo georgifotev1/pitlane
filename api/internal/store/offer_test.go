@@ -276,6 +276,83 @@ func TestOfferStore(t *testing.T) {
 		}
 	})
 
+	t.Run("ListAll is a tenant-wide board with status filter and enrichment", func(t *testing.T) {
+		// Fresh tenant so counts are deterministic. Two cars under one customer;
+		// a second fixture's tenant must never appear.
+		ctx2, db2, offers2, tenant2, car2 := offerFixture(t)
+		other := newCar(tenant2.ID, car2.CustomerID, "OT9999HH")
+		if err := NewCarStore(db2).Create(ctx2, other); err != nil {
+			t.Fatalf("create second car: %v", err)
+		}
+
+		// One draft on car2, one sent offer on the other car.
+		draft := newOffer(tenant2.ID, car2.ID)
+		if err := offers2.Create(ctx2, draft); err != nil {
+			t.Fatalf("create draft: %v", err)
+		}
+		sent := newOffer(tenant2.ID, other.ID)
+		if err := offers2.Create(ctx2, sent); err != nil {
+			t.Fatalf("create sent: %v", err)
+		}
+		if _, err := offers2.MarkSending(ctx2, tenant2.ID, sent.ID, "customer@example.com", &fakeEnqueuer{}); err != nil {
+			t.Fatalf("send: %v", err)
+		}
+
+		// No filter: both cars' offers, newest first, enriched.
+		board, total, err := offers2.ListAll(ctx2, tenant2.ID, OfferBoardParams{Limit: 10, Offset: 0})
+		if err != nil {
+			t.Fatalf("list all: %v", err)
+		}
+		if total != 2 || len(board) != 2 {
+			t.Fatalf("board: got total=%d len=%d, want 2/2", total, len(board))
+		}
+		if board[0].Offer.ID != sent.ID {
+			t.Fatalf("not newest-first: first is %s", board[0].Offer.ID)
+		}
+		byID := map[string]OfferSummary{}
+		for _, sm := range board {
+			byID[sm.Offer.ID] = sm
+		}
+		if byID[draft.ID].CarPlate != car2.Plate || byID[draft.ID].CustomerName != "Ivan Petrov" {
+			t.Fatalf("draft enrichment wrong: %+v", byID[draft.ID])
+		}
+		if byID[sent.ID].CarPlate != other.Plate || byID[sent.ID].CustomerName != "Ivan Petrov" {
+			t.Fatalf("sent enrichment wrong: %+v", byID[sent.ID])
+		}
+		// Board view omits items.
+		if board[0].Offer.Items != nil {
+			t.Fatalf("board should not load items")
+		}
+
+		// Status filter: only drafts.
+		drafts, total, err := offers2.ListAll(ctx2, tenant2.ID, OfferBoardParams{Status: "draft", Limit: 10, Offset: 0})
+		if err != nil {
+			t.Fatalf("list drafts: %v", err)
+		}
+		if total != 1 || len(drafts) != 1 || drafts[0].Offer.ID != draft.ID {
+			t.Fatalf("draft filter wrong: total=%d len=%d", total, len(drafts))
+		}
+
+		// Pagination: one per page.
+		page1, total, err := offers2.ListAll(ctx2, tenant2.ID, OfferBoardParams{Limit: 1, Offset: 0})
+		if err != nil {
+			t.Fatalf("page 1: %v", err)
+		}
+		if total != 2 || len(page1) != 1 || page1[0].Offer.ID != sent.ID {
+			t.Fatalf("page 1 wrong: total=%d len=%d", total, len(page1))
+		}
+
+		// Cross-tenant: the other fixture's tenant sees none of these.
+		_, _, offers3, tenant3, _ := offerFixture(t)
+		foreign, total, err := offers3.ListAll(ctx2, tenant3.ID, OfferBoardParams{Limit: 10, Offset: 0})
+		if err != nil {
+			t.Fatalf("foreign board: %v", err)
+		}
+		if total != 0 || len(foreign) != 0 {
+			t.Fatalf("tenant leak: got total=%d len=%d, want 0/0", total, len(foreign))
+		}
+	})
+
 	t.Run("cross-tenant access is invisible", func(t *testing.T) {
 		ctx2, _, offers2, tenantA, carA := offerFixture(t)
 		mine := newOffer(tenantA.ID, carA.ID)

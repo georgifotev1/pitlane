@@ -2,10 +2,19 @@ import { useState } from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { Trans, useLingui } from "@lingui/react/macro"
-import { ArrowLeftIcon, PencilIcon, ArchiveIcon } from "lucide-react"
+import { PencilIcon, ArchiveIcon } from "lucide-react"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { CustomerFormDialog } from "@/components/customers/CustomerFormDialog"
 import { ArchiveCustomerDialog } from "@/components/customers/ArchiveCustomerDialog"
 import { CarsSection } from "@/components/cars/CarsSection"
@@ -46,7 +55,7 @@ function CustomerDetail() {
 
   if (query.isError || !query.data) {
     return (
-      <main className="mx-auto max-w-3xl p-6">
+      <div>
         <p className="text-sm text-destructive">
           <Trans>Customer not found.</Trans>
         </p>
@@ -57,31 +66,40 @@ function CustomerDetail() {
         >
           <Trans>Back to customers</Trans>
         </Link>
-      </main>
+      </div>
     )
   }
 
   const c = query.data
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-3xl flex-col gap-6 p-6">
-      <Link
-        to="/customers"
-        search={{ page: 1, search: "", archived: false }}
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:underline"
-      >
-        <ArrowLeftIcon className="size-4" />
-        <Trans>Back to customers</Trans>
-      </Link>
+    <>
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              render={
+                <Link to="/customers" search={{ page: 1, search: "", archived: false }} />
+              }
+            >
+              <Trans>Customers</Trans>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{c.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
             {c.name}
             {c.archivedAt && (
-              <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground">
+              <Badge variant="secondary">
                 <Trans>Archived</Trans>
-              </span>
+              </Badge>
             )}
           </h1>
           {c.company && <p className="text-sm text-muted-foreground">{c.company}</p>}
@@ -121,6 +139,6 @@ function CustomerDetail() {
           navigate({ to: "/customers", search: { page: 1, search: "", archived: false } })
         }
       />
-    </main>
+    </>
   )
 }

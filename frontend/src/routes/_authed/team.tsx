@@ -19,6 +19,7 @@ import {
 import { InviteUserDialog } from "@/components/team/InviteUserDialog"
 import { ChangeRoleDialog } from "@/components/team/ChangeRoleDialog"
 import { RevokeInviteDialog } from "@/components/team/RevokeInviteDialog"
+import { PageHeader } from "@/components/layout/PageHeader"
 
 export const Route = createFileRoute("/_authed/team")({
   component: TeamPage,
@@ -51,14 +52,14 @@ function TeamPage() {
   // route, so the screen refuses rather than showing empty tables.
   if (me.isSuccess && !canRead) {
     return (
-      <main className="mx-auto flex min-h-svh max-w-3xl flex-col justify-center gap-2 p-6 text-center">
+      <div className="flex flex-col items-center gap-2 py-16 text-center">
         <h1 className="text-2xl font-bold tracking-tight">
           <Trans>Team</Trans>
         </h1>
         <p className="text-sm text-muted-foreground">
           <Trans>You don't have permission to manage the team.</Trans>
         </p>
-      </main>
+      </div>
     )
   }
 
@@ -66,23 +67,19 @@ function TeamPage() {
   const pending = invitations.data?.invitations ?? []
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-4xl flex-col gap-8 p-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            <Trans>Team</Trans>
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            <Trans>People with access to your garage.</Trans>
-          </p>
-        </div>
-        {canWrite && (
-          <Button onClick={() => setInviteOpen(true)}>
-            <PlusIcon />
-            <Trans>Invite teammate</Trans>
-          </Button>
-        )}
-      </header>
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        title={<Trans>Team</Trans>}
+        description={<Trans>People with access to your garage.</Trans>}
+        actions={
+          canWrite ? (
+            <Button onClick={() => setInviteOpen(true)}>
+              <PlusIcon />
+              <Trans>Invite teammate</Trans>
+            </Button>
+          ) : undefined
+        }
+      />
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">
@@ -232,6 +229,6 @@ function TeamPage() {
           invitation={revoking}
         />
       )}
-    </main>
+    </div>
   )
 }

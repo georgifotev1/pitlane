@@ -2,6 +2,7 @@ import type {
   AcceptInviteRequest,
   AttachmentListResponse,
   AttachmentResponse,
+  CarBoardResponse,
   CarListResponse,
   CarResponse,
   CreateCarRequest,
@@ -17,6 +18,7 @@ import type {
   InvitationResponse,
   InviteUserRequest,
   LoginRequest,
+  OfferBoardResponse,
   OfferListResponse,
   OfferResponse,
   PasswordResetConfirmRequest,
@@ -170,6 +172,40 @@ function offerListPath(carId: string, q: OfferListQuery): string {
   return `/cars/${carId}/offers?${params.toString()}`
 }
 
+// The offers board is tenant-wide (not nested under a car), filtered by an
+// optional lifecycle status. "" means all statuses — same shape as repairs.
+export type OfferBoardQuery = {
+  page: number
+  pageSize: number
+  status: string
+}
+
+function offerBoardPath(q: OfferBoardQuery): string {
+  const params = new URLSearchParams()
+  params.set("page", String(q.page))
+  params.set("pageSize", String(q.pageSize))
+  if (q.status) params.set("status", q.status)
+  return `/offers?${params.toString()}`
+}
+
+// The cars board is tenant-wide (not nested under a customer), with the same
+// search/archived filters as the nested list.
+export type CarBoardQuery = {
+  page: number
+  pageSize: number
+  search: string
+  archived: boolean
+}
+
+function carBoardPath(q: CarBoardQuery): string {
+  const params = new URLSearchParams()
+  params.set("page", String(q.page))
+  params.set("pageSize", String(q.pageSize))
+  if (q.search) params.set("search", q.search)
+  if (q.archived) params.set("archived", "true")
+  return `/cars?${params.toString()}`
+}
+
 // Repairs are a tenant-wide board (not nested under a car), filtered by an
 // optional status. "" means all statuses.
 export type RepairListQuery = {
@@ -273,6 +309,9 @@ export const api = {
   cars: {
     list: (customerId: string, q: CarListQuery) =>
       requestBody<CarListResponse>(carListPath(customerId, q)),
+    // listAll is the tenant-wide board: every car in the garage, each row
+    // carrying its customer's name.
+    listAll: (q: CarBoardQuery) => requestBody<CarBoardResponse>(carBoardPath(q)),
     get: (id: string) => request<CarResponse>(`/cars/${id}`, "car"),
     create: (customerId: string, data: CreateCarRequest) =>
       request<CarResponse>(`/customers/${customerId}/cars`, "car", {
@@ -293,6 +332,9 @@ export const api = {
   offers: {
     list: (carId: string, q: OfferListQuery) =>
       requestBody<OfferListResponse>(offerListPath(carId, q)),
+    // listAll is the tenant-wide board: every offer in the garage, each row
+    // carrying the car plate + customer name, optionally filtered by status.
+    listAll: (q: OfferBoardQuery) => requestBody<OfferBoardResponse>(offerBoardPath(q)),
     get: (id: string) => request<OfferResponse>(`/offers/${id}`, "offer"),
     create: (carId: string, data: CreateOfferRequest) =>
       request<OfferResponse>(`/cars/${carId}/offers`, "offer", {

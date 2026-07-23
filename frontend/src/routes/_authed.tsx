@@ -1,16 +1,20 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect } from "react"
-import { Trans } from "@lingui/react/macro"
+import { Trans, useLingui } from "@lingui/react/macro"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { ProblemError } from "@/lib/api"
+import { AppSidebar } from "@/components/layout/AppSidebar"
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { Separator } from "@/components/ui/separator"
 
 export const Route = createFileRoute("/_authed")({
   component: AuthedLayout,
 })
 
 function AuthedLayout() {
+  const { t } = useLingui()
   const navigate = useNavigate()
   const me = useQuery({
     queryKey: queryKeys.auth.me(),
@@ -37,5 +41,18 @@ function AuthedLayout() {
     return null
   }
 
-  return <Outlet />
+  return (
+    <SidebarProvider>
+      <AppSidebar user={me.data} />
+      <SidebarInset>
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
+          <SidebarTrigger aria-label={t`Toggle sidebar`} />
+          <Separator orientation="vertical" className="h-6" />
+        </header>
+        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-6">
+          <Outlet />
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  )
 }

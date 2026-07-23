@@ -8,6 +8,7 @@ import { queryKeys } from "@/lib/queryKeys"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { AuthLayout } from "@/components/layout/AuthLayout"
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -43,15 +44,21 @@ function LoginPage() {
   })
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 p-6">
-      <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">
-          <Trans>Sign in to pitlane</Trans>
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          <Trans>Sign in with your garage credentials.</Trans>
+    <AuthLayout
+      title={<Trans>Sign in to pitlane</Trans>}
+      description={<Trans>Sign in with your garage credentials.</Trans>}
+      footer={
+        <p>
+          <Trans>New here?</Trans>{" "}
+          <Link
+            to="/signup"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            <Trans>Create your garage</Trans>
+          </Link>
         </p>
-      </div>
+      }
+    >
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => login.mutate(values))}
@@ -93,12 +100,6 @@ function LoginPage() {
           {login.isPending ? <Trans>Signing in…</Trans> : <Trans>Sign in</Trans>}
         </Button>
       </form>
-      <p className="text-center text-sm text-muted-foreground">
-        <Trans>New here?</Trans>{" "}
-        <Link to="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
-          <Trans>Create your garage</Trans>
-        </Link>
-      </p>
-    </main>
+    </AuthLayout>
   )
 }

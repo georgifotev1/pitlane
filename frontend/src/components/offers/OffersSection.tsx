@@ -20,49 +20,11 @@ import {
 import { OfferFormDialog } from "@/components/offers/OfferFormDialog"
 import { OfferPdfDialog } from "@/components/offers/OfferPdfDialog"
 import { SendOfferDialog } from "@/components/offers/SendOfferDialog"
+import { OfferStatusBadge, SendStatusBadge } from "@/components/offers/OfferStatusBadge"
 
 // A car has few offers, so we fetch a generous single page and render them all
 // — no pagination UI (the API still supports it, matching CarsSection).
 const PAGE_SIZE = 100
-
-function StatusBadge({ status }: { status: string }) {
-  // Amber-ish for draft, neutral for terminal states; kept simple with the
-  // existing muted palette so no new tokens are needed.
-  const tone =
-    status === "accepted"
-      ? "bg-primary/10 text-primary"
-      : status === "rejected" || status === "expired"
-        ? "bg-destructive/10 text-destructive"
-        : "bg-muted text-muted-foreground"
-  return (
-    <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}>
-      {status === "draft" && <Trans>Draft</Trans>}
-      {status === "sent" && <Trans>Sent</Trans>}
-      {status === "accepted" && <Trans>Accepted</Trans>}
-      {status === "rejected" && <Trans>Rejected</Trans>}
-      {status === "expired" && <Trans>Expired</Trans>}
-    </span>
-  )
-}
-
-// SendStatusBadge surfaces the email-delivery lifecycle (send_status) for offers
-// that have been sent. It is meaningless on a draft, so nothing renders there.
-function SendStatusBadge({ status, sendStatus }: { status: string; sendStatus: string }) {
-  if (status === "draft") return null
-  const tone =
-    sendStatus === "sent"
-      ? "bg-primary/10 text-primary"
-      : sendStatus === "failed"
-        ? "bg-destructive/10 text-destructive"
-        : "bg-muted text-muted-foreground"
-  return (
-    <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}>
-      {sendStatus === "pending" && <Trans>Sending…</Trans>}
-      {sendStatus === "sent" && <Trans>Emailed</Trans>}
-      {sendStatus === "failed" && <Trans>Send failed</Trans>}
-    </span>
-  )
-}
 
 export function OffersSection({ carId, defaultRecipient }: { carId: string; defaultRecipient: string }) {
   const { t } = useLingui()
@@ -176,7 +138,7 @@ export function OffersSection({ carId, defaultRecipient }: { carId: string; defa
                 <TableRow key={offer.id}>
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <StatusBadge status={offer.status} />
+                      <OfferStatusBadge status={offer.status} />
                       <SendStatusBadge status={offer.status} sendStatus={offer.sendStatus} />
                     </div>
                   </TableCell>

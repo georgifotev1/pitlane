@@ -2,12 +2,20 @@ import { useState } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Trans, useLingui } from "@lingui/react/macro"
-import { ArrowLeftIcon, PencilIcon, PlayIcon, CheckCircleIcon, RotateCcwIcon } from "lucide-react"
+import { PencilIcon, PlayIcon, CheckCircleIcon, RotateCcwIcon } from "lucide-react"
 import { api, ProblemError } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { errorCodeToMessage } from "@/lib/errorCodes"
 import { formatMoney } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import {
   Table,
   TableBody,
@@ -79,11 +87,11 @@ function RepairDetail() {
 
   if (query.isError || !query.data) {
     return (
-      <main className="mx-auto max-w-3xl p-6">
+      <div>
         <p className="text-sm text-destructive">
           <Trans>Repair not found.</Trans>
         </p>
-      </main>
+      </div>
     )
   }
 
@@ -93,17 +101,34 @@ function RepairDetail() {
   const busy = statusMutation.isPending
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-3xl flex-col gap-6 p-6">
-      {carId && (
-        <Link
-          to="/cars/$carId"
-          params={{ carId }}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:underline"
-        >
-          <ArrowLeftIcon className="size-4" />
-          <Trans>Back to car</Trans>
-        </Link>
-      )}
+    <>
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              render={<Link to="/repairs" search={{ page: 1, status: "" }} />}
+            >
+              <Trans>Repairs</Trans>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          {carId && carQuery.data && (
+            <>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink render={<Link to="/cars/$carId" params={{ carId }} />}>
+                  {carQuery.data.plate}
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+            </>
+          )}
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              <Trans>Repair</Trans>
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -248,6 +273,6 @@ function RepairDetail() {
       />
 
       <AttachmentsSection repairId={repair.id} />
-    </main>
+    </>
   )
 }

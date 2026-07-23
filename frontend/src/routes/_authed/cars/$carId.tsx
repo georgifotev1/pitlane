@@ -1,9 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import { Trans, useLingui } from "@lingui/react/macro"
-import { ArrowLeftIcon } from "lucide-react"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
+import { Badge } from "@/components/ui/badge"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { OffersSection } from "@/components/offers/OffersSection"
 import { HistorySection } from "@/components/history/HistorySection"
 import { AttachmentsSection } from "@/components/attachments/AttachmentsSection"
@@ -50,34 +58,53 @@ function CarDetail() {
 
   if (query.isError || !query.data) {
     return (
-      <main className="mx-auto max-w-3xl p-6">
+      <div>
         <p className="text-sm text-destructive">
           <Trans>Car not found.</Trans>
         </p>
-      </main>
+      </div>
     )
   }
 
   const car = query.data
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-3xl flex-col gap-6 p-6">
-      <Link
-        to="/customers/$customerId"
-        params={{ customerId: car.customerId }}
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:underline"
-      >
-        <ArrowLeftIcon className="size-4" />
-        <Trans>Back to customer</Trans>
-      </Link>
+    <>
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              render={
+                <Link to="/customers" search={{ page: 1, search: "", archived: false }} />
+              }
+            >
+              <Trans>Customers</Trans>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              render={
+                <Link to="/customers/$customerId" params={{ customerId: car.customerId }} />
+              }
+            >
+              {customerQuery.data?.name ?? "…"}
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{car.plate}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       <header>
         <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
           {car.plate}
           {car.archivedAt && (
-            <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground">
+            <Badge variant="secondary">
               <Trans>Archived</Trans>
-            </span>
+            </Badge>
           )}
         </h1>
         {(car.make || car.model) && (
@@ -105,6 +132,6 @@ function CarDetail() {
       <HistorySection carId={car.id} />
 
       <AttachmentsSection carId={car.id} />
-    </main>
+    </>
   )
 }

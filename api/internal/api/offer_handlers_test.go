@@ -163,6 +163,24 @@ func (tc *tenantClient) listOffers(t *testing.T, carID, query string) (*http.Res
 	return res, &out
 }
 
+// listAllOffers hits the tenant-wide board endpoint (not the nested list).
+func (tc *tenantClient) listAllOffers(t *testing.T, query string) (*http.Response, *dto.OfferBoardResponse) {
+	t.Helper()
+	res, err := tc.client.Get(tc.api.server.URL + "/api/v1/offers" + query)
+	if err != nil {
+		t.Fatalf("list offers board: %v", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return res, nil
+	}
+	var out dto.OfferBoardResponse
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatalf("list offers board decode: %v", err)
+	}
+	return res, &out
+}
+
 // twoItemOffer is a fixture body: 90.00 + 60.00 = 150.00 subtotal.
 func twoItemOffer() dto.CreateOfferRequest {
 	return dto.CreateOfferRequest{
@@ -525,6 +543,72 @@ func TestOfferTenantIsolation(t *testing.T) {
 		_, got := tcA.getOffer(t, offerA.ID)
 		if got.Status != "draft" || got.TotalCents != 17850 {
 			t.Fatalf("A's offer was altered: %+v", got)
+		}
+	})
+}
+
+func TestOfferBoard(t *testing.T) {
+	api := newTestAPI(t)
+	tcA, _ := api.signup(t, "Garage A", "Owner A", "a@example.com", "password-aaa")
+	tcB, _ := api.signup(t, "Garage B", "Owner B", "b@example.com", "password-bbb")
+
+	_, custA := tcA.createCustomer(t, dto.CreateCustomerRequest{Name: "A's customer"})
+	_, carA := tcA.createCar(t, custA.ID, dto.CreateCarRequest{Plate: "AAA001"})
+	_, carA2 := tcA.createCar(t, custA.ID, dto.CreateCarRequest{Plate: "AAA002"})
+
+	// One draft on the first car, one sent offer on the second.
+	_, draft := tcA.createOffer(t, carA.ID, twoItemOffer())
+	_, sent := tcA.createOffer(t, carA2.ID, twoItemOffer())
+	if res, _ := tcA.sendOffer(t, sent.ID, "customer@example.com"); res.StatusCode != http.StatusOK {
+		t.Fatalf("send: %d", res.StatusCode)
+	}
+
+	t.Run("board spans cars, newest first, enriched with plate + customer", func(t *testing.T) {
+		_, board := tcA.listAllOffers(t, "")
+		if board.Metadata.Total != 2 || len(board.Offers) != 2 {
+			t.Fatalf("board: got total=%d len=%d, want 2/2", board.Metadata.Total, len(board.Offers))
+		}
+		if board.Offers[0].ID != sent.ID || board.Offers[1].ID != draft.ID {
+			t.Fatalf("not newest-first: %+v", board.Offers)
+		}
+		if board.Offers[0].CarPlate != "AAA002" || board.Offers[0].CustomerName != "A's customer" {
+			t.Fatalf("enrichment wrong: %+v", board.Offers[0])
+		}
+		if board.Offers[0].Status != "sent" || board.Offers[1].Status != "draft" {
+			t.Fatalf("statuses wrong: %+v", board.Offers)
+		}
+	})
+
+	t.Run("status filter narrows the board", func(t *testing.T) {
+		_, board := tcA.listAllOffers(t, "?status=draft")
+		if board.Metadata.Total != 1 || board.Offers[0].ID != draft.ID {
+			t.Fatalf("draft filter: got total=%d, want 1", board.Metadata.Total)
+		}
+	})
+
+	t.Run("unknown status filter is 422", func(t *testing.T) {
+		res, _ := tcA.listAllOffers(t, "?status=bogus")
+		if res.StatusCode != http.StatusUnprocessableEntity {
+			t.Fatalf("status: got %d, want 422", res.StatusCode)
+		}
+	})
+
+	t.Run("B's board does not include A's offers", func(t *testing.T) {
+		_, board := tcB.listAllOffers(t, "")
+		if board.Metadata.Total != 0 || len(board.Offers) != 0 {
+			t.Fatalf("tenant leak: got %+v, want empty", board)
+		}
+	})
+
+	t.Run("board requires auth", func(t *testing.T) {
+		tc := api.newClient()
+		res, err := tc.client.Get(api.server.URL + "/api/v1/offers")
+		if err != nil {
+			t.Fatalf("board: %v", err)
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("status: got %d, want 401", res.StatusCode)
 		}
 	})
 }

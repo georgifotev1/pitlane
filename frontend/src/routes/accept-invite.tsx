@@ -8,6 +8,7 @@ import { queryKeys } from "@/lib/queryKeys"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { AuthLayout } from "@/components/layout/AuthLayout"
 
 type InviteSearch = {
   token: string
@@ -52,35 +53,28 @@ function AcceptInvitePage() {
 
   if (!token) {
     return (
-      <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 p-6">
-        <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">
-            <Trans>Invalid invitation</Trans>
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            <Trans>This invitation link is missing its token. Ask for a fresh invite.</Trans>
-          </p>
-        </div>
-        <Link
-          to="/login"
-          className="text-center text-sm font-medium text-foreground underline-offset-4 hover:underline"
-        >
-          <Trans>Back to sign in</Trans>
-        </Link>
-      </main>
+      <AuthLayout
+        title={<Trans>Invalid invitation</Trans>}
+        description={
+          <Trans>This invitation link is missing its token. Ask for a fresh invite.</Trans>
+        }
+        footer={
+          <Link
+            to="/login"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            <Trans>Back to sign in</Trans>
+          </Link>
+        }
+      />
     )
   }
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 p-6">
-      <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">
-          <Trans>Accept your invitation</Trans>
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          <Trans>Set up your name and password to join the garage.</Trans>
-        </p>
-      </div>
+    <AuthLayout
+      title={<Trans>Accept your invitation</Trans>}
+      description={<Trans>Set up your name and password to join the garage.</Trans>}
+    >
       <form className="space-y-4" onSubmit={handleSubmit((values) => accept.mutate(values))}>
         <div className="space-y-2">
           <Label htmlFor="name">
@@ -130,6 +124,6 @@ function AcceptInvitePage() {
           {accept.isPending ? <Trans>Joining…</Trans> : <Trans>Join garage</Trans>}
         </Button>
       </form>
-    </main>
+    </AuthLayout>
   )
 }

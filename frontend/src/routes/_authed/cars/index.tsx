@@ -2,8 +2,7 @@ import { useState } from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { Trans, useLingui } from "@lingui/react/macro"
-import { PlusIcon, PencilIcon, ArchiveIcon, UsersIcon } from "lucide-react"
-import type { CustomerResponse } from "@/lib/generated/types"
+import { CarIcon } from "lucide-react"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
+import { PageHeader } from "@/components/layout/PageHeader"
 import {
   Table,
   TableBody,
@@ -19,22 +19,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { CustomerFormDialog } from "@/components/customers/CustomerFormDialog"
-import { ArchiveCustomerDialog } from "@/components/customers/ArchiveCustomerDialog"
-import { PageHeader } from "@/components/layout/PageHeader"
 
 const PAGE_SIZE = 20
 
-type CustomerSearch = {
+type CarSearch = {
   page: number
   search: string
   archived: boolean
 }
 
-export const Route = createFileRoute("/_authed/customers/")({
+export const Route = createFileRoute("/_authed/cars/")({
   // Typed, validated search params — pagination and filters live in the URL so
   // they survive refresh and are shareable (ADR §26).
-  validateSearch: (search: Record<string, unknown>): CustomerSearch => {
+  validateSearch: (search: Record<string, unknown>): CarSearch => {
     const page = Number(search.page)
     return {
       page: Number.isInteger(page) && page > 0 ? page : 1,
@@ -42,31 +39,28 @@ export const Route = createFileRoute("/_authed/customers/")({
       archived: search.archived === true || search.archived === "true",
     }
   },
-  component: CustomersList,
+  component: CarsBoard,
 })
 
-function CustomersList() {
+function CarsBoard() {
   const { t } = useLingui()
   const navigate = useNavigate({ from: Route.fullPath })
   const { page, search, archived } = Route.useSearch()
 
   const [searchInput, setSearchInput] = useState(search)
-  const [createOpen, setCreateOpen] = useState(false)
-  const [editing, setEditing] = useState<CustomerResponse | undefined>()
-  const [archiving, setArchiving] = useState<CustomerResponse | undefined>()
 
   const query = useQuery({
-    queryKey: queryKeys.customers.list({ page, pageSize: PAGE_SIZE, search, archived }),
-    queryFn: () => api.customers.list({ page, pageSize: PAGE_SIZE, search, archived }),
+    queryKey: queryKeys.cars.board({ page, pageSize: PAGE_SIZE, search, archived }),
+    queryFn: () => api.cars.listAll({ page, pageSize: PAGE_SIZE, search, archived }),
     placeholderData: keepPreviousData,
   })
 
   const total = query.data?.metadata.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const customers = query.data?.customers ?? []
+  const cars = query.data?.cars ?? []
   // First run = success, nothing found, and no filters masking the list. This
-  // is the moment for a welcome panel instead of an empty table.
-  const isFirstRun = query.isSuccess && customers.length === 0 && !search && !archived
+  // is the moment to explain where cars come from instead of an empty table.
+  const isFirstRun = query.isSuccess && cars.length === 0 && !search && !archived
 
   function submitSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -84,13 +78,9 @@ function CustomersList() {
   return (
     <>
       <PageHeader
-        title={<Trans>Customers</Trans>}
-        description={<Trans>People and companies your garage works with.</Trans>}
-        actions={
-          <Button onClick={() => setCreateOpen(true)}>
-            <PlusIcon />
-            <Trans>New customer</Trans>
-          </Button>
+        title={<Trans>Cars</Trans>}
+        description={
+          <Trans>Every vehicle in the garage. Open one for its offers and service history.</Trans>
         }
       />
 
@@ -104,7 +94,7 @@ function CustomersList() {
               id="search"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder={t`Name, company, email, phone`}
+              placeholder={t`Plate, VIN, make, model`}
               className="w-64"
             />
           </div>
@@ -125,39 +115,48 @@ function CustomersList() {
 
       {isFirstRun && (
         <section className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-16 text-center">
-          <UsersIcon className="size-8 text-muted-foreground" />
+          <CarIcon className="size-8 text-muted-foreground" />
           <div className="space-y-1">
             <p className="font-medium">
-              <Trans>No customers yet</Trans>
+              <Trans>No cars yet</Trans>
             </p>
-            <p className="text-sm text-muted-foreground">
-              <Trans>Add your first customer to get the garage rolling.</Trans>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              <Trans>
+                Cars belong to a customer. Open a customer and add their first car there.
+              </Trans>
             </p>
           </div>
-          <Button onClick={() => setCreateOpen(true)}>
-            <PlusIcon />
-            <Trans>New customer</Trans>
+          <Button
+            render={
+              <Link to="/customers" search={{ page: 1, search: "", archived: false }} />
+            }
+          >
+            <Trans>Go to customers</Trans>
           </Button>
         </section>
       )}
+
       <section className={isFirstRun ? "hidden" : "rounded-lg border border-border"}>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>
-                <Trans>Name</Trans>
+                <Trans>Plate</Trans>
               </TableHead>
               <TableHead>
-                <Trans>Company</Trans>
+                <Trans>Customer</Trans>
               </TableHead>
               <TableHead>
-                <Trans>Email</Trans>
+                <Trans>Make</Trans>
               </TableHead>
               <TableHead>
-                <Trans>Phone</Trans>
+                <Trans>Model</Trans>
+              </TableHead>
+              <TableHead>
+                <Trans>Year</Trans>
               </TableHead>
               <TableHead className="text-right">
-                <Trans>Actions</Trans>
+                <Trans>Mileage</Trans>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -166,76 +165,71 @@ function CustomersList() {
               Array.from({ length: 5 }, (_, i) => (
                 <TableRow key={i} aria-hidden>
                   <TableCell>
+                    <Skeleton className="h-4 w-24" />
+                  </TableCell>
+                  <TableCell>
                     <Skeleton className="h-4 w-32" />
                   </TableCell>
                   <TableCell>
                     <Skeleton className="h-4 w-24" />
                   </TableCell>
                   <TableCell>
-                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-4 w-20" />
                   </TableCell>
                   <TableCell>
-                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-12" />
                   </TableCell>
                   <TableCell>
-                    <Skeleton className="ml-auto h-4 w-12" />
+                    <Skeleton className="ml-auto h-4 w-16" />
                   </TableCell>
                 </TableRow>
               ))}
             {query.isError && (
               <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center text-destructive">
-                  <Trans>Could not load customers.</Trans>
+                <TableCell colSpan={6} className="py-8 text-center text-destructive">
+                  <Trans>Could not load cars.</Trans>
                 </TableCell>
               </TableRow>
             )}
-            {query.isSuccess && customers.length === 0 && (
+            {query.isSuccess && cars.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                  <Trans>No customers found.</Trans>
+                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                  <Trans>No cars found.</Trans>
                 </TableCell>
               </TableRow>
             )}
-            {customers.map((c) => (
-              <TableRow key={c.id}>
+            {cars.map((car) => (
+              <TableRow key={car.id}>
                 <TableCell className="font-medium">
+                  {/* The car page is where offers, service history, and photos live. */}
                   <Link
-                    to="/customers/$customerId"
-                    params={{ customerId: c.id }}
+                    to="/cars/$carId"
+                    params={{ carId: car.id }}
                     className="underline-offset-4 hover:underline"
+                    aria-label={t`Open car`}
                   >
-                    {c.name}
+                    {car.plate}
                   </Link>
-                  {c.archivedAt && (
+                  {car.archivedAt && (
                     <Badge variant="secondary" className="ml-2">
                       <Trans>Archived</Trans>
                     </Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-muted-foreground">{c.company || "—"}</TableCell>
-                <TableCell className="text-muted-foreground">{c.email || "—"}</TableCell>
-                <TableCell className="text-muted-foreground">{c.phone || "—"}</TableCell>
                 <TableCell>
-                  <div className="flex justify-end gap-1">
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      onClick={() => setEditing(c)}
-                      aria-label={t`Edit`}
-                    >
-                      <PencilIcon />
-                    </Button>
-                    {!c.archivedAt && (
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        onClick={() => setArchiving(c)}
-                        aria-label={t`Archive`}
-                      >
-                        <ArchiveIcon />
-                      </Button>
-                    )}
-                  </div>
+                  <Link
+                    to="/customers/$customerId"
+                    params={{ customerId: car.customerId }}
+                    className="text-muted-foreground underline-offset-4 hover:underline"
+                  >
+                    {car.customerName}
+                  </Link>
+                </TableCell>
+                <TableCell className="text-muted-foreground">{car.make || "—"}</TableCell>
+                <TableCell className="text-muted-foreground">{car.model || "—"}</TableCell>
+                <TableCell className="text-muted-foreground">{car.year || "—"}</TableCell>
+                <TableCell className="text-right tabular-nums text-muted-foreground">
+                  {car.mileage ? car.mileage.toLocaleString("bg-BG") : "—"}
                 </TableCell>
               </TableRow>
             ))}
@@ -250,12 +244,7 @@ function CustomersList() {
           </Trans>
         </span>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => goToPage(page - 1)}
-          >
+          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
             <Trans>Previous</Trans>
           </Button>
           <Button
@@ -268,20 +257,6 @@ function CustomersList() {
           </Button>
         </div>
       </footer>
-
-      <CustomerFormDialog open={createOpen} onOpenChange={setCreateOpen} />
-      <CustomerFormDialog
-        open={editing !== undefined}
-        onOpenChange={(open) => !open && setEditing(undefined)}
-        customer={editing}
-      />
-      {archiving && (
-        <ArchiveCustomerDialog
-          open={archiving !== undefined}
-          onOpenChange={(open) => !open && setArchiving(undefined)}
-          customer={archiving}
-        />
-      )}
     </>
   )
 }

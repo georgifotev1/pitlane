@@ -7,6 +7,7 @@ import { applyServerErrors } from "@/lib/formErrors.ts"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { AuthLayout } from "@/components/layout/AuthLayout"
 
 export const Route = createFileRoute("/forgot-password")({
   component: ForgotPasswordPage,
@@ -34,38 +35,39 @@ function ForgotPasswordPage() {
 
   if (request.isSuccess) {
     return (
-      <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 p-6">
-        <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">
-            <Trans>Check your email</Trans>
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            <Trans>
-              If an account exists for that address, we've sent a link to reset the password. The
-              link is valid for one hour.
-            </Trans>
-          </p>
-        </div>
-        <Link
-          to="/login"
-          className="text-center text-sm font-medium text-foreground underline-offset-4 hover:underline"
-        >
-          <Trans>Back to sign in</Trans>
-        </Link>
-      </main>
+      <AuthLayout
+        title={<Trans>Check your email</Trans>}
+        description={
+          <Trans>
+            If an account exists for that address, we've sent a link to reset the password. The
+            link is valid for one hour.
+          </Trans>
+        }
+        footer={
+          <Link
+            to="/login"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            <Trans>Back to sign in</Trans>
+          </Link>
+        }
+      />
     )
   }
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 p-6">
-      <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">
-          <Trans>Reset your password</Trans>
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          <Trans>Enter your email and we'll send you a reset link.</Trans>
-        </p>
-      </div>
+    <AuthLayout
+      title={<Trans>Reset your password</Trans>}
+      description={<Trans>Enter your email and we'll send you a reset link.</Trans>}
+      footer={
+        <Link
+          to="/login"
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+        >
+          <Trans>Back to sign in</Trans>
+        </Link>
+      }
+    >
       <form className="space-y-4" onSubmit={handleSubmit((values) => request.mutate(values))}>
         <div className="space-y-2">
           <Label htmlFor="email">
@@ -84,14 +86,6 @@ function ForgotPasswordPage() {
           {request.isPending ? <Trans>Sending…</Trans> : <Trans>Send reset link</Trans>}
         </Button>
       </form>
-      <p className="text-center text-sm text-muted-foreground">
-        <Link
-          to="/login"
-          className="font-medium text-foreground underline-offset-4 hover:underline"
-        >
-          <Trans>Back to sign in</Trans>
-        </Link>
-      </p>
-    </main>
+    </AuthLayout>
   )
 }

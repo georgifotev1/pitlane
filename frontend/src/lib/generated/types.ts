@@ -225,6 +225,56 @@ export interface SendOfferRequest {
   recipient: string;
 }
 /**
+ * OfferSummaryResponse is one row of the tenant-wide offers board. It carries
+ * the car plate and customer name (joined server-side) so the board renders
+ * without extra round-trips, but not the line items (the car detail page
+ * loads those).
+ */
+export interface OfferSummaryResponse {
+  id: string;
+  carId: string;
+  carPlate: string;
+  customerName: string;
+  status: string;
+  sendStatus: string;
+  totalCents: number /* int64 */;
+  notes: string;
+  createdAt: string;
+}
+/**
+ * OfferBoardResponse is the full body of the offers board endpoint (both keys
+ * read by the client), mirroring RepairListResponse.
+ */
+export interface OfferBoardResponse {
+  offers: OfferSummaryResponse[];
+  metadata: ListMetadata;
+}
+/**
+ * CarSummaryResponse is one row of the tenant-wide cars board. It carries the
+ * owning customer's name (joined server-side) so the board renders without
+ * extra round-trips.
+ */
+export interface CarSummaryResponse {
+  id: string;
+  customerId: string;
+  customerName: string;
+  plate: string;
+  make: string;
+  model: string;
+  year: number /* int */;
+  mileage: number /* int */;
+  archivedAt?: string;
+  createdAt: string;
+}
+/**
+ * CarBoardResponse is the full body of the cars board endpoint (both keys read
+ * by the client), mirroring the other list responses.
+ */
+export interface CarBoardResponse {
+  cars: CarSummaryResponse[];
+  metadata: ListMetadata;
+}
+/**
  * RepairItemResponse is one line of a repair. Same shape as OfferItemResponse:
  * the copy made at conversion is faithful. Money is integer cents.
  */

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { Trans, useLingui } from "@lingui/react/macro"
-import { WrenchIcon } from "lucide-react"
+import { FileTextIcon } from "lucide-react"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { formatMoney } from "@/lib/utils"
@@ -16,49 +16,49 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { RepairStatusBadge } from "@/components/repairs/RepairStatusBadge"
+import { OfferStatusBadge, SendStatusBadge } from "@/components/offers/OfferStatusBadge"
 
 const PAGE_SIZE = 20
 
-// The board can be filtered to one status or show all ("").
-const STATUSES = ["", "open", "in_progress", "completed"] as const
+// The board can be filtered to one lifecycle status or show all ("").
+const STATUSES = ["", "draft", "sent", "accepted", "rejected", "expired"] as const
 type StatusFilter = (typeof STATUSES)[number]
 
-type RepairSearch = {
+type OfferSearch = {
   page: number
   status: StatusFilter
 }
 
-export const Route = createFileRoute("/_authed/repairs/")({
+export const Route = createFileRoute("/_authed/offers/")({
   // Typed, validated search params — the filter and page live in the URL so
   // they survive refresh and are shareable (ADR §26).
-  validateSearch: (search: Record<string, unknown>): RepairSearch => {
+  validateSearch: (search: Record<string, unknown>): OfferSearch => {
     const page = Number(search.page)
     const status = STATUSES.includes(search.status as StatusFilter)
       ? (search.status as StatusFilter)
       : ""
     return { page: Number.isInteger(page) && page > 0 ? page : 1, status }
   },
-  component: RepairsBoard,
+  component: OffersBoard,
 })
 
-function RepairsBoard() {
+function OffersBoard() {
   const { t } = useLingui()
   const navigate = useNavigate({ from: Route.fullPath })
   const { page, status } = Route.useSearch()
 
   const query = useQuery({
-    queryKey: queryKeys.repairs.list({ page, pageSize: PAGE_SIZE, status }),
-    queryFn: () => api.repairs.list({ page, pageSize: PAGE_SIZE, status }),
+    queryKey: queryKeys.offers.board({ page, pageSize: PAGE_SIZE, status }),
+    queryFn: () => api.offers.listAll({ page, pageSize: PAGE_SIZE, status }),
     placeholderData: keepPreviousData,
   })
 
   const total = query.data?.metadata.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const repairs = query.data?.repairs ?? []
+  const offers = query.data?.offers ?? []
   // First run = success, nothing found, and no filter masking the list. This is
-  // the moment to explain where repairs come from instead of an empty table.
-  const isFirstRun = query.isSuccess && repairs.length === 0 && !status
+  // the moment to explain how an offer is born instead of showing an empty table.
+  const isFirstRun = query.isSuccess && offers.length === 0 && !status
 
   function setStatus(next: StatusFilter) {
     navigate({ search: (prev) => ({ ...prev, status: next, page: 1 }) })
@@ -70,16 +70,18 @@ function RepairsBoard() {
 
   const filterLabel: Record<StatusFilter, React.ReactNode> = {
     "": <Trans>All</Trans>,
-    open: <Trans>Open</Trans>,
-    in_progress: <Trans>In progress</Trans>,
-    completed: <Trans>Completed</Trans>,
+    draft: <Trans>Draft</Trans>,
+    sent: <Trans>Sent</Trans>,
+    accepted: <Trans>Accepted</Trans>,
+    rejected: <Trans>Rejected</Trans>,
+    expired: <Trans>Expired</Trans>,
   }
 
   return (
     <>
       <PageHeader
-        title={<Trans>Repairs</Trans>}
-        description={<Trans>Jobs across the whole garage. Convert a sent offer to start one.</Trans>}
+        title={<Trans>Offers</Trans>}
+        description={<Trans>Repair quotes across the whole garage.</Trans>}
       />
 
       <div className="flex flex-wrap gap-1">
@@ -97,20 +99,24 @@ function RepairsBoard() {
 
       {isFirstRun && (
         <section className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-16 text-center">
-          <WrenchIcon className="size-8 text-muted-foreground" />
+          <FileTextIcon className="size-8 text-muted-foreground" />
           <div className="space-y-1">
             <p className="font-medium">
-              <Trans>No repairs yet</Trans>
+              <Trans>No offers yet</Trans>
             </p>
             <p className="max-w-sm text-sm text-muted-foreground">
               <Trans>
-                A repair starts when you accept a sent offer. Open the offers board to send
-                or accept one.
+                Offers are written for a specific car. Open a customer, pick their car, and
+                create your first offer there.
               </Trans>
             </p>
           </div>
-          <Button render={<Link to="/offers" search={{ page: 1, status: "" }} />}>
-            <Trans>Go to offers</Trans>
+          <Button
+            render={
+              <Link to="/customers" search={{ page: 1, search: "", archived: false }} />
+            }
+          >
+            <Trans>Go to customers</Trans>
           </Button>
         </section>
       )}
@@ -120,16 +126,19 @@ function RepairsBoard() {
           <TableHeader>
             <TableRow>
               <TableHead>
+                <Trans>Status</Trans>
+              </TableHead>
+              <TableHead>
                 <Trans>Car</Trans>
               </TableHead>
               <TableHead>
                 <Trans>Customer</Trans>
               </TableHead>
-              <TableHead>
-                <Trans>Status</Trans>
-              </TableHead>
               <TableHead className="text-right">
                 <Trans>Total</Trans>
+              </TableHead>
+              <TableHead>
+                <Trans>Notes</Trans>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -138,51 +147,61 @@ function RepairsBoard() {
               Array.from({ length: 5 }, (_, i) => (
                 <TableRow key={i} aria-hidden>
                   <TableCell>
+                    <Skeleton className="h-5 w-20 rounded-4xl" />
+                  </TableCell>
+                  <TableCell>
                     <Skeleton className="h-4 w-24" />
                   </TableCell>
                   <TableCell>
                     <Skeleton className="h-4 w-32" />
                   </TableCell>
                   <TableCell>
-                    <Skeleton className="h-5 w-20 rounded-4xl" />
+                    <Skeleton className="ml-auto h-4 w-16" />
                   </TableCell>
                   <TableCell>
-                    <Skeleton className="ml-auto h-4 w-16" />
+                    <Skeleton className="h-4 w-40" />
                   </TableCell>
                 </TableRow>
               ))}
             {query.isError && (
               <TableRow>
-                <TableCell colSpan={4} className="py-8 text-center text-destructive">
-                  <Trans>Could not load repairs.</Trans>
+                <TableCell colSpan={5} className="py-8 text-center text-destructive">
+                  <Trans>Could not load offers.</Trans>
                 </TableCell>
               </TableRow>
             )}
-            {query.isSuccess && repairs.length === 0 && (
+            {query.isSuccess && offers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
-                  <Trans>No repairs with this status.</Trans>
+                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                  <Trans>No offers with this status.</Trans>
                 </TableCell>
               </TableRow>
             )}
-            {repairs.map((r) => (
-              <TableRow key={r.id}>
+            {offers.map((offer) => (
+              <TableRow key={offer.id}>
+                <TableCell>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <OfferStatusBadge status={offer.status} />
+                    <SendStatusBadge status={offer.status} sendStatus={offer.sendStatus} />
+                  </div>
+                </TableCell>
                 <TableCell className="font-medium">
+                  {/* Offers are managed on the car's page, so the row links there. */}
                   <Link
-                    to="/repairs/$repairId"
-                    params={{ repairId: r.id }}
+                    to="/cars/$carId"
+                    params={{ carId: offer.carId }}
                     className="underline-offset-4 hover:underline"
-                    aria-label={t`Open repair`}
+                    aria-label={t`Open car`}
                   >
-                    {r.carPlate}
+                    {offer.carPlate}
                   </Link>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{r.customerName}</TableCell>
-                <TableCell>
-                  <RepairStatusBadge status={r.status} />
-                </TableCell>
+                <TableCell className="text-muted-foreground">{offer.customerName}</TableCell>
                 <TableCell className="text-right tabular-nums font-medium">
-                  {formatMoney(r.totalCents)}
+                  {formatMoney(offer.totalCents)}
+                </TableCell>
+                <TableCell className="max-w-xs truncate text-muted-foreground">
+                  {offer.notes || "—"}
                 </TableCell>
               </TableRow>
             ))}

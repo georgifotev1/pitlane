@@ -103,6 +103,71 @@ func (s *CarStore) List(ctx context.Context, tenantID, customerID string, p CarL
 	return cars, total, err
 }
 
+// CarSummary is a board row: the car plus its customer's name, joined in for
+// display so the tenant-wide board renders without extra round-trips.
+type CarSummary struct {
+	Car          *domain.Car
+	CustomerName string
+}
+
+// ListAll returns a tenant-wide page of cars (plate order) plus the total
+// count matching the filters. Unlike List, it is not scoped to one customer —
+// instead each row is enriched with the customer name via a join that stays
+// in-tenant (composite key). Search and archived filters mirror List exactly.
+func (s *CarStore) ListAll(ctx context.Context, tenantID string, p CarListParams) ([]CarSummary, int, error) {
+	var out []CarSummary
+	var total int
+
+	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
+		// $1 tenant, $2 search ('' = match all), $3 include archived.
+		const where = `
+			WHERE c.tenant_id = $1
+			  AND ($2 = '' OR c.plate ILIKE '%' || $2 || '%'
+			                OR c.vin ILIKE '%' || $2 || '%'
+			                OR c.make ILIKE '%' || $2 || '%'
+			                OR c.model ILIKE '%' || $2 || '%')
+			  AND ($3 OR c.archived_at IS NULL)`
+
+		if err := tx.QueryRow(ctx,
+			`SELECT count(*) FROM cars c `+where,
+			tenantID, p.Search, p.IncludeArchived,
+		).Scan(&total); err != nil {
+			return fmt.Errorf("count cars: %w", err)
+		}
+
+		rows, err := tx.Query(ctx,
+			`SELECT c.id, c.tenant_id, c.customer_id, c.plate, c.vin, c.make, c.model,
+			        c.year, c.mileage, c.archived_at, c.created_at, c.updated_at,
+			        cust.name
+			 FROM cars c
+			 JOIN customers cust ON cust.id = c.customer_id AND cust.tenant_id = c.tenant_id
+			 `+where+`
+			 ORDER BY c.plate ASC, c.id ASC
+			 LIMIT $4 OFFSET $5`,
+			tenantID, p.Search, p.IncludeArchived, p.Limit, p.Offset,
+		)
+		if err != nil {
+			return fmt.Errorf("list cars board: %w", err)
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var c domain.Car
+			var customerName string
+			if err := rows.Scan(
+				&c.ID, &c.TenantID, &c.CustomerID, &c.Plate, &c.VIN, &c.Make, &c.Model,
+				&c.Year, &c.Mileage, &c.ArchivedAt, &c.CreatedAt, &c.UpdatedAt,
+				&customerName,
+			); err != nil {
+				return fmt.Errorf("scan car summary: %w", err)
+			}
+			out = append(out, CarSummary{Car: &c, CustomerName: customerName})
+		}
+		return rows.Err()
+	})
+	return out, total, err
+}
+
 // Get returns one car scoped to the tenant, or ErrNotFound.
 func (s *CarStore) Get(ctx context.Context, tenantID, id string) (*domain.Car, error) {
 	var car *domain.Car

@@ -132,6 +132,9 @@ func (s *Server) Handler() http.Handler {
 	// Cars — a car belongs to a customer, so list/create are nested under the
 	// customer; item ops (get/update/archive) address the car directly. Same
 	// read/write permission split as customers; archive is a POST soft-delete.
+	// Tenant-wide cars board: not nested under a customer (each row carries the
+	// customer name). Shares the search/archived filters with the nested list.
+	mux.Handle("GET /api/v1/cars", s.protected(domain.PermissionCarsRead, s.listAllCars))
 	mux.Handle("GET /api/v1/customers/{customerId}/cars", s.protected(domain.PermissionCarsRead, s.listCars))
 	mux.Handle("POST /api/v1/customers/{customerId}/cars", s.protected(domain.PermissionCarsWrite, s.createCar))
 	mux.Handle("GET /api/v1/cars/{id}", s.protected(domain.PermissionCarsRead, s.getCar))
@@ -142,6 +145,9 @@ func (s *Server) Handler() http.Handler {
 	// car; item ops (get/update/status) address the offer directly. Same
 	// read/write split. Offers are never deleted (ADR §Deletion policy); the
 	// status endpoint drives the draft→sent→accepted|rejected|expired machine.
+	// Tenant-wide offers board: not nested under a car (each row carries the
+	// plate + customer name). ?status= filters the lifecycle state.
+	mux.Handle("GET /api/v1/offers", s.protected(domain.PermissionOffersRead, s.listAllOffers))
 	mux.Handle("GET /api/v1/cars/{carId}/offers", s.protected(domain.PermissionOffersRead, s.listOffers))
 	mux.Handle("POST /api/v1/cars/{carId}/offers", s.protected(domain.PermissionOffersWrite, s.createOffer))
 	mux.Handle("GET /api/v1/offers/{id}", s.protected(domain.PermissionOffersRead, s.getOffer))

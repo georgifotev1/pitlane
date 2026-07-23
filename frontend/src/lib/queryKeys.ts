@@ -3,7 +3,14 @@
  * greppable, and makes invalidation explicit (queryKeys.auth.me() invalidates
  * the "me" query regardless of which component reads it).
  */
-import type { CarListQuery, CustomerListQuery, OfferListQuery, RepairListQuery } from "@/lib/api";
+import type {
+  CarBoardQuery,
+  CarListQuery,
+  CustomerListQuery,
+  OfferBoardQuery,
+  OfferListQuery,
+  RepairListQuery,
+} from "@/lib/api";
 
 export const queryKeys = {
   health: () => ["health"] as const,
@@ -24,12 +31,14 @@ export const queryKeys = {
     all: () => ["cars"] as const,
     listForCustomer: (customerId: string, q: CarListQuery) =>
       ["cars", "list", customerId, q] as const,
+    board: (q: CarBoardQuery) => ["cars", "board", q] as const,
     detail: (id: string) => ["cars", "detail", id] as const,
   },
   offers: {
     all: () => ["offers"] as const,
     listForCar: (carId: string, q: OfferListQuery) =>
       ["offers", "list", carId, q] as const,
+    board: (q: OfferBoardQuery) => ["offers", "board", q] as const,
     detail: (id: string) => ["offers", "detail", id] as const,
   },
   repairs: {

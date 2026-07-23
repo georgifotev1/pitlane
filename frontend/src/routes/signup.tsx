@@ -8,6 +8,7 @@ import { queryKeys } from "@/lib/queryKeys"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { AuthLayout } from "@/components/layout/AuthLayout"
 
 export const Route = createFileRoute("/signup")({
   component: SignupPage,
@@ -46,15 +47,21 @@ function SignupPage() {
   const passwordMinMessage = t`Must be at least 8 characters.`
 
   return (
-    <main className="mx-auto flex min-h-svh max-w-sm flex-col justify-center gap-6 p-6">
-      <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">
-          <Trans>Create your garage</Trans>
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          <Trans>Set up a garage and your owner account.</Trans>
+    <AuthLayout
+      title={<Trans>Create your garage</Trans>}
+      description={<Trans>Set up a garage and your owner account.</Trans>}
+      footer={
+        <p>
+          <Trans>Already have an account?</Trans>{" "}
+          <Link
+            to="/login"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            <Trans>Sign in</Trans>
+          </Link>
         </p>
-      </div>
+      }
+    >
       <form
         className="space-y-4"
         onSubmit={handleSubmit((values) => signup.mutate(values))}
@@ -113,12 +120,6 @@ function SignupPage() {
           {signup.isPending ? <Trans>Creating…</Trans> : <Trans>Create garage</Trans>}
         </Button>
       </form>
-      <p className="text-center text-sm text-muted-foreground">
-        <Trans>Already have an account?</Trans>{" "}
-        <Link to="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
-          <Trans>Sign in</Trans>
-        </Link>
-      </p>
-    </main>
+    </AuthLayout>
   )
 }
