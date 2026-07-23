@@ -26,7 +26,12 @@
       "Bash(pnpm exec *)",
       "Bash(awk '/^msgid /{id=$0} /^msgstr \"\"$/{if\\(id!=\"msgid \\\\\"\\\\\"\"\\) print id}' src/locales/bg.po)",
       "Bash(make migrate-up *)",
-      "Bash(make migrate-status *)"
+      "Bash(make migrate-status *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\)\")",
+      "Bash(echo \"TSC_EXIT=$?\")",
+      "Bash(pnpm lint *)",
+      "Bash(echo \"LINT_EXIT=$?\")",
+      "Bash(grep -iA3 \"dev-frontend\\\\|frontend\")"
     ]
   }
 }

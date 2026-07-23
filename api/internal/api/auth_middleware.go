@@ -37,6 +37,18 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		// Password-reset session kill (ADR §Security): a reset stamps
+		// password_changed_at; every session created before it is dead. The
+		// user reload above makes this check free — no query on the scs store's
+		// opaque session rows.
+		if user.PasswordChangedAt != nil {
+			if createdAt := sm.GetInt64(r.Context(), "createdAt"); createdAt < user.PasswordChangedAt.Unix() {
+				_ = sm.Destroy(r.Context())
+				renderProblem(w, r, http.StatusUnauthorized, CodeAuthentication, "authentication required")
+				return
+			}
+		}
+
 		ctx := withAuth(r.Context(), user.ID, user.TenantID, user.Role)
 		ctx = withLogger(ctx, s.logger)
 		next.ServeHTTP(w, r.WithContext(ctx))

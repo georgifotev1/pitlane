@@ -23,6 +23,11 @@ const (
 	// plate). It lives here so the field-code registry stays in one place,
 	// mirrored by the client error-code table.
 	CodeDuplicate = "duplicate"
+	// CodeEmailTaken / CodeAlreadyInvited are likewise handler-emitted: the
+	// global users.email unique index (signup, invite, accept-invite) and the
+	// one-pending-invitation index fire at the database, not in a Check.
+	CodeEmailTaken     = "email_taken"
+	CodeAlreadyInvited = "already_invited"
 )
 
 // Check holds validation state. A nil Check is valid and empty.

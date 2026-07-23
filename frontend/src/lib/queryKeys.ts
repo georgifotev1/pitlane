@@ -10,6 +10,11 @@ export const queryKeys = {
   auth: {
     me: () => ["auth", "me"] as const,
   },
+  users: {
+    all: () => ["users"] as const,
+    list: () => ["users", "list"] as const,
+    invitations: () => ["users", "invitations"] as const,
+  },
   customers: {
     all: () => ["customers"] as const,
     list: (q: CustomerListQuery) => ["customers", "list", q] as const,

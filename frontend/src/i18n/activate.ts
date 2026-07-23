@@ -2,7 +2,7 @@ import { i18n } from "@lingui/core"
 import { detectLocale, persistLocale, type Locale } from "./detector"
 
 const catalogs: Record<Locale, () => Promise<{ messages: Record<string, string> }>> = {
-  bg: async () => (await import("@/locales/bg")).default,
+  bg: async () => await import("@/locales/bg"),
 }
 
 let activated = false

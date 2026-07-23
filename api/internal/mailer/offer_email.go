@@ -12,7 +12,7 @@ import (
 // covers the browser UI, but this is a server-rendered document with a single
 // fixed locale, so the strings live here beside the templates.
 //
-//go:embed templates/offer_email.html.tmpl templates/offer_email.txt.tmpl
+//go:embed templates/offer_email.html.tmpl templates/offer_email.txt.tmpl templates/password_reset_email.html.tmpl templates/password_reset_email.txt.tmpl templates/invite_email.html.tmpl templates/invite_email.txt.tmpl
 var templateFS embed.FS
 
 // Parsed once at init and reused (templates are read-only, so this is

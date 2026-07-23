@@ -13,42 +13,52 @@ import (
 )
 
 type Server struct {
-	logger    *slog.Logger
-	env       string
-	cfg       config.Config
-	spa       *spaHandler
-	session   *scs.SessionManager
-	tenants   *store.TenantStore
-	users     *store.UserStore
-	customers *store.CustomerStore
-	cars      *store.CarStore
+	logger       *slog.Logger
+	env          string
+	cfg          config.Config
+	spa          *spaHandler
+	session      *scs.SessionManager
+	tenants      *store.TenantStore
+	users        *store.UserStore
+	customers    *store.CustomerStore
+	cars         *store.CarStore
 	offers       *store.OfferStore
 	repairs      *store.RepairStore
 	history      *store.HistoryStore
 	attachments  *store.AttachmentStore
 	audit        *store.AuditLogStore
+	resets       *store.PasswordResetTokenStore
+	invitations  *store.InvitationStore
 	pdf          offerRenderer
 	sendEnqueuer offerEmailEnqueuer
-	files        filestore.Store
+	// The Phase 10 enqueuers are the store's consumer interfaces directly
+	// (nothing per-request to bind, unlike the offer's Reply-To).
+	resetEnqueuer  store.PasswordResetEmailEnqueuer
+	inviteEnqueuer store.InviteEmailEnqueuer
+	files          filestore.Store
 }
 
 // ServerDeps bundles the runtime dependencies the HTTP layer needs.
 type ServerDeps struct {
-	Logger    *slog.Logger
-	Cfg       config.Config
-	Session   *scs.SessionManager
-	Tenants   *store.TenantStore
-	Users     *store.UserStore
-	Customers *store.CustomerStore
-	Cars      *store.CarStore
+	Logger       *slog.Logger
+	Cfg          config.Config
+	Session      *scs.SessionManager
+	Tenants      *store.TenantStore
+	Users        *store.UserStore
+	Customers    *store.CustomerStore
+	Cars         *store.CarStore
 	Offers       *store.OfferStore
 	Repairs      *store.RepairStore
 	History      *store.HistoryStore
 	Attachments  *store.AttachmentStore
 	Audit        *store.AuditLogStore
+	Resets       *store.PasswordResetTokenStore
+	Invitations  *store.InvitationStore
 	PDF          offerRenderer
 	SendEnqueuer offerEmailEnqueuer
-	Files        filestore.Store
+	ResetEnqueuer  store.PasswordResetEmailEnqueuer
+	InviteEnqueuer store.InviteEmailEnqueuer
+	Files          filestore.Store
 }
 
 func NewServer(deps ServerDeps) (*Server, error) {
@@ -57,23 +67,27 @@ func NewServer(deps ServerDeps) (*Server, error) {
 		return nil, err
 	}
 	return &Server{
-		logger:    deps.Logger,
-		env:       deps.Cfg.Env,
-		cfg:       deps.Cfg,
-		spa:       spa,
-		session:   deps.Session,
-		tenants:   deps.Tenants,
-		users:     deps.Users,
-		customers: deps.Customers,
-		cars:      deps.Cars,
+		logger:       deps.Logger,
+		env:          deps.Cfg.Env,
+		cfg:          deps.Cfg,
+		spa:          spa,
+		session:      deps.Session,
+		tenants:      deps.Tenants,
+		users:        deps.Users,
+		customers:    deps.Customers,
+		cars:         deps.Cars,
 		offers:       deps.Offers,
 		repairs:      deps.Repairs,
 		history:      deps.History,
 		attachments:  deps.Attachments,
 		audit:        deps.Audit,
+		resets:       deps.Resets,
+		invitations:  deps.Invitations,
 		pdf:          deps.PDF,
 		sendEnqueuer: deps.SendEnqueuer,
-		files:        deps.Files,
+		resetEnqueuer:  deps.ResetEnqueuer,
+		inviteEnqueuer: deps.InviteEnqueuer,
+		files:          deps.Files,
 	}, nil
 }
 
@@ -91,6 +105,20 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/v1/auth/login", s.strictRateLimit(http.HandlerFunc(s.login)))
 	mux.Handle("POST /api/v1/auth/logout", s.requireAuth(http.HandlerFunc(s.logout)))
 	mux.Handle("GET /api/v1/auth/me", s.requireAuth(http.HandlerFunc(s.me)))
+	// Password reset (public, ADR §Security: enumeration-safe, strict limiter
+	// per ADR decision 18) and invitation acceptance (the emailed link's target).
+	mux.Handle("POST /api/v1/auth/password-reset", s.strictRateLimit(http.HandlerFunc(s.requestPasswordReset)))
+	mux.Handle("POST /api/v1/auth/password-reset/confirm", s.strictRateLimit(http.HandlerFunc(s.confirmPasswordReset)))
+	mux.Handle("POST /api/v1/auth/accept-invite", s.strictRateLimit(http.HandlerFunc(s.acceptInvite)))
+
+	// Team management: the user list reads, invitations and role changes write.
+	// Mechanics hold neither users:read nor users:write — every route here is
+	// 403 for them (the Phase 10 gate verifies exactly that).
+	mux.Handle("GET /api/v1/users", s.protected(domain.PermissionUsersRead, s.listUsers))
+	mux.Handle("PUT /api/v1/users/{id}/role", s.protected(domain.PermissionUsersWrite, s.updateUserRole))
+	mux.Handle("GET /api/v1/users/invitations", s.protected(domain.PermissionUsersRead, s.listInvitations))
+	mux.Handle("POST /api/v1/users/invitations", s.protected(domain.PermissionUsersWrite, s.inviteUser))
+	mux.Handle("DELETE /api/v1/users/invitations/{id}", s.protected(domain.PermissionUsersWrite, s.revokeInvitation))
 
 	// Customers — the pattern-setting slice. read gates GET, write gates
 	// mutations. Archive is a POST (soft-delete), leaving DELETE free for a

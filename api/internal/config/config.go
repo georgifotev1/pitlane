@@ -31,7 +31,7 @@ type Config struct {
 		From     string
 	}
 
-	// TODO(phase 9): consumed by the R2 file store.
+	// Consumed by the R2 file store (Phase 9). Dev points at MinIO.
 	R2 struct {
 		Endpoint        string
 		Region          string
@@ -40,7 +40,14 @@ type Config struct {
 		SecretAccessKey string
 	}
 
-	// TODO(phase 2): trusted proxies for client-IP extraction in rate limiting.
+	// App carries public-facing settings for the SPA. BaseURL is where emailed
+	// links (password reset, invitations — Phase 10) point: the Vite dev server
+	// locally, the same-origin deploy in prod.
+	App struct {
+		BaseURL string
+	}
+
+	// Trusted proxies for client-IP extraction in rate limiting.
 	TrustedProxies []string
 }
 
@@ -67,6 +74,13 @@ func Load() (Config, error) {
 	cfg.R2.Bucket = envString("R2_BUCKET", "")
 	cfg.R2.AccessKeyID = envString("R2_ACCESS_KEY_ID", "")
 	cfg.R2.SecretAccessKey = envString("R2_SECRET_ACCESS_KEY", "")
+
+	// No default here: production must set it explicitly (checked below); the
+	// Vite origin fallback applies to dev/test only.
+	cfg.App.BaseURL = envString("APP_BASE_URL", "")
+	if cfg.App.BaseURL == "" && cfg.Env != "production" {
+		cfg.App.BaseURL = "http://localhost:5173"
+	}
 
 	if v := envString("TRUSTED_PROXY", ""); v != "" {
 		cfg.TrustedProxies = strings.Split(v, ",")
@@ -97,6 +111,11 @@ func Load() (Config, error) {
 		if cfg.SMTP.From == "" {
 			errs = append(errs, errors.New("SMTP_FROM is required in production"))
 		}
+	}
+	// Emailed links must point at the real SPA origin in production; the
+	// localhost fallback exists for dev only.
+	if cfg.Env == "production" && cfg.App.BaseURL == "" {
+		errs = append(errs, errors.New("APP_BASE_URL is required in production"))
 	}
 
 	return cfg, errors.Join(errs...)

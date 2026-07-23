@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -58,13 +57,15 @@ func (s *Server) signup(w http.ResponseWriter, r *http.Request) {
 		Name:         req.UserName,
 	}
 
-	if err := s.tenants.Create(r.Context(), tenant); err != nil {
-		s.logger.Error("create tenant", "err", err)
-		renderProblem(w, r, http.StatusInternalServerError, CodeAccountCreationFail, "could not create account")
-		return
-	}
-	if err := s.users.Create(r.Context(), user); err != nil {
-		s.logger.Error("create user", "err", err)
+	// Tenant + owner insert in ONE transaction: a duplicate email must not
+	// leave an orphaned tenant row, and the client deserves a field error,
+	// not a 500.
+	if err := s.tenants.CreateWithOwner(r.Context(), tenant, user); err != nil {
+		if errors.Is(err, store.ErrDuplicateEmail) {
+			renderValidation(w, r, map[string]string{"email": validator.CodeEmailTaken})
+			return
+		}
+		s.logger.Error("create tenant with owner", "err", err)
 		renderProblem(w, r, http.StatusInternalServerError, CodeAccountCreationFail, "could not create account")
 		return
 	}
@@ -85,6 +86,14 @@ func (s *Server) signup(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// dummyPasswordHash is a REAL bcrypt hash (cost 12) of a throwaway password,
+// precomputed offline. Login runs a comparison against it when the email is
+// unknown so the unknown-email path costs the same ~250ms as the known-email
+// path (ADR §Security enumeration). The previous value was not a valid bcrypt
+// hash at all — CompareHashAndPassword returned ErrHashTooShort in
+// microseconds, silently defeating the equalization.
+var dummyPasswordHash = []byte("$2a$12$O.nnYN8XkTvW7HZe3oCpOe/biwIy9eWE..QoDn0hl/XJNzFjgC.Y2")
+
 // login authenticates by email + password. Unknown email performs a dummy
 // bcrypt comparison to equalize timing (ADR §Security enumeration).
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
@@ -102,8 +111,8 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	user, err := s.users.GetByEmail(r.Context(), req.Email)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
-			// Dummy bcrypt to equalize timing.
-			_ = bcrypt.CompareHashAndPassword([]byte("$2a$12$dummyhashforenumerationequalization"), []byte(req.Password))
+			// Dummy bcrypt against a valid precomputed hash to equalize timing.
+			_ = bcrypt.CompareHashAndPassword(dummyPasswordHash, []byte(req.Password))
 			renderProblem(w, r, http.StatusUnauthorized, CodeInvalidCredentials, "invalid email or password")
 			return
 		}
@@ -212,5 +221,3 @@ func renderValidation(w http.ResponseWriter, r *http.Request, errs map[string]st
 	w.WriteHeader(http.StatusUnprocessableEntity)
 	_ = json.NewEncoder(w).Encode(p)
 }
-
-var _ = slog.Default

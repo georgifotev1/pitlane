@@ -13,5 +13,9 @@ export default defineConfig({
     },
   ],
   format: formatter({ lineNumbers: false }),
+  // Vite loads the compiled catalog as a browser ES module, so emit ESM
+  // (`export`) rather than the default CommonJS (`module.exports`), which
+  // throws "module is not defined" at runtime.
+  compileNamespace: "es",
   runtimeConfigModule: ["@lingui/core", "i18n"],
 })

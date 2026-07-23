@@ -79,6 +79,14 @@ function LoginPage() {
             {...register("password", { required: t`This field is required.` })}
           />
           {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+          <div className="text-right">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+            >
+              <Trans>Forgot your password?</Trans>
+            </Link>
+          </div>
         </div>
         {errors.root && <p className="text-sm text-destructive">{errors.root.message}</p>}
         <Button type="submit" className="w-full" disabled={isSubmitting || login.isPending}>

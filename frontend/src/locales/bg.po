@@ -17,6 +17,10 @@ msgstr ""
 #~ msgid "Accept"
 #~ msgstr "Приемане"
 
+#: src/routes/accept-invite.tsx
+msgid "Accept your invitation"
+msgstr "Приемане на поканата"
+
 #: src/components/offers/OffersSection.tsx
 msgid "Accepted"
 msgstr "Прието"
@@ -26,6 +30,7 @@ msgstr "Прието"
 #: src/components/offers/OffersSection.tsx
 #: src/components/repairs/RepairFormDialog.tsx
 #: src/routes/_authed/customers/index.tsx
+#: src/routes/_authed/team.tsx
 msgid "Actions"
 msgstr "Действия"
 
@@ -42,6 +47,10 @@ msgstr "Добавяне на бележка"
 #: src/routes/_authed/customers/$customerId.tsx
 msgid "Address"
 msgstr "Адрес"
+
+#: src/lib/roles.ts
+msgid "Administrator"
+msgstr "Администратор"
 
 #: src/routes/_authed/repairs/index.tsx
 msgid "All"
@@ -103,6 +112,11 @@ msgstr "Обратно към клиентите"
 msgid "Back to dashboard"
 msgstr "Обратно към таблото"
 
+#: src/routes/accept-invite.tsx
+#: src/routes/forgot-password.tsx
+msgid "Back to sign in"
+msgstr "Обратно към входа"
+
 #: src/components/cars/ArchiveCarDialog.tsx
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/ArchiveCustomerDialog.tsx
@@ -112,6 +126,9 @@ msgstr "Обратно към таблото"
 #: src/components/offers/SendOfferDialog.tsx
 #: src/components/repairs/CompleteRepairDialog.tsx
 #: src/components/repairs/RepairFormDialog.tsx
+#: src/components/team/ChangeRoleDialog.tsx
+#: src/components/team/InviteUserDialog.tsx
+#: src/components/team/RevokeInviteDialog.tsx
 msgid "Cancel"
 msgstr "Отказ"
 
@@ -127,9 +144,22 @@ msgstr "Автомобилът не е намерен."
 msgid "Cars"
 msgstr "Автомобили"
 
+#: src/components/team/ChangeRoleDialog.tsx
+#: src/routes/_authed/team.tsx
+msgid "Change role"
+msgstr "Промяна на ролята"
+
+#: src/routes/forgot-password.tsx
+msgid "Check your email"
+msgstr "Проверете имейла си"
+
 #: src/routes/index.tsx
 msgid "Checking the API…"
 msgstr "Проверява се връзката с API…"
+
+#: src/routes/reset-password.tsx
+msgid "Choose a new password"
+msgstr "Изберете нова парола"
 
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/routes/_authed/customers/$customerId.tsx
@@ -160,6 +190,11 @@ msgstr "Завършен на {0} при {1} км"
 #: src/components/repairs/CompleteRepairDialog.tsx
 msgid "Completing…"
 msgstr "Завършване…"
+
+#: src/routes/accept-invite.tsx
+#: src/routes/reset-password.tsx
+msgid "Confirm password"
+msgstr "Потвърдете паролата"
 
 #: src/components/customers/CustomerFormDialog.tsx
 msgid "Contact and notes for this customer."
@@ -197,6 +232,14 @@ msgstr "Ремонтите не можаха да се заредят."
 #: src/components/history/HistorySection.tsx
 msgid "Could not load service history."
 msgstr "Сервизната история не може да бъде заредена."
+
+#: src/routes/_authed/team.tsx
+msgid "Could not load the team."
+msgstr "Екипът не може да бъде зареден."
+
+#: src/components/team/RevokeInviteDialog.tsx
+msgid "Could not revoke. Please try again."
+msgstr "Поканата не може да бъде оттеглена. Опитайте отново."
 
 #: src/routes/signup.tsx
 msgid "Create garage"
@@ -289,8 +332,11 @@ msgid "Edit repair"
 msgstr "Редактиране на ремонт"
 
 #: src/components/customers/CustomerFormDialog.tsx
+#: src/components/team/InviteUserDialog.tsx
 #: src/routes/_authed/customers/$customerId.tsx
 #: src/routes/_authed/customers/index.tsx
+#: src/routes/_authed/team.tsx
+#: src/routes/forgot-password.tsx
 #: src/routes/login.tsx
 #: src/routes/signup.tsx
 msgid "Email"
@@ -300,6 +346,10 @@ msgstr "Имейл"
 msgid "Emailed"
 msgstr "Изпратен имейл"
 
+#: src/routes/forgot-password.tsx
+msgid "Enter your email and we'll send you a reset link."
+msgstr "Въведете имейла си и ще Ви изпратим връзка за нулиране."
+
 #: src/components/offers/OffersSection.tsx
 msgid "Expire"
 msgstr "Маркиране като изтекла"
@@ -308,22 +358,55 @@ msgstr "Маркиране като изтекла"
 msgid "Expired"
 msgstr "Изтекла"
 
+#: src/routes/_authed/team.tsx
+msgid "Expires"
+msgstr "Изтича на"
+
 #: src/components/attachments/AttachmentsSection.tsx
 msgid "File is too large. Maximum size is 10 MB."
 msgstr "Файлът е твърде голям. Максималният размер е 10 MB."
 
+#: src/routes/login.tsx
+msgid "Forgot your password?"
+msgstr "Забравена парола?"
+
 #: src/routes/signup.tsx
 msgid "Garage name"
 msgstr "Име на гаража"
+
+#: src/routes/forgot-password.tsx
+msgid "If an account exists for that address, we've sent a link to reset the password. The link is valid for one hour."
+msgstr "Ако съществува профил с този адрес, изпратихме връзка за нулиране на паролата. Връзката е валидна един час."
 
 #: src/components/repairs/RepairStatusBadge.tsx
 #: src/routes/_authed/repairs/index.tsx
 msgid "In progress"
 msgstr "В процес"
 
+#: src/routes/accept-invite.tsx
+msgid "Invalid invitation"
+msgstr "Невалидна покана"
+
+#: src/routes/reset-password.tsx
+msgid "Invalid link"
+msgstr "Невалидна връзка"
+
+#: src/components/team/InviteUserDialog.tsx
+#: src/routes/_authed/team.tsx
+msgid "Invite teammate"
+msgstr "Покана за член на екипа"
+
 #: src/routes/_authed/repairs/index.tsx
 msgid "Jobs across the whole garage. Convert a sent offer to start one."
 msgstr "Заявки от целия сервиз. Преобразувайте изпратена оферта, за да започнете."
+
+#: src/routes/accept-invite.tsx
+msgid "Join garage"
+msgstr "Присъединяване"
+
+#: src/routes/accept-invite.tsx
+msgid "Joining…"
+msgstr "Присъединяване…"
 
 #: src/components/offers/OfferFormDialog.tsx
 #: src/components/repairs/RepairFormDialog.tsx
@@ -366,6 +449,7 @@ msgstr "Зареждане на историята…"
 #: src/routes/_authed/dashboard.tsx
 #: src/routes/_authed/repairs/$repairId.tsx
 #: src/routes/_authed/repairs/index.tsx
+#: src/routes/_authed/team.tsx
 msgid "Loading…"
 msgstr "Зареждане…"
 
@@ -374,6 +458,14 @@ msgstr "Зареждане…"
 #: src/routes/_authed/cars/$carId.tsx
 msgid "Make"
 msgstr "Марка"
+
+#: src/lib/roles.ts
+msgid "Mechanic"
+msgstr "Механик"
+
+#: src/routes/_authed/team.tsx
+msgid "Members"
+msgstr "Членове"
 
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/cars/CarsSection.tsx
@@ -397,12 +489,15 @@ msgstr "Пробег {0} км · Общо {1}"
 msgid "Model"
 msgstr "Модел"
 
+#: src/routes/accept-invite.tsx
+#: src/routes/reset-password.tsx
 #: src/routes/signup.tsx
 msgid "Must be at least 8 characters."
 msgstr "Трябва да съдържа поне 8 символа."
 
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/routes/_authed/customers/index.tsx
+#: src/routes/_authed/team.tsx
 msgid "Name"
 msgstr "Име"
 
@@ -429,6 +524,10 @@ msgstr "Нов потребител?"
 msgid "New offer"
 msgstr "Нова оферта"
 
+#: src/routes/reset-password.tsx
+msgid "New password"
+msgstr "Нова парола"
+
 #: src/routes/_authed/customers/index.tsx
 #: src/routes/_authed/repairs/index.tsx
 msgid "Next"
@@ -453,6 +552,10 @@ msgstr "Все още няма записи в историята. Тук ще �
 #: src/components/offers/OffersSection.tsx
 msgid "No offers yet."
 msgstr "Все още няма оферти."
+
+#: src/routes/_authed/team.tsx
+msgid "No pending invitations."
+msgstr "Няма чакащи покани."
 
 #: src/routes/_authed/repairs/index.tsx
 msgid "No repairs yet."
@@ -493,6 +596,10 @@ msgstr "Отвори ремонта"
 msgid "Other"
 msgstr "Друго"
 
+#: src/lib/roles.ts
+msgid "Owner"
+msgstr "Собственик"
+
 #: src/routes/_authed/customers/index.tsx
 #: src/routes/_authed/repairs/index.tsx
 msgid "Page {page} of {totalPages} · {total} total"
@@ -504,14 +611,32 @@ msgstr "Страница {page} от {totalPages} · общо {total}"
 msgid "Part"
 msgstr "Част"
 
+#: src/routes/accept-invite.tsx
 #: src/routes/login.tsx
 #: src/routes/signup.tsx
 msgid "Password"
 msgstr "Парола"
 
+#: src/routes/reset-password.tsx
+msgid "Password updated"
+msgstr "Паролата е обновена"
+
+#: src/routes/accept-invite.tsx
+#: src/routes/reset-password.tsx
+msgid "Passwords do not match."
+msgstr "Паролите не съвпадат."
+
+#: src/routes/_authed/team.tsx
+msgid "Pending invitations"
+msgstr "Чакащи покани"
+
 #: src/routes/_authed/customers/index.tsx
 msgid "People and companies your garage works with."
 msgstr "Хора и фирми, с които работи вашият сервиз."
+
+#: src/routes/_authed/team.tsx
+msgid "People with access to your garage."
+msgstr "Хора с достъп до Вашия сервиз."
 
 #: src/routes/_authed/dashboard.tsx
 msgid "Permissions"
@@ -595,6 +720,14 @@ msgstr "Оферти за ремонт на този автомобил."
 msgid "Repairs"
 msgstr "Ремонти"
 
+#: src/routes/reset-password.tsx
+msgid "Request a new link"
+msgstr "Заявете нова връзка"
+
+#: src/routes/forgot-password.tsx
+msgid "Reset your password"
+msgstr "Нулиране на паролата"
+
 #: src/components/offers/OffersSection.tsx
 msgid "Retry"
 msgstr "Повторен опит"
@@ -603,11 +736,31 @@ msgstr "Повторен опит"
 msgid "Retry sending"
 msgstr "Повторно изпращане"
 
+#: src/components/team/RevokeInviteDialog.tsx
+#: src/routes/_authed/team.tsx
+msgid "Revoke"
+msgstr "Оттегляне"
+
+#: src/components/team/RevokeInviteDialog.tsx
+msgid "Revoke invitation"
+msgstr "Оттегляне на поканата"
+
+#: src/components/team/RevokeInviteDialog.tsx
+msgid "Revoking…"
+msgstr "Оттегляне…"
+
+#: src/components/team/ChangeRoleDialog.tsx
+#: src/components/team/InviteUserDialog.tsx
+#: src/routes/_authed/team.tsx
+msgid "Role"
+msgstr "Роля"
+
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/components/history/HistorySection.tsx
 #: src/components/offers/OfferFormDialog.tsx
 #: src/components/repairs/RepairFormDialog.tsx
+#: src/components/team/ChangeRoleDialog.tsx
 msgid "Save"
 msgstr "Запази"
 
@@ -615,6 +768,8 @@ msgstr "Запази"
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/components/offers/OfferFormDialog.tsx
 #: src/components/repairs/RepairFormDialog.tsx
+#: src/components/team/ChangeRoleDialog.tsx
+#: src/routes/reset-password.tsx
 msgid "Saving…"
 msgstr "Запазване…"
 
@@ -631,12 +786,22 @@ msgstr "Изпращане"
 msgid "Send failed"
 msgstr "Неуспешно изпращане"
 
+#: src/components/team/InviteUserDialog.tsx
+msgid "Send invite"
+msgstr "Изпращане на покана"
+
 #: src/components/offers/SendOfferDialog.tsx
 msgid "Send offer"
 msgstr "Изпращане на оферта"
 
+#: src/routes/forgot-password.tsx
+msgid "Send reset link"
+msgstr "Изпращане на връзка"
+
 #: src/components/offers/OffersSection.tsx
 #: src/components/offers/SendOfferDialog.tsx
+#: src/components/team/InviteUserDialog.tsx
+#: src/routes/forgot-password.tsx
 msgid "Sending…"
 msgstr "Изпраща се…"
 
@@ -648,9 +813,22 @@ msgstr "Изпратена"
 msgid "Service history"
 msgstr "Сервизна история"
 
+#: src/routes/reset-password.tsx
+msgid "Set new password"
+msgstr "Задаване на нова парола"
+
+#. placeholder {0}: user.name
+#: src/components/team/ChangeRoleDialog.tsx
+msgid "Set the permissions for {0}."
+msgstr "Задайте правата на {0}."
+
 #: src/routes/signup.tsx
 msgid "Set up a garage and your owner account."
 msgstr "Създайте гараж и вашия акаунт."
+
+#: src/routes/accept-invite.tsx
+msgid "Set up your name and password to join the garage."
+msgstr "Задайте име и парола, за да се присъедините към сервиза."
 
 #: src/components/cars/CarsSection.tsx
 #: src/routes/_authed/customers/index.tsx
@@ -658,6 +836,7 @@ msgid "Show archived"
 msgstr "Показване на архивираните"
 
 #: src/routes/login.tsx
+#: src/routes/reset-password.tsx
 #: src/routes/signup.tsx
 msgid "Sign in"
 msgstr "Вход"
@@ -677,6 +856,10 @@ msgstr "Изход"
 #: src/routes/_authed/dashboard.tsx
 msgid "Signed in as"
 msgstr "Влезли сте като"
+
+#: src/routes/reset-password.tsx
+msgid "Signing in on other devices will require the new password."
+msgstr "Влизането на други устройства ще изисква новата парола."
 
 #: src/routes/login.tsx
 msgid "Signing in…"
@@ -712,6 +895,11 @@ msgstr "ДДС и общата сума се изчисляват при зап�
 msgid "Tax rate (%)"
 msgstr "Ставка ДДС (%)"
 
+#: src/routes/_authed/dashboard.tsx
+#: src/routes/_authed/team.tsx
+msgid "Team"
+msgstr "Екип"
+
 #: src/components/offers/OffersSection.tsx
 #: src/routes/_authed/repairs/$repairId.tsx
 msgid "The action could not be completed."
@@ -721,6 +909,11 @@ msgstr "Действието не може да бъде изпълнено."
 msgid "The file could not be uploaded."
 msgstr "Файлът не можа да бъде качен."
 
+#. placeholder {0}: invitation.email
+#: src/components/team/RevokeInviteDialog.tsx
+msgid "The link sent to {0} will stop working."
+msgstr "Връзката, изпратена до {0}, ще спре да работи."
+
 #: src/components/history/HistorySection.tsx
 msgid "The note could not be saved."
 msgstr "Бележката не можа да бъде запазена."
@@ -729,11 +922,19 @@ msgstr "Бележката не можа да бъде запазена."
 msgid "The offer PDF will be emailed to the customer. Once sent, the offer can no longer be edited."
 msgstr "PDF файлът с офертата ще бъде изпратен на клиента по имейл. След изпращане офертата не може да бъде редактирана."
 
+#: src/components/team/InviteUserDialog.tsx
+msgid "They'll get an email with a link to set up their account."
+msgstr "Ще получат имейл с връзка за създаване на профила си."
+
 #: src/components/cars/CarFormDialog.tsx
 #: src/components/customers/CustomerFormDialog.tsx
 #: src/components/offers/OfferFormDialog.tsx
 #: src/components/repairs/RepairFormDialog.tsx
+#: src/components/team/InviteUserDialog.tsx
+#: src/routes/accept-invite.tsx
+#: src/routes/forgot-password.tsx
 #: src/routes/login.tsx
+#: src/routes/reset-password.tsx
 #: src/routes/signup.tsx
 msgid "This field is required."
 msgstr "Полето е задължително."
@@ -747,6 +948,14 @@ msgstr "Това скрива {0} от активния списък и осво
 #: src/components/customers/ArchiveCustomerDialog.tsx
 msgid "This hides {0} from the active list. You can still view archived customers with the filter."
 msgstr "Това скрива {0} от активния списък. Можете да видите архивираните клиенти чрез филтъра."
+
+#: src/routes/accept-invite.tsx
+msgid "This invitation link is missing its token. Ask for a fresh invite."
+msgstr "В тази покана липсва токен. Поискайте нова покана."
+
+#: src/routes/reset-password.tsx
+msgid "This reset link is missing its token. Please request a new one."
+msgstr "В тази връзка за нулиране липсва токен. Моля, заявете нова."
 
 #: src/components/history/HistorySection.tsx
 msgid "Title"
@@ -793,6 +1002,19 @@ msgstr "Какво е свършено?"
 msgid "Year"
 msgstr "Година"
 
+#: src/routes/_authed/team.tsx
+msgid "You"
+msgstr "Вие"
+
+#: src/routes/_authed/team.tsx
+msgid "You don't have permission to manage the team."
+msgstr "Нямате право да управлявате екипа."
+
+#: src/routes/accept-invite.tsx
 #: src/routes/signup.tsx
 msgid "Your name"
 msgstr "Вашето име"
+
+#: src/routes/reset-password.tsx
+msgid "Your password has been changed. Sign in with your new password."
+msgstr "Паролата Ви е променена. Влезте с новата парола."

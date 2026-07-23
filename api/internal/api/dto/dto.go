@@ -349,3 +349,55 @@ type AttachmentResponse struct {
 type AttachmentListResponse struct {
 	Attachments []AttachmentResponse `json:"attachments"`
 }
+
+// PasswordResetRequest asks for a reset email. The response is always 204
+// (enumeration-safe) — this type is only the inbound shape.
+type PasswordResetRequest struct {
+	Email string `json:"email"`
+}
+
+// PasswordResetConfirmRequest sets a new password from an emailed token.
+type PasswordResetConfirmRequest struct {
+	Token    string `json:"token"`
+	Password string `json:"password"`
+}
+
+// InviteUserRequest creates a staff invitation (users:write). Role must be
+// admin or mechanic — owner is born only at signup.
+type InviteUserRequest struct {
+	Email string `json:"email"`
+	Role  string `json:"role"`
+}
+
+// AcceptInviteRequest completes an invited account from the emailed token.
+// The email is implicit in the invitation, so it is not part of the body.
+type AcceptInviteRequest struct {
+	Token    string `json:"token"`
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
+// UpdateUserRoleRequest changes a team member's role (users:write).
+type UpdateUserRoleRequest struct {
+	Role string `json:"role"`
+}
+
+// InvitationResponse is a pending invitation as seen by the team screen. The
+// token is never exposed — only its metadata.
+type InvitationResponse struct {
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Role      string    `json:"role"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// InvitationListResponse is the full body of the pending-invitations endpoint.
+type InvitationListResponse struct {
+	Invitations []InvitationResponse `json:"invitations"`
+}
+
+// UserListResponse is the full body of the team-list endpoint.
+type UserListResponse struct {
+	Users []UserResponse `json:"users"`
+}

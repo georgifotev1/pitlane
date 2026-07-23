@@ -132,4 +132,149 @@ func TestUserStore(t *testing.T) {
 			t.Fatalf("expected ErrNotFound for missing email, got %v", err)
 		}
 	})
+
+	t.Run("Create rejects duplicate email", func(t *testing.T) {
+		u := newUser(tenant.ID, "dupe@example.com", "First", "mechanic")
+		u.PasswordHash = "fake-hash"
+		if err := us.Create(ctx, u); err != nil {
+			t.Fatalf("create first: %v", err)
+		}
+		other := newUser(tenant.ID, "DUPE@example.com", "Second", "admin")
+		other.PasswordHash = "fake-hash"
+		if err := us.Create(ctx, other); err != ErrDuplicateEmail {
+			t.Fatalf("expected ErrDuplicateEmail, got %v", err)
+		}
+	})
+
+	t.Run("List returns tenant users oldest first", func(t *testing.T) {
+		listTenant := newTenant("List Garage")
+		if err := ts.Create(ctx, listTenant); err != nil {
+			t.Fatalf("create tenant: %v", err)
+		}
+		owner := newUser(listTenant.ID, "owner@list.com", "Owner", "owner")
+		owner.PasswordHash = "fake-hash"
+		if err := us.Create(ctx, owner); err != nil {
+			t.Fatalf("create owner: %v", err)
+		}
+		mech := newUser(listTenant.ID, "mech@list.com", "Mech", "mechanic")
+		mech.PasswordHash = "fake-hash"
+		if err := us.Create(ctx, mech); err != nil {
+			t.Fatalf("create mech: %v", err)
+		}
+
+		got, err := us.List(ctx, listTenant.ID)
+		if err != nil {
+			t.Fatalf("list: %v", err)
+		}
+		if len(got) != 2 {
+			t.Fatalf("expected 2 users, got %d", len(got))
+		}
+		if got[0].ID != owner.ID || got[1].ID != mech.ID {
+			t.Fatalf("wrong order: got %s then %s", got[0].Email, got[1].Email)
+		}
+
+		// Cross-tenant isolation: another tenant's list must not include these.
+		others, err := us.List(ctx, tenant.ID)
+		if err != nil {
+			t.Fatalf("list other: %v", err)
+		}
+		for _, u := range others {
+			if u.TenantID == listTenant.ID {
+				t.Fatalf("cross-tenant leak in List: %+v", u)
+			}
+		}
+	})
+
+	t.Run("UpdateRole changes role, scoped to tenant", func(t *testing.T) {
+		u := newUser(tenant.ID, "role@example.com", "Role", "mechanic")
+		u.PasswordHash = "fake-hash"
+		if err := us.Create(ctx, u); err != nil {
+			t.Fatalf("create user: %v", err)
+		}
+		if err := us.UpdateRole(ctx, tenant.ID, u.ID, domain.RoleAdmin); err != nil {
+			t.Fatalf("update role: %v", err)
+		}
+		got, err := us.GetByID(ctx, tenant.ID, u.ID)
+		if err != nil {
+			t.Fatalf("reload: %v", err)
+		}
+		if got.Role != domain.RoleAdmin {
+			t.Fatalf("expected admin, got %s", got.Role)
+		}
+		if err := us.UpdateRole(ctx, tenant.ID, "00000000-0000-0000-0000-000000000000", domain.RoleAdmin); err != ErrNotFound {
+			t.Fatalf("expected ErrNotFound, got %v", err)
+		}
+	})
+
+	t.Run("UpdatePassword sets hash and password_changed_at", func(t *testing.T) {
+		u := newUser(tenant.ID, "pw@example.com", "PW", "mechanic")
+		u.PasswordHash = "old-hash"
+		if err := us.Create(ctx, u); err != nil {
+			t.Fatalf("create user: %v", err)
+		}
+		before, err := us.GetByID(ctx, tenant.ID, u.ID)
+		if err != nil {
+			t.Fatalf("get: %v", err)
+		}
+		if before.PasswordChangedAt != nil {
+			t.Fatalf("password_changed_at must start nil, got %v", before.PasswordChangedAt)
+		}
+		if err := us.UpdatePassword(ctx, tenant.ID, u.ID, "new-hash"); err != nil {
+			t.Fatalf("update password: %v", err)
+		}
+		got, err := us.GetByID(ctx, tenant.ID, u.ID)
+		if err != nil {
+			t.Fatalf("reload: %v", err)
+		}
+		if got.PasswordHash != "new-hash" {
+			t.Fatalf("hash not updated: %q", got.PasswordHash)
+		}
+		if got.PasswordChangedAt == nil {
+			t.Fatal("password_changed_at must be stamped")
+		}
+	})
+}
+
+func TestTenantStoreCreateWithOwner(t *testing.T) {
+	tdb := testdb.New(t)
+	t.Cleanup(func() { tdb.Cleanup(t) })
+
+	db := NewDB(tdb.Pool)
+	ts := NewTenantStore(db)
+	us := NewUserStore(db)
+	ctx := context.Background()
+
+	t.Run("creates tenant and owner atomically", func(t *testing.T) {
+		tenant := newTenant("Atomic Garage")
+		owner := newUser(tenant.ID, "owner@atomic.com", "Owner", "owner")
+		owner.PasswordHash = "fake-hash"
+		if err := ts.CreateWithOwner(ctx, tenant, owner); err != nil {
+			t.Fatalf("create with owner: %v", err)
+		}
+		if _, err := ts.GetByID(ctx, tenant.ID); err != nil {
+			t.Fatalf("tenant missing: %v", err)
+		}
+		if _, err := us.GetByID(ctx, tenant.ID, owner.ID); err != nil {
+			t.Fatalf("owner missing: %v", err)
+		}
+	})
+
+	t.Run("duplicate email rolls back the tenant too", func(t *testing.T) {
+		existing := newTenant("Existing")
+		existingOwner := newUser(existing.ID, "taken@example.com", "Taken", "owner")
+		existingOwner.PasswordHash = "fake-hash"
+		if err := ts.CreateWithOwner(ctx, existing, existingOwner); err != nil {
+			t.Fatalf("seed: %v", err)
+		}
+
+		orphan := newTenant("Orphan Garage")
+		owner := newUser(orphan.ID, "TAKEN@example.com", "Second", "owner")
+		owner.PasswordHash = "fake-hash"
+		if err := ts.CreateWithOwner(ctx, orphan, owner); err != ErrDuplicateEmail {
+			t.Fatalf("expected ErrDuplicateEmail, got %v", err)
+		}
+		if _, err := ts.GetByID(ctx, orphan.ID); err != ErrNotFound {
+			t.Fatalf("tenant must have rolled back, got err=%v", err)
+		}
+	})
 }

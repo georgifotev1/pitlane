@@ -65,6 +65,13 @@ function Dashboard() {
             <Trans>Repairs</Trans>
           </Button>
         </Link>
+        {user.permissions.includes("users:read") && (
+          <Link to="/team">
+            <Button variant="outline">
+              <Trans>Team</Trans>
+            </Button>
+          </Link>
+        )}
       </nav>
       <section className="rounded-lg border border-border p-6">
         <h2 className="text-lg font-semibold">

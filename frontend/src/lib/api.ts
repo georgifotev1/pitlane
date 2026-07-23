@@ -1,4 +1,5 @@
 import type {
+  AcceptInviteRequest,
   AttachmentListResponse,
   AttachmentResponse,
   CarListResponse,
@@ -12,9 +13,14 @@ import type {
   HealthResponse,
   HistoryNoteResponse,
   HistoryResponse,
+  InvitationListResponse,
+  InvitationResponse,
+  InviteUserRequest,
   LoginRequest,
   OfferListResponse,
   OfferResponse,
+  PasswordResetConfirmRequest,
+  PasswordResetRequest,
   RepairListResponse,
   RepairResponse,
   SignupRequest,
@@ -24,6 +30,8 @@ import type {
   UpdateHistoryNoteRequest,
   UpdateOfferRequest,
   UpdateRepairRequest,
+  UpdateUserRoleRequest,
+  UserListResponse,
   UserResponse,
 } from "@/lib/generated/types"
 
@@ -194,6 +202,53 @@ export const api = {
     }),
   logout: () => request<void>("/auth/logout", "", { method: "POST" }),
   me: () => request<UserResponse>("/auth/me", "user"),
+
+  // Password reset (public). requestReset is enumeration-safe: the server
+  // answers 204 whether or not the email exists, so the UI never branches on
+  // the outcome. confirmReset consumes the emailed token and sets the new
+  // password (destroying every session); the user then logs in fresh.
+  requestPasswordReset: (data: PasswordResetRequest) =>
+    request<void>("/auth/password-reset", "", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+  confirmPasswordReset: (data: PasswordResetConfirmRequest) =>
+    request<void>("/auth/password-reset/confirm", "", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+  // acceptInvite completes an invited account from the emailed token and starts
+  // a session (like signup), so the caller invalidates `me` and navigates in.
+  acceptInvite: (data: AcceptInviteRequest) =>
+    request<UserResponse>("/auth/accept-invite", "user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+
+  // Team management (users:read for the lists, users:write for the mutations).
+  users: {
+    list: () => requestBody<UserListResponse>("/users"),
+    updateRole: (id: string, data: UpdateUserRoleRequest) =>
+      request<UserResponse>(`/users/${id}/role`, "user", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    invitations: {
+      list: () => requestBody<InvitationListResponse>("/users/invitations"),
+      create: (data: InviteUserRequest) =>
+        request<InvitationResponse>("/users/invitations", "invitation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        }),
+      revoke: (id: string) =>
+        request<void>(`/users/invitations/${id}`, "", { method: "DELETE" }),
+    },
+  },
 
   customers: {
     list: (q: CustomerListQuery) =>

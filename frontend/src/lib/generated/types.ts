@@ -372,3 +372,63 @@ export interface AttachmentResponse {
 export interface AttachmentListResponse {
   attachments: AttachmentResponse[];
 }
+/**
+ * PasswordResetRequest asks for a reset email. The response is always 204
+ * (enumeration-safe) — this type is only the inbound shape.
+ */
+export interface PasswordResetRequest {
+  email: string;
+}
+/**
+ * PasswordResetConfirmRequest sets a new password from an emailed token.
+ */
+export interface PasswordResetConfirmRequest {
+  token: string;
+  password: string;
+}
+/**
+ * InviteUserRequest creates a staff invitation (users:write). Role must be
+ * admin or mechanic — owner is born only at signup.
+ */
+export interface InviteUserRequest {
+  email: string;
+  role: string;
+}
+/**
+ * AcceptInviteRequest completes an invited account from the emailed token.
+ * The email is implicit in the invitation, so it is not part of the body.
+ */
+export interface AcceptInviteRequest {
+  token: string;
+  name: string;
+  password: string;
+}
+/**
+ * UpdateUserRoleRequest changes a team member's role (users:write).
+ */
+export interface UpdateUserRoleRequest {
+  role: string;
+}
+/**
+ * InvitationResponse is a pending invitation as seen by the team screen. The
+ * token is never exposed — only its metadata.
+ */
+export interface InvitationResponse {
+  id: string;
+  email: string;
+  role: string;
+  expiresAt: string;
+  createdAt: string;
+}
+/**
+ * InvitationListResponse is the full body of the pending-invitations endpoint.
+ */
+export interface InvitationListResponse {
+  invitations: InvitationResponse[];
+}
+/**
+ * UserListResponse is the full body of the team-list endpoint.
+ */
+export interface UserListResponse {
+  users: UserResponse[];
+}

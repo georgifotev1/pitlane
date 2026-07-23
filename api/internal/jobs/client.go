@@ -28,6 +28,8 @@ type offerRenderer interface {
 
 // WorkerDeps are everything the workers need, injected from main. Stores load
 // the offer graph; the renderer builds the attachment; the mailer delivers it.
+// BaseURL is the public SPA origin emailed links point at (Phase 10 auth
+// emails).
 type WorkerDeps struct {
 	Offers    *store.OfferStore
 	Cars      *store.CarStore
@@ -36,14 +38,17 @@ type WorkerDeps struct {
 	PDF       offerRenderer
 	Mailer    mailer.Mailer
 	Logger    *slog.Logger
+	BaseURL   string
 }
 
 // NewClient builds a working River client on the default queue, backed by the
-// app's Postgres pool, with the SendOfferEmail worker registered. River
-// requires its schema to be migrated before Start (see "api migrate up").
+// app's Postgres pool, with all workers registered. River requires its schema
+// to be migrated before Start (see "api migrate up").
 func NewClient(pool *pgxpool.Pool, deps WorkerDeps) (*river.Client[pgx.Tx], error) {
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &sendOfferEmailWorker{deps: deps})
+	river.AddWorker(workers, &sendPasswordResetEmailWorker{deps: deps})
+	river.AddWorker(workers, &sendInviteEmailWorker{deps: deps})
 
 	client, err := river.NewClient(riverpgxv5.New(pool), &river.Config{
 		Queues:  map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 10}},
@@ -97,6 +102,54 @@ func (e *OfferEmailEnqueuer) EnqueueOfferEmail(ctx context.Context, tx pgx.Tx, t
 		TenantID: tenantID,
 		OfferID:  offerID,
 		ReplyTo:  e.replyTo,
+	}, nil)
+	return err
+}
+
+// PasswordResetEnqueuer implements store.PasswordResetEmailEnqueuer by
+// inserting a SendPasswordResetEmail job on the caller's transaction — the
+// same transactional-enqueue guarantee as the offer send: token row and email
+// dispatch commit or roll back together.
+type PasswordResetEnqueuer struct {
+	client *river.Client[pgx.Tx]
+}
+
+// NewPasswordResetEnqueuer wraps a River client as an enqueuer.
+func NewPasswordResetEnqueuer(client *river.Client[pgx.Tx]) *PasswordResetEnqueuer {
+	return &PasswordResetEnqueuer{client: client}
+}
+
+// EnqueuePasswordResetEmail inserts the reset-email job on tx.
+func (e *PasswordResetEnqueuer) EnqueuePasswordResetEmail(ctx context.Context, tx pgx.Tx, tenantID, userID, email, userName, token string) error {
+	_, err := e.client.InsertTx(ctx, tx, SendPasswordResetEmailArgs{
+		TenantID: tenantID,
+		UserID:   userID,
+		Email:    email,
+		UserName: userName,
+		Token:    token,
+	}, nil)
+	return err
+}
+
+// InviteEnqueuer implements store.InviteEmailEnqueuer by inserting a
+// SendInviteEmail job on the caller's transaction.
+type InviteEnqueuer struct {
+	client *river.Client[pgx.Tx]
+}
+
+// NewInviteEnqueuer wraps a River client as an enqueuer.
+func NewInviteEnqueuer(client *river.Client[pgx.Tx]) *InviteEnqueuer {
+	return &InviteEnqueuer{client: client}
+}
+
+// EnqueueInviteEmail inserts the invite-email job on tx.
+func (e *InviteEnqueuer) EnqueueInviteEmail(ctx context.Context, tx pgx.Tx, tenantID, invitationID, email, role, token string) error {
+	_, err := e.client.InsertTx(ctx, tx, SendInviteEmailArgs{
+		TenantID:     tenantID,
+		InvitationID: invitationID,
+		Email:        email,
+		Role:         role,
+		Token:        token,
 	}, nil)
 	return err
 }

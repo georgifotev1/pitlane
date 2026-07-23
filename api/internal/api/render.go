@@ -21,6 +21,12 @@ const (
 	CodeConflict            = "conflict"
 	CodeRateLimited         = "rate_limit_exceeded"
 	CodeValidationFailed    = "validation_failed"
+	// CodeInvalidToken covers unknown/expired/used reset and invite tokens —
+	// one code for all three so the client learns nothing about which fired.
+	CodeInvalidToken = "invalid_token"
+	// Role-management guards (Phase 10): 409s on the team screen.
+	CodeCannotChangeOwnRole   = "cannot_change_own_role"
+	CodeCannotChangeOwnerRole = "cannot_change_owner_role"
 )
 
 // RFC 9457 problem detail. The errors map carries field-level validation codes

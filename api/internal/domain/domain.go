@@ -100,15 +100,20 @@ type Tenant struct {
 }
 
 // User belongs to exactly one tenant. Email is globally unique.
+// PasswordChangedAt (nil = never) is the session-kill timestamp for password
+// reset (ADR §Security): requireAuth destroys any session created before it,
+// which is how a reset invalidates every other session without touching the
+// scs store's opaque session rows.
 type User struct {
-	ID           string
-	TenantID     string
-	Email        string
-	PasswordHash string
-	Role         Role
-	Name         string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID                string
+	TenantID          string
+	Email             string
+	PasswordHash      string
+	Role              Role
+	Name              string
+	PasswordChangedAt *time.Time
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // Customer is a person or company a garage does business with. It belongs to
@@ -386,6 +391,32 @@ func IsValidRepairStatus(s string) bool {
 		return true
 	}
 	return false
+}
+
+// Token lifetimes (ADR §Security). The reset TTL is contractual (1h); the
+// invitation TTL is a product choice (72h — a weekend to onboard staff). The
+// handler stamps ExpiresAt from these; the invite email renders the same
+// number, so both live here.
+const (
+	PasswordResetTokenTTL = time.Hour
+	InvitationTokenTTL    = 72 * time.Hour
+)
+
+// Invitation is a pending staff invite: an emailed, single-use, expiring token
+// whose acceptance creates a User with the invited Role in this tenant. The
+// token itself is never stored — only its SHA-256 hash (TokenHash). Only staff
+// roles (admin, mechanic) are invitable; owner is born at signup. Email is
+// stored lower-cased (the one-pending-per-email index depends on it).
+type Invitation struct {
+	ID         string
+	TenantID   string
+	Email      string
+	Role       Role
+	TokenHash  string
+	InvitedBy  string
+	ExpiresAt  time.Time
+	AcceptedAt *time.Time
+	CreatedAt  time.Time
 }
 
 // HistoryNote is a manual external-work entry attached to a car. It is the only

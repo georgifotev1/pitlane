@@ -88,6 +88,8 @@ func serve() error {
 	history := store.NewHistoryStore(db)
 	attachments := store.NewAttachmentStore(db)
 	audit := store.NewAuditLogStore(db)
+	resets := store.NewPasswordResetTokenStore(db)
+	invitations := store.NewInvitationStore(db)
 	pdfRenderer := pdf.NewRenderer()
 
 	fileStore, err := filestore.NewS3(filestore.Config{
@@ -119,6 +121,7 @@ func serve() error {
 		PDF:       pdfRenderer,
 		Mailer:    mailSender,
 		Logger:    logger,
+		BaseURL:   cfg.App.BaseURL,
 	})
 	if err != nil {
 		return err
@@ -140,21 +143,25 @@ func serve() error {
 	sessionManager.Cookie.Path = "/"
 
 	server, err := api.NewServer(api.ServerDeps{
-		Logger:       logger,
-		Cfg:          cfg,
-		Session:      sessionManager,
-		Tenants:      tenants,
-		Users:        users,
-		Customers:    customers,
-		Cars:         cars,
-		Offers:       offers,
-		Repairs:      repairs,
-		History:      history,
-		Attachments:  attachments,
-		Audit:        audit,
-		PDF:          pdfRenderer,
-		SendEnqueuer: jobs.NewOfferEmailEnqueuer(riverClient),
-		Files:        fileStore,
+		Logger:         logger,
+		Cfg:            cfg,
+		Session:        sessionManager,
+		Tenants:        tenants,
+		Users:          users,
+		Customers:      customers,
+		Cars:           cars,
+		Offers:         offers,
+		Repairs:        repairs,
+		History:        history,
+		Attachments:    attachments,
+		Audit:          audit,
+		Resets:         resets,
+		Invitations:    invitations,
+		PDF:            pdfRenderer,
+		SendEnqueuer:   jobs.NewOfferEmailEnqueuer(riverClient),
+		ResetEnqueuer:  jobs.NewPasswordResetEnqueuer(riverClient),
+		InviteEnqueuer: jobs.NewInviteEnqueuer(riverClient),
+		Files:          fileStore,
 	})
 	if err != nil {
 		return fmt.Errorf("server: %w", err)

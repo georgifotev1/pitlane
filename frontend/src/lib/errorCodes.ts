@@ -26,6 +26,12 @@ const messages: Record<string, string> = {
   not_found: "Ресурсът не е намерен.",
   conflict: "Действието е в конфликт с текущото състояние (офертата вече е изпратена).",
   rate_limit_exceeded: "Твърде много заявки. Изчакайте и опитайте отново.",
+  // Phase 10: password reset + staff invitations.
+  invalid_token: "Връзката е невалидна или е изтекла. Поискайте нова.",
+  email_taken: "Този имейл вече е зает.",
+  already_invited: "Вече има изпратена покана за този имейл.",
+  cannot_change_own_role: "Не можете да променяте собствената си роля.",
+  cannot_change_owner_role: "Ролята на собственика не може да бъде променяна.",
 }
 
 export function errorCodeToMessage(code: string | undefined | null): string {
