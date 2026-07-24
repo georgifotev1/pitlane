@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { Trans, useLingui } from "@lingui/react/macro"
 import { CarIcon } from "lucide-react"
 import { api } from "@/lib/api"
+import { isInteractiveTarget } from "@/lib/utils"
 import { queryKeys } from "@/lib/queryKeys"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -200,32 +201,31 @@ function CarsBoard() {
               </TableRow>
             )}
             {cars.map((car) => (
-              <TableRow key={car.id}>
+              <TableRow
+                key={car.id}
+                className="cursor-pointer"
+                role="link"
+                tabIndex={0}
+                aria-label={t`Open car`}
+                onClick={(e) => {
+                  if (isInteractiveTarget(e.target)) return
+                  navigate({ to: "/cars/$carId", params: { carId: car.id } })
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter" && e.key !== " ") return
+                  e.preventDefault()
+                  navigate({ to: "/cars/$carId", params: { carId: car.id } })
+                }}
+              >
                 <TableCell className="font-medium">
-                  {/* The car page is where offers, service history, and photos live. */}
-                  <Link
-                    to="/cars/$carId"
-                    params={{ carId: car.id }}
-                    className="underline-offset-4 hover:underline"
-                    aria-label={t`Open car`}
-                  >
-                    {car.plate}
-                  </Link>
+                  {car.plate}
                   {car.archivedAt && (
                     <Badge variant="secondary" className="ml-2">
                       <Trans>Archived</Trans>
                     </Badge>
                   )}
                 </TableCell>
-                <TableCell>
-                  <Link
-                    to="/customers/$customerId"
-                    params={{ customerId: car.customerId }}
-                    className="text-muted-foreground underline-offset-4 hover:underline"
-                  >
-                    {car.customerName}
-                  </Link>
-                </TableCell>
+                <TableCell className="text-muted-foreground">{car.customerName}</TableCell>
                 <TableCell className="text-muted-foreground">{car.make || "—"}</TableCell>
                 <TableCell className="text-muted-foreground">{car.model || "—"}</TableCell>
                 <TableCell className="text-muted-foreground">{car.year || "—"}</TableCell>

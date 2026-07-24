@@ -4,7 +4,7 @@ import { Trans, useLingui } from "@lingui/react/macro"
 import { WrenchIcon } from "lucide-react"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
-import { formatMoney } from "@/lib/utils"
+import { formatMoney, isInteractiveTarget } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PageHeader } from "@/components/layout/PageHeader"
@@ -166,17 +166,23 @@ function RepairsBoard() {
               </TableRow>
             )}
             {repairs.map((r) => (
-              <TableRow key={r.id}>
-                <TableCell className="font-medium">
-                  <Link
-                    to="/repairs/$repairId"
-                    params={{ repairId: r.id }}
-                    className="underline-offset-4 hover:underline"
-                    aria-label={t`Open repair`}
-                  >
-                    {r.carPlate}
-                  </Link>
-                </TableCell>
+              <TableRow
+                key={r.id}
+                className="cursor-pointer"
+                role="link"
+                tabIndex={0}
+                aria-label={t`Open repair`}
+                onClick={(e) => {
+                  if (isInteractiveTarget(e.target)) return
+                  navigate({ to: "/repairs/$repairId", params: { repairId: r.id } })
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter" && e.key !== " ") return
+                  e.preventDefault()
+                  navigate({ to: "/repairs/$repairId", params: { repairId: r.id } })
+                }}
+              >
+                <TableCell className="font-medium">{r.carPlate}</TableCell>
                 <TableCell className="text-muted-foreground">{r.customerName}</TableCell>
                 <TableCell>
                   <RepairStatusBadge status={r.status} />

@@ -1,10 +1,11 @@
 import { useState } from "react"
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { Trans, useLingui } from "@lingui/react/macro"
 import { PlusIcon, PencilIcon, ArchiveIcon, UsersIcon } from "lucide-react"
 import type { CustomerResponse } from "@/lib/generated/types"
 import { api } from "@/lib/api"
+import { isInteractiveTarget } from "@/lib/utils"
 import { queryKeys } from "@/lib/queryKeys"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -197,15 +198,24 @@ function CustomersList() {
               </TableRow>
             )}
             {customers.map((c) => (
-              <TableRow key={c.id}>
+              <TableRow
+                key={c.id}
+                className="cursor-pointer"
+                role="link"
+                tabIndex={0}
+                aria-label={t`Open customer`}
+                onClick={(e) => {
+                  if (isInteractiveTarget(e.target)) return
+                  navigate({ to: "/customers/$customerId", params: { customerId: c.id } })
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter" && e.key !== " ") return
+                  e.preventDefault()
+                  navigate({ to: "/customers/$customerId", params: { customerId: c.id } })
+                }}
+              >
                 <TableCell className="font-medium">
-                  <Link
-                    to="/customers/$customerId"
-                    params={{ customerId: c.id }}
-                    className="underline-offset-4 hover:underline"
-                  >
-                    {c.name}
-                  </Link>
+                  {c.name}
                   {c.archivedAt && (
                     <Badge variant="secondary" className="ml-2">
                       <Trans>Archived</Trans>

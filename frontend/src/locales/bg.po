@@ -691,11 +691,17 @@ msgstr "Офертите се съставят за конкретен авто�
 msgid "Open"
 msgstr "Отворен"
 
+#: src/components/cars/CarsSection.tsx
 #: src/routes/_authed/cars/index.tsx
 #: src/routes/_authed/offers/index.tsx
 msgid "Open car"
 msgstr "Отвори автомобила"
 
+#: src/routes/_authed/customers/index.tsx
+msgid "Open customer"
+msgstr "Open customer"
+
+#: src/routes/_authed/dashboard.tsx
 #: src/routes/_authed/repairs/index.tsx
 msgid "Open repair"
 msgstr "Отвори ремонта"

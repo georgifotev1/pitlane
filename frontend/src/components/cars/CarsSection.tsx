@@ -1,10 +1,11 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Link } from "@tanstack/react-router"
+import { useNavigate } from "@tanstack/react-router"
 import { Trans, useLingui } from "@lingui/react/macro"
 import { PlusIcon, PencilIcon, ArchiveIcon } from "lucide-react"
 import type { CarResponse } from "@/lib/generated/types"
 import { api } from "@/lib/api"
+import { isInteractiveTarget } from "@/lib/utils"
 import { queryKeys } from "@/lib/queryKeys"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -32,6 +33,7 @@ function formatNumber(n: number): string {
 
 export function CarsSection({ customerId }: { customerId: string }) {
   const { t } = useLingui()
+  const navigate = useNavigate()
   const [showArchived, setShowArchived] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [editing, setEditing] = useState<CarResponse | undefined>()
@@ -120,15 +122,24 @@ export function CarsSection({ customerId }: { customerId: string }) {
               </TableRow>
             )}
             {cars.map((car) => (
-              <TableRow key={car.id}>
+              <TableRow
+                key={car.id}
+                className="cursor-pointer"
+                role="link"
+                tabIndex={0}
+                aria-label={t`Open car`}
+                onClick={(e) => {
+                  if (isInteractiveTarget(e.target)) return
+                  navigate({ to: "/cars/$carId", params: { carId: car.id } })
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter" && e.key !== " ") return
+                  e.preventDefault()
+                  navigate({ to: "/cars/$carId", params: { carId: car.id } })
+                }}
+              >
                 <TableCell className="font-medium">
-                  <Link
-                    to="/cars/$carId"
-                    params={{ carId: car.id }}
-                    className="underline-offset-4 hover:underline"
-                  >
-                    {car.plate}
-                  </Link>
+                  {car.plate}
                   {car.archivedAt && (
                     <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                       <Trans>Archived</Trans>

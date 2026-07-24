@@ -4,7 +4,7 @@ import { Trans, useLingui } from "@lingui/react/macro"
 import { FileTextIcon } from "lucide-react"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
-import { formatMoney } from "@/lib/utils"
+import { formatMoney, isInteractiveTarget } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PageHeader } from "@/components/layout/PageHeader"
@@ -179,24 +179,29 @@ function OffersBoard() {
               </TableRow>
             )}
             {offers.map((offer) => (
-              <TableRow key={offer.id}>
+              <TableRow
+                key={offer.id}
+                className="cursor-pointer"
+                role="link"
+                tabIndex={0}
+                aria-label={t`Open car`}
+                onClick={(e) => {
+                  if (isInteractiveTarget(e.target)) return
+                  navigate({ to: "/cars/$carId", params: { carId: offer.carId } })
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter" && e.key !== " ") return
+                  e.preventDefault()
+                  navigate({ to: "/cars/$carId", params: { carId: offer.carId } })
+                }}
+              >
                 <TableCell>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <OfferStatusBadge status={offer.status} />
                     <SendStatusBadge status={offer.status} sendStatus={offer.sendStatus} />
                   </div>
                 </TableCell>
-                <TableCell className="font-medium">
-                  {/* Offers are managed on the car's page, so the row links there. */}
-                  <Link
-                    to="/cars/$carId"
-                    params={{ carId: offer.carId }}
-                    className="underline-offset-4 hover:underline"
-                    aria-label={t`Open car`}
-                  >
-                    {offer.carPlate}
-                  </Link>
-                </TableCell>
+                <TableCell className="font-medium">{offer.carPlate}</TableCell>
                 <TableCell className="text-muted-foreground">{offer.customerName}</TableCell>
                 <TableCell className="text-right tabular-nums font-medium">
                   {formatMoney(offer.totalCents)}

@@ -1,12 +1,13 @@
 import { useState } from "react"
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
-import { Trans } from "@lingui/react/macro"
+import { Trans, useLingui } from "@lingui/react/macro"
 import { ArrowRightIcon, PlusIcon, UsersIcon, WrenchIcon } from "lucide-react"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/queryKeys"
 import { formatMoney } from "@/lib/utils"
 import { useRoleLabel } from "@/lib/roles"
+import { isInteractiveTarget } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -30,7 +31,9 @@ export const Route = createFileRoute("/_authed/dashboard")({
 // section. All of it rides endpoints that already exist (plan: zero backend
 // changes).
 function Dashboard() {
+  const { t } = useLingui()
   const roleLabel = useRoleLabel()
+  const navigate = useNavigate()
   const [createOpen, setCreateOpen] = useState(false)
 
   const me = useQuery({ queryKey: queryKeys.auth.me(), queryFn: api.me })
@@ -158,14 +161,23 @@ function Dashboard() {
           {activeRepairs.length > 0 && (
             <ul className="divide-y divide-border">
               {activeRepairs.map((r) => (
-                <li key={r.id} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
-                  <Link
-                    to="/repairs/$repairId"
-                    params={{ repairId: r.id }}
-                    className="font-medium underline-offset-4 hover:underline"
-                  >
-                    {r.carPlate}
-                  </Link>
+                <li
+                  key={r.id}
+                  className="flex cursor-pointer items-center gap-4 py-3 first:pt-0 last:pb-0"
+                  role="link"
+                  tabIndex={0}
+                  aria-label={t`Open repair`}
+                  onClick={(e) => {
+                    if (isInteractiveTarget(e.target)) return
+                    navigate({ to: "/repairs/$repairId", params: { repairId: r.id } })
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return
+                    e.preventDefault()
+                    navigate({ to: "/repairs/$repairId", params: { repairId: r.id } })
+                  }}
+                >
+                  <span className="font-medium">{r.carPlate}</span>
                   <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
                     {r.customerName}
                   </span>
