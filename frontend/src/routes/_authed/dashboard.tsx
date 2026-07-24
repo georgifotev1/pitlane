@@ -92,6 +92,7 @@ function Dashboard() {
             <Button
               variant="link"
               className="px-0"
+              nativeButton={false}
               render={
                 <Link to="/customers" search={{ page: 1, search: "", archived: false }} />
               }
@@ -117,6 +118,7 @@ function Dashboard() {
             <Button
               variant="link"
               className="px-0"
+              nativeButton={false}
               render={<Link to="/repairs" search={{ page: 1, status: "" }} />}
             >
               <Trans>Repairs board</Trans>

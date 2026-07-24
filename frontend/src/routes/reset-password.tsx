@@ -75,7 +75,7 @@ function ResetPasswordPage() {
           </Trans>
         }
       >
-        <Button className="w-full" render={<Link to="/login" />}>
+        <Button className="w-full" nativeButton={false} render={<Link to="/login" />}>
           <Trans>Sign in</Trans>
         </Button>
       </AuthLayout>

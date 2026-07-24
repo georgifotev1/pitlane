@@ -31,7 +31,15 @@
       "Bash(echo \"TSC_EXIT=$?\")",
       "Bash(pnpm lint *)",
       "Bash(echo \"LINT_EXIT=$?\")",
-      "Bash(grep -iA3 \"dev-frontend\\\\|frontend\")"
+      "Bash(grep -iA3 \"dev-frontend\\\\|frontend\")",
+      "Bash(awk ' *)",
+      "Bash(git stash *)",
+      "Bash(git add *)",
+      "Bash(git reset *)",
+      "Bash(git commit -q -m ' *)"
+    ],
+    "additionalDirectories": [
+      "/private/tmp"
     ]
   }
 }

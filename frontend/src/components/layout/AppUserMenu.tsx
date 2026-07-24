@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -59,20 +60,22 @@ export function AppUserMenu({ user }: { user: UserResponse }) {
             <ChevronsUpDownIcon className="ml-auto size-4 shrink-0 text-sidebar-foreground/60" />
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-56">
-            <DropdownMenuLabel>
-              <span className="text-muted-foreground">
-                <Trans>Signed in as</Trans>
-              </span>{" "}
-              {roleLabel(user.role)}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              disabled={logout.isPending}
-              onClick={() => logout.mutate()}
-            >
-              <LogOutIcon />
-              <Trans>Sign out</Trans>
-            </DropdownMenuItem>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>
+                <span className="text-muted-foreground">
+                  <Trans>Signed in as</Trans>
+                </span>{" "}
+                {roleLabel(user.role)}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={logout.isPending}
+                onClick={() => logout.mutate()}
+              >
+                <LogOutIcon />
+                <Trans>Sign out</Trans>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

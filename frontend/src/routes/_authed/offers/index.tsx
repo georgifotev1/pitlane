@@ -112,6 +112,7 @@ function OffersBoard() {
             </p>
           </div>
           <Button
+            nativeButton={false}
             render={
               <Link to="/customers" search={{ page: 1, search: "", archived: false }} />
             }

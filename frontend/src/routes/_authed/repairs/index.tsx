@@ -109,7 +109,7 @@ function RepairsBoard() {
               </Trans>
             </p>
           </div>
-          <Button render={<Link to="/offers" search={{ page: 1, status: "" }} />}>
+          <Button nativeButton={false} render={<Link to="/offers" search={{ page: 1, status: "" }} />}>
             <Trans>Go to offers</Trans>
           </Button>
         </section>

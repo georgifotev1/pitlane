@@ -29,7 +29,7 @@ function NotFound() {
       <p className="text-muted-foreground">
         <Trans>This page does not exist.</Trans>
       </p>
-      <Button render={<Link to="/dashboard" />}>
+      <Button nativeButton={false} render={<Link to="/dashboard" />}>
         <Trans>Back to the dashboard</Trans>
       </Button>
     </main>
