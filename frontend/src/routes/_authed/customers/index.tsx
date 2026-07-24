@@ -205,7 +205,7 @@ function CustomersList() {
                 tabIndex={0}
                 aria-label={t`Open customer`}
                 onClick={(e) => {
-                  if (isInteractiveTarget(e.target)) return
+                  if (isInteractiveTarget(e.target, e.currentTarget)) return
                   navigate({ to: "/customers/$customerId", params: { customerId: c.id } })
                 }}
                 onKeyDown={(e) => {

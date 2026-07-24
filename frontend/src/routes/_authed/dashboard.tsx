@@ -168,7 +168,7 @@ function Dashboard() {
                   tabIndex={0}
                   aria-label={t`Open repair`}
                   onClick={(e) => {
-                    if (isInteractiveTarget(e.target)) return
+                    if (isInteractiveTarget(e.target, e.currentTarget)) return
                     navigate({ to: "/repairs/$repairId", params: { repairId: r.id } })
                   }}
                   onKeyDown={(e) => {

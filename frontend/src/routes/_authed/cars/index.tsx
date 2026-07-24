@@ -208,7 +208,7 @@ function CarsBoard() {
                 tabIndex={0}
                 aria-label={t`Open car`}
                 onClick={(e) => {
-                  if (isInteractiveTarget(e.target)) return
+                  if (isInteractiveTarget(e.target, e.currentTarget)) return
                   navigate({ to: "/cars/$carId", params: { carId: car.id } })
                 }}
                 onKeyDown={(e) => {
