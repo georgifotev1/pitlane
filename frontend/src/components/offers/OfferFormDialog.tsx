@@ -1,13 +1,13 @@
-import { useMemo } from "react"
-import { useFieldArray, useForm, useWatch } from "react-hook-form"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Trans, useLingui } from "@lingui/react/macro"
-import { PlusIcon, Trash2Icon } from "lucide-react"
-import type { OfferResponse } from "@/lib/generated/types"
-import { api } from "@/lib/api"
-import { applyServerErrors } from "@/lib/formErrors"
-import { queryKeys } from "@/lib/queryKeys"
-import { formatMoney } from "@/lib/utils"
+import { useMemo } from "react";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Trans, useLingui } from "@lingui/react/macro";
+import { PlusIcon, Trash2Icon } from "lucide-react";
+import type { OfferResponse } from "@/lib/generated/types";
+import { api } from "@/lib/api";
+import { applyServerErrors } from "@/lib/formErrors";
+import { queryKeys } from "@/lib/queryKeys";
+import { formatMoney } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -15,11 +15,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 // A line's unit price and quantity are held as strings in the form (so an empty
 // field shows blank rather than "0") and parsed to cents / ints on submit and
@@ -27,33 +27,33 @@ import { Textarea } from "@/components/ui/textarea"
 // stores cents. Server validation keys use `unitPriceCents`, so onError remaps
 // that suffix back onto this field.
 type ItemFormValue = {
-  kind: string
-  description: string
-  quantity: string
-  unitPrice: string
-}
+  kind: string;
+  description: string;
+  quantity: string;
+  unitPrice: string;
+};
 
 type OfferFormValues = {
-  notes: string
-  taxRatePercent: string
-  items: ItemFormValue[]
-}
+  notes: string;
+  taxRatePercent: string;
+  items: ItemFormValue[];
+};
 
 function centsFromMajor(major: string): number {
-  const n = parseFloat(major)
-  if (!Number.isFinite(n) || n < 0) return 0
-  return Math.round(n * 100)
+  const n = parseFloat(major);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.round(n * 100);
 }
 
 function parseQty(s: string): number {
-  const n = parseInt(s, 10)
-  return Number.isFinite(n) && n > 0 ? n : 0
+  const n = parseInt(s, 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
 // taxCents mirrors domain.TaxCents exactly (basis points, round half up) so the
 // on-screen preview matches what the server will snapshot.
 function taxCents(subtotalCents: number, bps: number): number {
-  return Math.floor((subtotalCents * bps + 5000) / 10000)
+  return Math.floor((subtotalCents * bps + 5000) / 10000);
 }
 
 function toFormValues(offer?: OfferResponse): OfferFormValues {
@@ -62,7 +62,7 @@ function toFormValues(offer?: OfferResponse): OfferFormValues {
       notes: "",
       taxRatePercent: "",
       items: [{ kind: "part", description: "", quantity: "1", unitPrice: "" }],
-    }
+    };
   }
   return {
     notes: offer.notes,
@@ -73,17 +73,17 @@ function toFormValues(offer?: OfferResponse): OfferFormValues {
       quantity: String(it.quantity),
       unitPrice: (it.unitPriceCents / 100).toFixed(2),
     })),
-  }
+  };
 }
 
 type Props = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   // The car this offer belongs to (needed to create).
-  carId: string
+  carId: string;
   // When provided, the dialog edits a draft; otherwise it creates.
-  offer?: OfferResponse
-}
+  offer?: OfferResponse;
+};
 
 /**
  * The create/edit editor for draft offers. Line items are managed with
@@ -93,32 +93,32 @@ type Props = {
  * offer is immutable — this dialog is only opened for drafts.
  */
 export function OfferFormDialog({ open, onOpenChange, carId, offer }: Props) {
-  const { t } = useLingui()
-  const qc = useQueryClient()
-  const isEdit = offer !== undefined
+  const { t } = useLingui();
+  const qc = useQueryClient();
+  const isEdit = offer !== undefined;
 
-  const values = useMemo(() => toFormValues(offer), [offer])
+  const values = useMemo(() => toFormValues(offer), [offer]);
   const {
     register,
     control,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<OfferFormValues>({ values })
+  } = useForm<OfferFormValues>({ values });
 
-  const { fields, append, remove } = useFieldArray({ control, name: "items" })
+  const { fields, append, remove } = useFieldArray({ control, name: "items" });
 
   // Live totals preview. On create the tax rate is unknown (server snapshots
   // the tenant default), so only the subtotal is shown until first save.
-  const watchedItems = useWatch({ control, name: "items" })
-  const watchedPercent = useWatch({ control, name: "taxRatePercent" })
+  const watchedItems = useWatch({ control, name: "items" });
+  const watchedPercent = useWatch({ control, name: "taxRatePercent" });
   const subtotal = (watchedItems ?? []).reduce(
     (sum, it) => sum + centsFromMajor(it.unitPrice) * parseQty(it.quantity),
     0,
-  )
-  const bps = isEdit ? Math.round((parseFloat(watchedPercent) || 0) * 100) : 0
-  const tax = taxCents(subtotal, bps)
-  const total = subtotal + tax
+  );
+  const bps = isEdit ? Math.round((parseFloat(watchedPercent) || 0) * 100) : 0;
+  const tax = taxCents(subtotal, bps);
+  const total = subtotal + tax;
 
   const mutation = useMutation({
     mutationFn: (v: OfferFormValues) => {
@@ -127,28 +127,30 @@ export function OfferFormDialog({ open, onOpenChange, carId, offer }: Props) {
         description: it.description,
         quantity: parseQty(it.quantity),
         unitPriceCents: centsFromMajor(it.unitPrice),
-      }))
+      }));
       if (isEdit) {
         return api.offers.update(offer.id, {
           notes: v.notes,
           taxRateBps: Math.round((parseFloat(v.taxRatePercent) || 0) * 100),
           items,
-        })
+        });
       }
-      return api.offers.create(carId, { notes: v.notes, items })
+      return api.offers.create(carId, { notes: v.notes, items });
     },
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: queryKeys.offers.all() })
-      onOpenChange(false)
+      await qc.invalidateQueries({ queryKey: queryKeys.offers.all() });
+      onOpenChange(false);
     },
     // The server validates `items.<i>.unitPriceCents` and `taxRateBps`; the
     // form fields are `unitPrice` and `taxRatePercent`. Remap so each error
     // lands on the right input.
     onError: (err) =>
       applyServerErrors(setError, err, (f) =>
-        f === "taxRateBps" ? "taxRatePercent" : f.replace(/\.unitPriceCents$/, ".unitPrice"),
+        f === "taxRateBps"
+          ? "taxRatePercent"
+          : f.replace(/\.unitPriceCents$/, ".unitPrice"),
       ),
-  })
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,7 +164,10 @@ export function OfferFormDialog({ open, onOpenChange, carId, offer }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <form className="space-y-4" onSubmit={handleSubmit((v) => mutation.mutate(v))}>
+        <form
+          className="space-y-4"
+          onSubmit={handleSubmit((v) => mutation.mutate(v))}
+        >
           <div className="space-y-2">
             <div className="grid grid-cols-[1fr_5rem_7rem_2rem] items-center gap-2 text-xs font-medium text-muted-foreground">
               <span>
@@ -182,7 +187,7 @@ export function OfferFormDialog({ open, onOpenChange, carId, offer }: Props) {
             {fields.map((field, i) => (
               <div key={field.id} className="space-y-1">
                 <div className="grid grid-cols-[1fr_5rem_7rem_2rem] items-start gap-2">
-                  <div className="space-y-1">
+                  <div className="flex gap-1">
                     <Input
                       aria-label={t`Description`}
                       placeholder={t`e.g. Brake pads`}
@@ -192,7 +197,7 @@ export function OfferFormDialog({ open, onOpenChange, carId, offer }: Props) {
                     />
                     <select
                       aria-label={t`Kind`}
-                      className="h-8 w-full rounded-lg border border-input bg-background px-2 text-xs"
+                      className="h-8 w-32 rounded-lg border border-input bg-background px-2 text-xs"
                       {...register(`items.${i}.kind`)}
                     >
                       <option value="part">{t`Part`}</option>
@@ -232,10 +237,14 @@ export function OfferFormDialog({ open, onOpenChange, carId, offer }: Props) {
                   </p>
                 )}
                 {errors.items?.[i]?.quantity && (
-                  <p className="text-sm text-destructive">{errors.items[i]?.quantity?.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.items[i]?.quantity?.message}
+                  </p>
                 )}
                 {errors.items?.[i]?.unitPrice && (
-                  <p className="text-sm text-destructive">{errors.items[i]?.unitPrice?.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.items[i]?.unitPrice?.message}
+                  </p>
                 )}
               </div>
             ))}
@@ -244,7 +253,14 @@ export function OfferFormDialog({ open, onOpenChange, carId, offer }: Props) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append({ kind: "part", description: "", quantity: "1", unitPrice: "" })}
+              onClick={() =>
+                append({
+                  kind: "part",
+                  description: "",
+                  quantity: "1",
+                  unitPrice: "",
+                })
+              }
             >
               <PlusIcon />
               <Trans>Add line</Trans>
@@ -265,7 +281,9 @@ export function OfferFormDialog({ open, onOpenChange, carId, offer }: Props) {
                 {...register("taxRatePercent")}
               />
               {errors.taxRatePercent && (
-                <p className="text-sm text-destructive">{errors.taxRatePercent.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.taxRatePercent.message}
+                </p>
               )}
             </div>
           )}
@@ -275,7 +293,9 @@ export function OfferFormDialog({ open, onOpenChange, carId, offer }: Props) {
               <Trans>Notes</Trans>
             </Label>
             <Textarea id="notes" rows={2} {...register("notes")} />
-            {errors.notes && <p className="text-sm text-destructive">{errors.notes.message}</p>}
+            {errors.notes && (
+              <p className="text-sm text-destructive">{errors.notes.message}</p>
+            )}
           </div>
 
           {/* Live totals preview — mirrors the server math. */}
@@ -308,7 +328,9 @@ export function OfferFormDialog({ open, onOpenChange, carId, offer }: Props) {
             )}
           </dl>
 
-          {errors.root && <p className="text-sm text-destructive">{errors.root.message}</p>}
+          {errors.root && (
+            <p className="text-sm text-destructive">{errors.root.message}</p>
+          )}
 
           <DialogFooter>
             <Button
@@ -320,11 +342,15 @@ export function OfferFormDialog({ open, onOpenChange, carId, offer }: Props) {
               <Trans>Cancel</Trans>
             </Button>
             <Button type="submit" disabled={isSubmitting || mutation.isPending}>
-              {mutation.isPending ? <Trans>Saving…</Trans> : <Trans>Save</Trans>}
+              {mutation.isPending ? (
+                <Trans>Saving…</Trans>
+              ) : (
+                <Trans>Save</Trans>
+              )}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
