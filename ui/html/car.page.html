@@ -1,57 +1,107 @@
-{{define "title"}}{{.Car.Plate}}{{end}}
-{{define "main"}}
+{{ define "title" }}{{ .Car.Plate }}{{ end }}
+{{ define "main" }}
 <header class="page-header">
-    <div><a class="back" href="/cars">← Автомобили</a>
-        <div class="title-line">
-            <h1 class="plate-title">{{.Car.Plate}}</h1>{{if .Car.ArchivedAt}}<span class="tag">Архивиран</span>{{end}}
-        </div>
-        <p class="muted">{{.Car.Make}} {{.Car.Model}}{{if .Car.Year}} · {{.Car.Year}}{{end}} · <a
-                href="/customers/{{.Customer.ID}}">{{.Customer.Name}}</a></p>
-    </div>
-    <div class="header-actions"><a class="button" href="/cars/{{.Car.ID}}/edit">Редактиране</a>{{if not
-        .Car.ArchivedAt}}<a class="button primary" href="/cars/{{.Car.ID}}/offers/new">Нова оферта</a>{{end}}</div>
+	<div>
+		<a class="back" href="/cars">← Автомобили</a>
+		<div class="title-line">
+			<h1 class="plate-title">{{ .Car.Plate }}</h1>
+			{{ if .Car.ArchivedAt }}<span class="tag">Архивиран</span>{{ end }}
+		</div>
+		<p class="muted">
+			{{ .Car.Make }} {{ .Car.Model }}{{ if .Car.Year }}· {{ .Car.Year }}{{ end }} ·
+			<a href="/customers/{{ .Customer.ID }}">{{ .Customer.Name }}</a>
+		</p>
+	</div>
+	<div class="header-actions">
+		<a class="button" href="/cars/{{ .Car.ID }}/edit">Редактиране</a>
+		{{ if not .Car.ArchivedAt }}
+			<a class="button primary" href="/cars/{{ .Car.ID }}/offers/new">Нова оферта</a>
+		{{ end }}
+	</div>
 </header>
 <section class="vehicle-strip">
-    <div><span>VIN</span><strong>{{if .Car.VIN}}{{.Car.VIN}}{{else}}—{{end}}</strong></div>
-    <div><span>Пробег</span><strong>{{if .Car.Mileage}}{{.Car.Mileage}} км{{else}}—{{end}}</strong></div>
-    <div><span>Клиент</span><strong><a href="/customers/{{.Customer.ID}}">{{.Customer.Name}}</a></strong></div>
+	<div><span>VIN</span><strong>{{ if .Car.VIN }}{{ .Car.VIN }}{{ else }}—{{ end }}</strong></div>
+	<div>
+		<span>Пробег</span><strong>{{ if .Car.Mileage }}{{ .Car.Mileage }} км{{ else }}—{{ end }}</strong>
+	</div>
+	<div>
+		<span>Клиент</span><strong><a href="/customers/{{ .Customer.ID }}">{{ .Customer.Name }}</a></strong>
+	</div>
 </section>
 <div class="detail-grid">
-    <section class="panel">
-        <div class="panel-header">
-            <h2>Сервизна история</h2>{{if not .Car.ArchivedAt}}<a href="/cars/{{.Car.ID}}/history/new">Добавяне на
-                запис</a>{{end}}
-        </div>{{if .History}}<div class="timeline">{{range .History}}<article>
-                <div class="timeline-dot"></div>
-                <div><time>{{date .RecordedAt}}</time>
-                    <h3>{{if .Title}}{{.Title}}{{else}}Завършен ремонт{{end}}</h3>{{if .Description}}<p class="preline">
-                        {{.Description}}</p>{{end}}{{if eq .Type "repair"}}<p class="muted">{{.Mileage}} км · {{money
-                        .TotalCents $.Tenant.Currency}}</p><a href="/repairs/{{.ID}}">Отвори ремонта</a>{{else}}<a
-                        href="/history/{{.ID}}/edit">Редактиране на записа</a>{{end}}
-                </div>
-            </article>{{end}}</div>{{else}}<div class="empty">
-            <h3>Все още няма сервизна история</h3>
-            <p>Записвайте тук обслужването и извършената работа.</p>
-        </div>{{end}}
-    </section>
-    <section class="panel">
-        <div class="panel-header">
-            <h2>Оферти</h2>{{if not .Car.ArchivedAt}}<a href="/cars/{{.Car.ID}}/offers/new">Нова оферта</a>{{end}}
-        </div>{{if .CarOffers}}<div class="list">{{range .CarOffers}}<a class="list-row" href="/offers/{{.ID}}">
-                <div><strong>{{.DocumentNumber}}</strong><span>{{date .CreatedAt}}</span></div>
-                <div class="align-right"><strong>{{money .TotalCents $.Tenant.Currency}}</strong><span>{{statusLabel
-                        (printf "%s" .Status)}}</span></div>
-            </a>{{end}}</div>{{else}}<div class="empty">
-            <h3>Все още няма оферти</h3>
-            <p>Създайте оферта за части и труд.</p>
-        </div>{{end}}
-    </section>
+	<section class="panel">
+		<div class="panel-header">
+			<h2>Сервизна история</h2>
+			{{ if not .Car.ArchivedAt }}
+				<a href="/cars/{{ .Car.ID }}/history/new">Добавяне на запис</a>
+			{{ end }}
+		</div>
+		{{ if .History }}
+			<div class="timeline">
+				{{ range .History }}
+					<article>
+						<div class="timeline-dot"></div>
+						<div>
+							<time>{{ date .RecordedAt }}</time>
+							<h3>{{ if .Title }}{{ .Title }}{{ else }}Завършен ремонт{{ end }}</h3>
+							{{ if .Description }}
+								<p class="preline">{{ .Description }}</p>
+							{{ end }}
+							{{ if eq .Type "repair" }}
+								<p class="muted">
+									{{ .Mileage }} км ·
+									{{ money .TotalCents $.Tenant.Currency }}
+								</p>
+								<a href="/repairs/{{ .ID }}">Отвори ремонта</a>
+							{{ else }}
+								<a href="/history/{{ .ID }}/edit">Редактиране на записа</a>
+							{{ end }}
+						</div>
+					</article>
+				{{ end }}
+			</div>
+		{{ else }}
+			<div class="empty">
+				<h3>Все още няма сервизна история</h3>
+				<p>Записвайте тук обслужването и извършената работа.</p>
+			</div>
+		{{ end }}
+	</section>
+	<section class="panel">
+		<div class="panel-header">
+			<h2>Оферти</h2>
+			{{ if not .Car.ArchivedAt }}
+				<a href="/cars/{{ .Car.ID }}/offers/new">Нова оферта</a>
+			{{ end }}
+		</div>
+		{{ if .CarOffers }}
+			<div class="list">
+				{{ range .CarOffers }}
+					<a class="list-row" href="/offers/{{ .ID }}">
+						<div><strong>{{ .DocumentNumber }}</strong><span>{{ date .CreatedAt }}</span></div>
+						<div class="align-right">
+							<strong>{{ money .TotalCents $.Tenant.Currency }}</strong><span>{{ statusLabel (printf "%s" .Status) }}</span>
+						</div>
+					</a>
+				{{ end }}
+			</div>
+		{{ else }}
+			<div class="empty">
+				<h3>Все още няма оферти</h3>
+				<p>Създайте оферта за части и труд.</p>
+			</div>
+		{{ end }}
+	</section>
 </div>
-{{if not .Car.ArchivedAt}}<section class="danger-zone">
-    <div><strong>Архивиране на автомобил</strong>
-        <p>Офертите и сервизната му история ще останат достъпни.</p>
-    </div>
-    <form method="post" action="/cars/{{.Car.ID}}/archive"><button class="button danger"
-            type="submit">Архивиране</button></form>
-</section>{{end}}
-{{end}}
+{{ if not .Car.ArchivedAt }}
+	<section class="danger-zone">
+		<div>
+			<strong>Архивиране на автомобил</strong>
+			<p>Офертите и сервизната му история ще останат достъпни.</p>
+		</div>
+		<form method="post" action="/cars/{{ .Car.ID }}/archive">
+			<button class="button danger" type="submit">Архивиране</button>
+		</form>
+	</section>
+{{ end }}
+{{ end }}

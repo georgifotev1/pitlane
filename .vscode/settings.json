@@ -1,7 +1,18 @@
 {
-  "[html]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
+  // Go templates: the built-in HTML formatter parses `"` inside {{...}} as an
+  // attribute delimiter and corrupts actions. gotmplfmt is template-aware.
   "html.format.enable": false,
-  "prettier.documentSelectors": ["**/*.html"]
+  "files.associations": {
+    "*.html.tmpl": "html",
+    "*.txt.tmpl": "plaintext"
+  },
+  "[html]": {
+    "editor.defaultFormatter": "jkillian.custom-local-formatters"
+  },
+  "customLocalFormatters.formatters": [
+    {
+      "command": "go tool gotmplfmt",
+      "languages": ["html"]
+    }
+  ]
 }

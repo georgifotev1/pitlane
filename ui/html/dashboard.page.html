@@ -1,133 +1,216 @@
-{{define "title"}}Табло{{end}}
-{{define "main"}}
+{{ define "title" }}Табло{{ end }}
+{{ define "main" }}
 <header class="page-header">
-  <div>
-    <h1>Вашият сервиз</h1>
-    <p class="muted">Колко влиза, колко остава и какво чака.</p>
-  </div>
-  <a class="button primary" href="/customers/new">Нов клиент</a>
+	<div>
+		<h1>Вашият сервиз</h1>
+		<p class="muted">Колко влиза, колко остава и какво чака.</p>
+	</div>
+	<a class="button primary" href="/customers/new">Нов клиент</a>
 </header>
 
-{{template "stat-tiles" .Stats}}
+{{ template "stat-tiles" .Stats }}
+
 
 <section class="panel chart-panel">
-  <div class="panel-header">
-    <div>
-      <h2>Приходи и печалба по месеци</h2>
-      <p class="muted">Завършени ремонти · суми без ДДС</p>
-    </div>
-    <div class="legend"><span class="legend-key"><i class="key-profit"></i>Печалба</span><span class="legend-key"><i
-          class="key-cost"></i>Части</span>{{if .Revenue.HasLoss}}<span class="legend-key"><i class="key-loss"></i>На
-        загуба</span>{{end}}</div>
-  </div>
-  {{if .Revenue.HasData}}<div class="chart">
-    <svg viewBox="0 0 {{.Revenue.Width}} {{.Revenue.Height}}" role="img"
-      aria-label="Оборот и печалба по месеци за последната година. Точните стойности са в таблицата под графиката.">
-      {{range .Revenue.Ticks}}
-      <line class="chart-grid" x1="{{$.Revenue.PlotLeft}}" y1="{{.Y}}" x2="{{$.Revenue.PlotRight}}" y2="{{.Y}}" /><text
-        class="chart-axis" x="{{$.Revenue.AxisLabelX}}" y="{{.Y}}" dy="4" text-anchor="end">{{.Label}}</text>{{end}}
-      {{range .Revenue.Bars}}<g class="chart-bar{{if .Current}} is-current{{end}}">
-        <title>{{.Title}}</title>
-        <rect class="chart-band" x="{{.BandX}}" y="{{$.Revenue.PlotTop}}" width="{{.BandWidth}}"
-          height="{{$.Revenue.PlotHeight}}" />
-        {{if .CostPath}}
-        <path class="chart-cost" d="{{.CostPath}}" />{{end}}
-        {{if .ProfitPath}}
-        <path class="{{if .Loss}}chart-loss{{else}}chart-profit{{end}}" d="{{.ProfitPath}}" />{{end}}
-        <text class="chart-month" x="{{.LabelX}}" y="{{$.Revenue.MonthLabelY}}" text-anchor="middle">{{.Label}}</text>
-        {{if .SubLabel}}<text class="chart-year" x="{{.LabelX}}" y="{{$.Revenue.YearLabelY}}"
-          text-anchor="middle">{{.SubLabel}}</text>{{end}}
-      </g>{{end}}
-    </svg>
-  </div>
-  {{if .Revenue.PartialMonth}}<p class="chart-hint">Текущият месец още не е приключил, затова последната колона е
-    по-ниска. Числата горе сравняват еднакви периоди.</p>{{end}}
-  {{if not .Revenue.HasCost}}<p class="chart-hint">Все още няма въведени доставни цени, затова целият оборот се брои за
-    печалба. Попълнете колоната „Доставна цена“ в редовете на офертите и ремонтите.</p>{{end}}
-  <details class="chart-table">
-    <summary>Данни по месеци</summary>
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>Месец</th>
-            <th class="number">Оборот</th>
-            <th class="number">Части</th>
-            <th class="number">Печалба</th>
-            <th class="number">Марж</th>
-            <th class="number">Ремонти</th>
-          </tr>
-        </thead>
-        <tbody>{{range .Revenue.Rows}}<tr>
-            <td>{{.Month}}</td>
-            <td class="number">{{.Revenue}}</td>
-            <td class="number">{{.Cost}}</td>
-            <td class="number">{{.Profit}}</td>
-            <td class="number">{{.Margin}}</td>
-            <td class="number">{{.Repairs}}</td>
-          </tr>{{end}}</tbody>
-      </table>
-    </div>
-  </details>
-  {{else}}<div class="empty">
-    <h3>Още няма завършени ремонти</h3>
-    <p>Графиката се попълва, щом отчетете първия завършен ремонт.</p>
-  </div>{{end}}
+	<div class="panel-header">
+		<div>
+			<h2>Приходи и печалба по месеци</h2>
+			<p class="muted">Завършени ремонти · суми без ДДС</p>
+		</div>
+		<div class="legend">
+			<span class="legend-key"><i class="key-profit"></i>Печалба</span><span class="legend-key"><i class="key-cost"></i>Части</span>
+			{{ if .Revenue.HasLoss }}
+				<span class="legend-key"><i class="key-loss"></i>На загуба</span>
+			{{ end }}
+		</div>
+	</div>
+	{{ if .Revenue.HasData }}
+		<div class="chart">
+			<svg
+				viewBox="0 0 {{ .Revenue.Width }} {{ .Revenue.Height }}"
+				role="img"
+				aria-label="Оборот и печалба по месеци за последната година. Точните стойности са в таблицата под графиката.">
+				{{ range .Revenue.Ticks }}
+					<line
+						class="chart-grid"
+						x1="{{ $.Revenue.PlotLeft }}"
+						y1="{{ .Y }}"
+						x2="{{ $.Revenue.PlotRight }}"
+						y2="{{ .Y }}"
+					/><text
+						class="chart-axis"
+						x="{{ $.Revenue.AxisLabelX }}"
+						y="{{ .Y }}"
+						dy="4"
+						text-anchor="end">{{ .Label }}</text>
+				{{ end }}
+				{{ range .Revenue.Bars }}
+					<g class="chart-bar{{ if .Current }}is-current{{ end }}">
+						<title>{{ .Title }}</title>
+						<rect
+							class="chart-band"
+							x="{{ .BandX }}"
+							y="{{ $.Revenue.PlotTop }}"
+							width="{{ .BandWidth }}"
+							height="{{ $.Revenue.PlotHeight }}"
+						/>
+						{{ if .CostPath }}
+							<path class="chart-cost" d="{{ .CostPath }}" />
+						{{ end }}
+						{{ if .ProfitPath }}
+							<path
+								class="{{ if .Loss }}
+								chart-loss
+{{ else }}
+								chart-profit
+{{ end }}"
+								d="{{ .ProfitPath }}"
+							/>
+						{{ end }}
+						<text
+							class="chart-month"
+							x="{{ .LabelX }}"
+							y="{{ $.Revenue.MonthLabelY }}"
+							text-anchor="middle">{{ .Label }}</text>
+						{{ if .SubLabel }}
+							<text
+								class="chart-year"
+								x="{{ .LabelX }}"
+								y="{{ $.Revenue.YearLabelY }}"
+								text-anchor="middle">{{ .SubLabel }}</text>
+						{{ end }}
+					</g>
+				{{ end }}
+			</svg>
+		</div>
+		{{ if .Revenue.PartialMonth }}
+			<p class="chart-hint">
+				Текущият месец още не е приключил, затова последната колона е по-ниска. Числата горе
+				сравняват еднакви периоди.
+			</p>
+		{{ end }}
+		{{ if not .Revenue.HasCost }}
+			<p class="chart-hint">
+				Все още няма въведени доставни цени, затова целият оборот се брои за печалба. Попълнете
+				колоната „Доставна цена“ в редовете на офертите и ремонтите.
+			</p>
+		{{ end }}
+		<details class="chart-table">
+			<summary>Данни по месеци</summary>
+			<div class="table-scroll">
+				<table>
+					<thead>
+						<tr>
+							<th>Месец</th>
+							<th class="number">Оборот</th>
+							<th class="number">Части</th>
+							<th class="number">Печалба</th>
+							<th class="number">Марж</th>
+							<th class="number">Ремонти</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{ range .Revenue.Rows }}
+							<tr>
+								<td>{{ .Month }}</td>
+								<td class="number">{{ .Revenue }}</td>
+								<td class="number">{{ .Cost }}</td>
+								<td class="number">{{ .Profit }}</td>
+								<td class="number">{{ .Margin }}</td>
+								<td class="number">{{ .Repairs }}</td>
+							</tr>
+						{{ end }}
+					</tbody>
+				</table>
+			</div>
+		</details>
+	{{ else }}
+		<div class="empty">
+			<h3>Още няма завършени ремонти</h3>
+			<p>Графиката се попълва, щом отчетете първия завършен ремонт.</p>
+		</div>
+	{{ end }}
 </section>
 
 <div class="dashboard-grid">
-  <section class="panel">
-    <div class="panel-header">
-      <div>
-        <h2>Откъде идват парите</h2>
-        <p class="muted">Последните 12 месеца · без ДДС</p>
-      </div>
-      <div class="legend"><span class="legend-key"><i class="key-profit"></i>Печалба</span><span class="legend-key"><i
-            class="key-cost"></i>Части</span></div>
-    </div>
-    {{if .Split.HasData}}<div class="split-bars">{{range .Split.Bars}}<div class="split-row">
-        <div class="split-head"><strong>{{.Label}}</strong><span class="muted">{{.Revenue}}</span></div>
-        <div class="split-track"><span class="{{if .Loss}}seg-loss{{else}}seg-profit{{end}}"{{.ProfitStyle}}></span>{{if
-          .HasCost}}<span class="seg-cost"{{.CostStyle}}></span>{{end}}</div>
-        <div class="split-foot"><span>печалба {{.Profit}}</span><span>{{.Margin}} марж</span></div>
-      </div>{{end}}</div>
-    {{if .Split.HasCost}}<p class="chart-hint">Трудът е почти чиста печалба; при частите остава само надценката. Ако
-      оборотът ви расте, но печалбата не, работата ви се измества към препродажба на части.</p>{{end}}
-    {{else}}<div class="empty">
-      <h3>Няма данни за разпределение</h3>
-      <p>Завършете ремонт, за да видите каква част от парите идват от труд и каква от части.</p>
-    </div>{{end}}
-  </section>
+	<section class="panel">
+		<div class="panel-header">
+			<div>
+				<h2>Откъде идват парите</h2>
+				<p class="muted">Последните 12 месеца · без ДДС</p>
+			</div>
+			<div class="legend">
+				<span class="legend-key"><i class="key-profit"></i>Печалба</span><span class="legend-key"><i class="key-cost"></i>Части</span>
+			</div>
+		</div>
+		{{ if .Split.HasData }}
+			<div class="split-bars">
+				{{ range .Split.Bars }}
+					<div class="split-row">
+						<div class="split-head">
+							<strong>{{ .Label }}</strong><span class="muted">{{ .Revenue }}</span>
+						</div>
+						<div class="split-track">
+							<span
+								class="{{ if .Loss }}
+								seg-loss
+{{ else }}
+								seg-profit
+{{ end }}"
+							{{ .ProfitStyle }}></span>
+							{{ if .HasCost }}
+								<span class="seg-cost" {{ .CostStyle }}></span>
+							{{ end }}
+						</div>
+						<div class="split-foot">
+							<span>печалба {{ .Profit }}</span><span>{{ .Margin }} марж</span>
+						</div>
+					</div>
+				{{ end }}
+			</div>
+			{{ if .Split.HasCost }}
+				<p class="chart-hint">
+					Трудът е почти чиста печалба; при частите остава само надценката. Ако оборотът ви расте,
+					но печалбата не, работата ви се измества към препродажба на части.
+				</p>
+			{{ end }}
+		{{ else }}
+			<div class="empty">
+				<h3>Няма данни за разпределение</h3>
+				<p>Завършете ремонт, за да видите каква част от парите идват от труд и каква от части.</p>
+			</div>
+		{{ end }}
+	</section>
 
-  <section class="panel">
-    <div class="panel-header">
-      <div>
-        <h2>Изисква внимание</h2>
-        <p class="muted">Без движение повече от 2 седмици</p>
-      </div>
-    </div>
-    {{template "document-list" .Attention}}
-  </section>
+	<section class="panel">
+		<div class="panel-header">
+			<div>
+				<h2>Изисква внимание</h2>
+				<p class="muted">Без движение повече от 2 седмици</p>
+			</div>
+		</div>
+		{{ template "document-list" .Attention }}
+	</section>
 
-  <section class="panel">
-    <div class="panel-header">
-      <h2>Последни ремонти</h2><a href="/repairs">Вижте всички</a>
-    </div>
-    {{template "document-list" .RecentRepairs}}
-  </section>
-  <section class="panel">
-    <div class="panel-header">
-      <h2>Последни оферти</h2><a href="/offers">Вижте всички</a>
-    </div>
-    {{template "document-list" .RecentOffers}}
-  </section>
+	<section class="panel">
+		<div class="panel-header">
+			<h2>Последни ремонти</h2>
+			<a href="/repairs">Вижте всички</a>
+		</div>
+		{{ template "document-list" .RecentRepairs }}
+	</section>
+	<section class="panel">
+		<div class="panel-header">
+			<h2>Последни оферти</h2>
+			<a href="/offers">Вижте всички</a>
+		</div>
+		{{ template "document-list" .RecentOffers }}
+	</section>
 </div>
 
-
-
 <section class="counters">
-  <a href="/customers"><span>Клиенти</span><strong>{{.Form.Get "customer_total"}}</strong></a>
-  <a href="/cars"><span>Автомобили</span><strong>{{.Form.Get "car_total"}}</strong></a>
-  <a href="/offers"><span>Оферти</span><strong>{{.Form.Get "offer_total"}}</strong></a>
+	<a href="/customers"><span>Клиенти</span><strong>{{ .Form.Get "customer_total" }}</strong></a>
+	<a href="/cars"><span>Автомобили</span><strong>{{ .Form.Get "car_total" }}</strong></a>
+	<a href="/offers"><span>Оферти</span><strong>{{ .Form.Get "offer_total" }}</strong></a>
 </section>
-{{end}}
+{{ end }}

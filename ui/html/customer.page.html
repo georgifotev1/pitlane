@@ -1,50 +1,86 @@
-{{define "title"}}{{.Customer.Name}}{{end}}
-{{define "main"}}
+{{ define "title" }}{{ .Customer.Name }}{{ end }}
+{{ define "main" }}
 <header class="page-header">
-    <div><a class="back" href="/customers">← Клиенти</a>
-        <h1>{{.Customer.Name}}</h1>
-        <p class="muted">{{if .Customer.Company}}{{.Customer.Company}}{{else}}Клиент от {{date
-            .Customer.CreatedAt}}{{end}}</p>
-    </div>
-    <div class="header-actions"><a class="button" href="/customers/{{.Customer.ID}}/edit">Редактиране</a>{{if not
-        .Customer.ArchivedAt}}<a class="button primary" href="/customers/{{.Customer.ID}}/cars/new">Нов
-            автомобил</a>{{end}}</div>
+	<div>
+		<a class="back" href="/customers">← Клиенти</a>
+		<h1>{{ .Customer.Name }}</h1>
+		<p class="muted">
+			{{ if .Customer.Company }}
+				{{ .Customer.Company }}
+			{{ else }}
+				Клиент от
+				{{ date .Customer.CreatedAt }}
+			{{ end }}
+		</p>
+	</div>
+	<div class="header-actions">
+		<a class="button" href="/customers/{{ .Customer.ID }}/edit">Редактиране</a>
+		{{ if not .Customer.ArchivedAt }}
+			<a class="button primary" href="/customers/{{ .Customer.ID }}/cars/new">Нов автомобил</a>
+		{{ end }}
+	</div>
 </header>
 <div class="detail-grid">
-    <section class="panel">
-        <div class="panel-header">
-            <h2>Контакт</h2>
-        </div>
-        <dl class="details">
-            <dt>Имейл</dt>
-            <dd>{{if .Customer.Email}}<a href="mailto:{{.Customer.Email}}">{{.Customer.Email}}</a>{{else}}—{{end}}</dd>
-            <dt>Телефон</dt>
-            <dd>{{if .Customer.Phone}}{{.Customer.Phone}}{{else}}—{{end}}</dd>
-            <dt>Адрес</dt>
-            <dd>{{if .Customer.Address}}{{.Customer.Address}}{{else}}—{{end}}</dd>
-            <dt>Бележки</dt>
-            <dd class="preline">{{if .Customer.Notes}}{{.Customer.Notes}}{{else}}—{{end}}</dd>
-        </dl>
-    </section>
-    <section class="panel">
-        <div class="panel-header">
-            <h2>Автомобили</h2>{{if not .Customer.ArchivedAt}}<a
-                href="/customers/{{.Customer.ID}}/cars/new">Добавяне</a>{{end}}
-        </div>{{if .CustomerCars}}<div class="list">{{range .CustomerCars}}<a class="list-row" href="/cars/{{.ID}}">
-                <div><strong class="plate">{{.Plate}}</strong><span>{{.Make}} {{.Model}}{{if .Year}} ·
-                        {{.Year}}{{end}}</span></div>{{if .ArchivedAt}}<span
-                    class="tag">Архивиран</span>{{else}}<span>→</span>{{end}}
-            </a>{{end}}</div>{{else}}<div class="empty">
-            <h3>Все още няма автомобили</h3>
-            <p>Добавете автомобил, за да записвате работа и да създавате оферти.</p>
-        </div>{{end}}
-    </section>
+	<section class="panel">
+		<div class="panel-header">
+			<h2>Контакт</h2>
+		</div>
+		<dl class="details">
+			<dt>Имейл</dt>
+			<dd>
+				{{ if .Customer.Email }}
+					<a href="mailto:{{ .Customer.Email }}">{{ .Customer.Email }}</a>
+				{{ else }}
+					—
+				{{ end }}
+			</dd>
+			<dt>Телефон</dt>
+			<dd>{{ if .Customer.Phone }}{{ .Customer.Phone }}{{ else }}—{{ end }}</dd>
+			<dt>Адрес</dt>
+			<dd>{{ if .Customer.Address }}{{ .Customer.Address }}{{ else }}—{{ end }}</dd>
+			<dt>Бележки</dt>
+			<dd class="preline">{{ if .Customer.Notes }}{{ .Customer.Notes }}{{ else }}—{{ end }}</dd>
+		</dl>
+	</section>
+	<section class="panel">
+		<div class="panel-header">
+			<h2>Автомобили</h2>
+			{{ if not .Customer.ArchivedAt }}
+				<a href="/customers/{{ .Customer.ID }}/cars/new">Добавяне</a>
+			{{ end }}
+		</div>
+		{{ if .CustomerCars }}
+			<div class="list">
+				{{ range .CustomerCars }}
+					<a class="list-row" href="/cars/{{ .ID }}">
+						<div>
+							<strong class="plate">{{ .Plate }}</strong><span>{{ .Make }} {{ .Model }}{{ if .Year }}· {{ .Year }}{{ end }}</span>
+						</div>
+						{{ if .ArchivedAt }}
+							<span class="tag">Архивиран</span>
+						{{ else }}
+							<span>→</span>
+						{{ end }}
+					</a>
+				{{ end }}
+			</div>
+		{{ else }}
+			<div class="empty">
+				<h3>Все още няма автомобили</h3>
+				<p>Добавете автомобил, за да записвате работа и да създавате оферти.</p>
+			</div>
+		{{ end }}
+	</section>
 </div>
-{{if not .Customer.ArchivedAt}}<section class="danger-zone">
-    <div><strong>Архивиране на клиент</strong>
-        <p>Архивираните клиенти остават в регистрите Ви.</p>
-    </div>
-    <form method="post" action="/customers/{{.Customer.ID}}/archive"><button class="button danger"
-            type="submit">Архивиране</button></form>
-</section>{{end}}
-{{end}}
+{{ if not .Customer.ArchivedAt }}
+	<section class="danger-zone">
+		<div>
+			<strong>Архивиране на клиент</strong>
+			<p>Архивираните клиенти остават в регистрите Ви.</p>
+		</div>
+		<form method="post" action="/customers/{{ .Customer.ID }}/archive">
+			<button class="button danger" type="submit">Архивиране</button>
+		</form>
+	</section>
+{{ end }}
+{{ end }}

@@ -1,16 +1,32 @@
-{{define "title"}}Настройки на сервиза{{end}}
-{{define "main"}}
-{{$name := .Form.Get "name"}}
-{{$address := .Form.Get "address"}}
-{{$vatNumber := .Form.Get "vat_number"}}
-{{$currency := .Form.Get "currency"}}
-<header class="page-header"><div><h1>Профил на сервиза</h1><p class="muted">Тези данни се показват във всяка оферта и PDF файл.</p></div></header>
+{{ define "title" }}Настройки на сервиза{{ end }}
+{{ define "main" }}
+{{ $name := .Form.Get "name" }}
+{{ $address := .Form.Get "address" }}
+{{ $vatNumber := .Form.Get "vat_number" }}
+{{ $currency := .Form.Get "currency" }}
+<header class="page-header">
+	<div>
+		<h1>Профил на сервиза</h1>
+		<p class="muted">Тези данни се показват във всяка оферта и PDF файл.</p>
+	</div>
+</header>
 <section class="panel form-panel">
-<form method="post" action="/garage" class="form-grid">
-  <label class="full">Име на сервиза<input name="name" value="{{$name}}" required>{{with errorFor .Form "name"}}<span class="field-error">{{.}}</span>{{end}}</label>
-  <label class="full">Адрес<textarea name="address" rows="3">{{$address}}</textarea></label>
-  <label>ДДС номер<input name="vat_number" value="{{$vatNumber}}"></label>
-  <label>Валута<input name="currency" value="{{$currency}}" maxlength="3" required><span class="hint">Трибуквен код, напр. EUR.</span>{{with errorFor .Form "currency"}}<span class="field-error">{{.}}</span>{{end}}</label>
-  <div class="full form-actions"><button class="button primary" type="submit">Запази настройките</button></div>
-</form></section>
-{{end}}
+	<form method="post" action="/garage" class="form-grid">
+		<label class="full">Име на сервиза<input
+				name="name"
+				value="{{ $name }}"
+				required
+			/>{{ with errorFor .Form "name" }}<span class="field-error">{{ . }}</span>{{ end }}</label>
+		<label class="full">Адрес<textarea name="address" rows="3">{{ $address }}</textarea></label>
+		<label>ДДС номер<input name="vat_number" value="{{ $vatNumber }}" /></label>
+		<label>Валута<input name="currency" value="{{ $currency }}" maxlength="3" required /><span
+				class="hint">Трибуквен код, напр. EUR.</span>
+			{{ with errorFor .Form "currency" }}
+				<span class="field-error">{{ . }}</span>
+			{{ end }}</label>
+		<div class="full form-actions">
+			<button class="button primary" type="submit">Запази настройките</button>
+		</div>
+	</form>
+</section>
+{{ end }}

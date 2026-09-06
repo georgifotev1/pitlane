@@ -1,65 +1,77 @@
-{{define "base"}}
+{{ define "base" }}
 <!doctype html>
 <html lang="bg">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="color-scheme" content="light" />
+		<meta name="theme-color" content="#f97316" />
+		<meta
+			name="description"
+			content="Pitlane е софтуер за управление на автосервиз — клиенти, автомобили, оферти, ремонти и сервизна история на едно място."
+		/>
+		<meta name="application-name" content="Pitlane" />
+		{{ if .CurrentUser }}
+			<meta name="robots" content="noindex, noarchive" />
+		{{ else }}
+			<meta name="robots" content="index, follow" />
+		{{ end }}
+		<meta property="og:type" content="website" />
+		<meta property="og:locale" content="bg_BG" />
+		<meta property="og:site_name" content="Pitlane" />
+		<meta property="og:title" content="{{ template "title" . }} · Pitlane" />
+		<meta
+			property="og:description"
+			content="Управлявайте клиенти, автомобили, оферти, ремонти и сервизна история на едно място."
+		/>
+		{{ if .CanonicalURL }}
+			<meta property="og:url" content="{{ .CanonicalURL }}" />
+			<meta property="og:image" content="{{ .SiteURL }}/static/icon-512.png" />
+			<link rel="canonical" href="{{ .CanonicalURL }}" />
+		{{ end }}
+		<meta name="twitter:card" content="summary" />
+		<meta name="twitter:title" content="{{ template "title" . }} · Pitlane" />
+		<meta name="twitter:description" content="Управление на автосервиз на едно място." />
+		<title>{{ template "title" . }} · Pitlane</title>
+		<link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+		<link rel="alternate icon" href="/favicon.ico" sizes="any" />
+		<link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+		<link rel="manifest" href="/site.webmanifest" />
+		<link rel="stylesheet" href="/static/app.css" />
+      <script src="/static/app.js" defer></script>
+	</head>
 
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
-  <meta name="theme-color" content="#f97316">
-  <meta name="description" content="Pitlane е софтуер за управление на автосервиз — клиенти, автомобили, оферти, ремонти и сервизна история на едно място.">
-  <meta name="application-name" content="Pitlane">
-  {{if .CurrentUser}}<meta name="robots" content="noindex, noarchive">{{else}}<meta name="robots" content="index, follow">{{end}}
-  <meta property="og:type" content="website">
-  <meta property="og:locale" content="bg_BG">
-  <meta property="og:site_name" content="Pitlane">
-  <meta property="og:title" content="{{template "title" .}} · Pitlane">
-  <meta property="og:description" content="Управлявайте клиенти, автомобили, оферти, ремонти и сервизна история на едно място.">
-  {{if .CanonicalURL}}<meta property="og:url" content="{{.CanonicalURL}}">
-  <meta property="og:image" content="{{.SiteURL}}/static/icon-512.png">
-  <link rel="canonical" href="{{.CanonicalURL}}">{{end}}
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="{{template "title" .}} · Pitlane">
-  <meta name="twitter:description" content="Управление на автосервиз на едно място.">
-  <title>{{template "title" .}} · Pitlane</title>
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="alternate icon" href="/favicon.ico" sizes="any">
-  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-  <link rel="manifest" href="/site.webmanifest">
-  <link rel="stylesheet" href="/static/app.css">
-  <script src="/static/app.js" defer></script>
-</head>
-
-<body class="{{if .CurrentUser}}app-shell{{else}}auth-shell{{end}}">
-  {{if .CurrentUser}}
-  <aside class="sidebar">
-    <a class="brand" href="/dashboard"><img class="brand-mark" src="/static/favicon.svg" width="32" height="32" alt=""><span>pitlane</span></a>
-    <div class="garage-name">{{.GarageName}}</div>
-    <nav aria-label="Основна навигация">
-      <a class="{{if active .CurrentPath "/dashboard"}}active{{end}}" href="/dashboard">Начало</a>
-      <a class="{{if active .CurrentPath "/customers"}}active{{end}}" href="/customers">Клиенти</a>
-      <a class="{{if active .CurrentPath "/cars"}}active{{end}}" href="/cars">Автомобили</a>
-      <a class="{{if active .CurrentPath "/offers"}}active{{end}}" href="/offers">Оферти</a>
-      <a class="{{if active .CurrentPath "/repairs"}}active{{end}}" href="/repairs">Ремонти</a>
-      <a class="{{if active .CurrentPath "/garage"}}active{{end}}" href="/garage">Настройки</a>
-    </nav>
-    <div class="sidebar-user">
-      <span>{{.CurrentUser}}</span>
-      <form action="/account/logout" method="post"><button class="link-button" type="submit">Изход</button></form>
-    </div>
-  </aside>
-  <main class="main">
-    {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
-    {{template "main" .}}
-  </main>
-  {{else}}
-  <main class="auth-main">
-    <a class="brand auth-brand" href="/"><img class="brand-mark" src="/static/favicon.svg" width="32" height="32" alt=""><span>pitlane</span></a>
-    {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
-    {{template "main" .}}
-  </main>
-  {{end}}
-</body>
-
+	<body class="{{ if .CurrentUser }}app-shell{{ else }}auth-shell{{ end }}">
+		{{ if .CurrentUser }}
+			<aside class="sidebar">
+				<a class="brand" href="/dashboard"><img class="brand-mark" src="/static/favicon.svg" width="32" height="32" alt="" /><span>pitlane</span></a>
+				<div class="garage-name">{{ .GarageName }}</div>
+				<nav aria-label="Основна навигация">
+					<a class="{{ if active .CurrentPath "/dashboard" }}active{{ end }}" href="/dashboard">Начало</a>
+					<a class="{{ if active .CurrentPath "/customers" }}active{{ end }}" href="/customers">Клиенти</a>
+					<a class="{{ if active .CurrentPath "/cars" }}active{{ end }}" href="/cars">Автомобили</a>
+					<a class="{{ if active .CurrentPath "/offers" }}active{{ end }}" href="/offers">Оферти</a>
+					<a class="{{ if active .CurrentPath "/repairs" }}active{{ end }}" href="/repairs">Ремонти</a>
+					<a class="{{ if active .CurrentPath "/garage" }}active{{ end }}" href="/garage">Настройки</a>
+				</nav>
+				<div class="sidebar-user">
+					<span>{{ .CurrentUser }}</span>
+					<form action="/account/logout" method="post">
+						<button class="link-button" type="submit">Изход</button>
+					</form>
+				</div>
+			</aside>
+			<main class="main">
+				{{ if .Flash }}<div class="flash">{{ .Flash }}</div>{{ end }}
+				{{ template "main" . }}
+			</main>
+		{{ else }}
+			<main class="auth-main">
+				<a class="brand auth-brand" href="/"><img class="brand-mark" src="/static/favicon.svg" width="32" height="32" alt="" /><span>pitlane</span></a>
+				{{ if .Flash }}<div class="flash">{{ .Flash }}</div>{{ end }}
+				{{ template "main" . }}
+			</main>
+		{{ end }}
+	</body>
 </html>
-{{end}}
+{{ end }}

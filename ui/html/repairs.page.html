@@ -1,17 +1,25 @@
-{{define "title"}}Ремонти{{end}}
-{{define "main"}}
+{{ define "title" }}Ремонти{{ end }}
+{{ define "main" }}
 <header class="page-header">
-  <div>
-    <h1>Ремонти</h1>
-    <p class="muted">Работата в сервиза · общо {{.RepairStats.Total}}</p>
-  </div>
+	<div>
+		<h1>Ремонти</h1>
+		<p class="muted">Работата в сервиза · общо {{ .RepairStats.Total }}</p>
+	</div>
 </header>
-{{template "stat-tiles" .Stats}}
-<form class="filters compact" method="get"><select name="status">
-    <option value="">Всички статуси</option>
-    <option value="open" {{if eq (.Form.Get "status" ) "open" }}selected{{end}}>Отворени</option>
-    <option value="in_progress" {{if eq (.Form.Get "status" ) "in_progress" }}selected{{end}}>В работа</option>
-    <option value="completed" {{if eq (.Form.Get "status" ) "completed" }}selected{{end}}>Завършени</option>
-  </select><button class="button" type="submit">Филтриране</button></form>
-{{template "document-board" .Board}}
-{{end}}
+{{ template "stat-tiles" .Stats }}
+<form class="filters compact" method="get">
+	<select name="status">
+		<option value="">Всички статуси</option>
+		<option value="open" {{ if eq (.Form.Get "status") "open" }}selected{{ end }}>
+			Отворени
+		</option>
+		<option value="in_progress" {{ if eq (.Form.Get "status") "in_progress" }}selected{{ end }}>
+			В работа
+		</option>
+		<option value="completed" {{ if eq (.Form.Get "status") "completed" }}selected{{ end }}>
+			Завършени
+		</option>
+	</select><button class="button" type="submit">Филтриране</button>
+</form>
+{{ template "document-board" .Board }}
+{{ end }}

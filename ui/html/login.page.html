@@ -1,19 +1,31 @@
-{{define "title"}}Вход{{end}}
-{{define "main"}}
+{{ define "title" }}Вход{{ end }}
+{{ define "main" }}
 <section class="auth-card">
-  <div class="auth-card-header">
-    <h1>Влезте в pitlane</h1>
-    <p class="muted">Влезте с данните на Вашия сервиз.</p>
-  </div>
-  {{with errorFor .Form "generic"}}<div class="form-alert">{{.}}</div>{{end}}
-  <form method="post" action="/account/login" class="form-stack">
-    <label>Имейл<input type="email" name="email" value="{{.Form.Get "email"}}" autocomplete="email" autofocus
-        required>{{with errorFor .Form "email"}}<span class="field-error">{{.}}</span>{{end}}</label>
-    <label>Парола<input type="password" name="password" autocomplete="current-password" required>{{with errorFor .Form
-      "password"}}<span class="field-error">{{.}}</span>{{end}}<a class="forgot-link"
-        href="/account/forgot-password">Забравена парола?</a></label>
-    <button class="button primary wide" type="submit">Вход</button>
-  </form>
+	<div class="auth-card-header">
+		<h1>Влезте в pitlane</h1>
+		<p class="muted">Влезте с данните на Вашия сервиз.</p>
+	</div>
+	{{ with errorFor .Form "generic" }}<div class="form-alert">{{ . }}</div>{{ end }}
+	<form method="post" action="/account/login" class="form-stack">
+		<label>Имейл<input
+				type="email"
+				name="email"
+				value="{{ .Form.Get "email" }}"
+				autocomplete="email"
+				autofocus
+				required
+			/>{{ with errorFor .Form "email" }}<span class="field-error">{{ . }}</span>{{ end }}</label>
+		<label>Парола<input
+				type="password"
+				name="password"
+				autocomplete="current-password"
+				required
+			/>
+			{{ with errorFor .Form "password" }}
+				<span class="field-error">{{ . }}</span>
+			{{ end }}<a class="forgot-link" href="/account/forgot-password">Забравена парола?</a></label>
+		<button class="button primary wide" type="submit">Вход</button>
+	</form>
 </section>
 <p class="auth-switch">Нов потребител? <a href="/account/signup">Създайте своя сервиз</a></p>
-{{end}}
+{{ end }}

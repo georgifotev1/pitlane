@@ -1,46 +1,59 @@
-{{define "title"}}Оферта {{.Offer.DocumentNumber}}{{end}}
-{{define "main"}}
+{{ define "title" }}Оферта {{ .Offer.DocumentNumber }}{{ end }}
+{{ define "main" }}
 <header class="page-header">
-    <div><a class="back" href="/offers">← Оферти</a>
-        <div class="title-line">
-            <h1>Оферта {{.Offer.DocumentNumber}}</h1><span class="status">{{statusLabel (printf "%s"
-                .Offer.Status)}}</span>
-        </div>
-        <p class="muted">Създадена на {{date .Offer.CreatedAt}}</p>
-    </div>
-    <div class="header-actions">{{if eq (printf "%s" .Offer.Status) "draft"}}<a class="button"
-            href="/offers/{{.Offer.ID}}/edit">Редактиране</a>{{end}}{{if or (eq (printf "%s" .Offer.Status) "draft") (eq
-        (printf "%s" .Offer.Status) "sent")}}<form method="post" action="/offers/{{.Offer.ID}}/accept"><button
-                class="button primary" type="submit">Приеми и създай ремонт</button></form>{{else if .Repair}}<a
-            class="button primary" href="/repairs/{{.Repair.ID}}">Отвори ремонта</a>{{end}}<a class="button"
-            href="/offers/{{.Offer.ID}}/print" target="_blank">Преглед за печат</a><a class="button"
-            href="/offers/{{.Offer.ID}}/pdf">Изтегляне на PDF</a></div>
+	<div>
+		<a class="back" href="/offers">← Оферти</a>
+		<div class="title-line">
+			<h1>Оферта {{ .Offer.DocumentNumber }}</h1>
+			<span class="status">{{ statusLabel (printf "%s" .Offer.Status) }}</span>
+		</div>
+		<p class="muted">Създадена на {{ date .Offer.CreatedAt }}</p>
+	</div>
+	<div class="header-actions">
+		{{ if eq (printf "%s" .Offer.Status) "draft" }}
+			<a class="button" href="/offers/{{ .Offer.ID }}/edit">Редактиране</a>
+		{{ end }}
+		{{ if or (eq (printf "%s" .Offer.Status) "draft") (eq (printf "%s" .Offer.Status) "sent") }}
+			<form method="post" action="/offers/{{ .Offer.ID }}/accept">
+				<button class="button primary" type="submit">Приеми и създай ремонт</button>
+			</form>
+		{{ else if .Repair }}
+			<a class="button primary" href="/repairs/{{ .Repair.ID }}">Отвори ремонта</a>
+		{{ end }}<a class="button" href="/offers/{{ .Offer.ID }}/print" target="_blank">Преглед за печат</a><a class="button" href="/offers/{{ .Offer.ID }}/pdf">Изтегляне на PDF</a>
+	</div>
 </header>
 <section class="document panel">
-    <div class="document-header">
-        <div>
-            <h2>{{.Tenant.Name}}</h2>
-            <p>{{.Tenant.Address}}</p>{{if .Tenant.VATNumber}}<p>ДДС №: {{.Tenant.VATNumber}}</p>{{end}}
-        </div>
-        <div class="align-right"><strong>ОФЕРТА</strong>
-            <p>№ {{.Offer.DocumentNumber}}</p>
-            <p>{{date .Offer.CreatedAt}}</p>
-        </div>
-    </div>
-    <div class="party-grid">
-        <div><span>Клиент</span><strong>{{.Customer.Name}}</strong>
-            <p>{{.Customer.Company}}</p>
-            <p>{{.Customer.Email}} {{.Customer.Phone}}</p>
-        </div>
-        <div><span>Автомобил</span><strong class="plate">{{.Car.Plate}}</strong>
-            <p>{{.Car.Make}} {{.Car.Model}} {{if .Car.Year}}({{.Car.Year}}){{end}}</p>
-            <p>{{if .Car.VIN}}VIN {{.Car.VIN}}{{end}}</p>
-        </div>
-    </div>
-    {{template "document-table" .Document}}
-    {{if .Offer.Notes}}<div class="document-notes"><span>Бележки</span>
-        <p class="preline">{{.Offer.Notes}}</p>
-    </div>{{end}}
+	<div class="document-header">
+		<div>
+			<h2>{{ .Tenant.Name }}</h2>
+			<p>{{ .Tenant.Address }}</p>
+			{{ if .Tenant.VATNumber }}<p>ДДС №: {{ .Tenant.VATNumber }}</p>{{ end }}
+		</div>
+		<div class="align-right">
+			<strong>ОФЕРТА</strong>
+			<p>№ {{ .Offer.DocumentNumber }}</p>
+			<p>{{ date .Offer.CreatedAt }}</p>
+		</div>
+	</div>
+	<div class="party-grid">
+		<div>
+			<span>Клиент</span><strong>{{ .Customer.Name }}</strong>
+			<p>{{ .Customer.Company }}</p>
+			<p>{{ .Customer.Email }} {{ .Customer.Phone }}</p>
+		</div>
+		<div>
+			<span>Автомобил</span><strong class="plate">{{ .Car.Plate }}</strong>
+			<p>{{ .Car.Make }} {{ .Car.Model }} {{ if .Car.Year }}({{ .Car.Year }}){{ end }}</p>
+			<p>{{ if .Car.VIN }}VIN {{ .Car.VIN }}{{ end }}</p>
+		</div>
+	</div>
+	{{ template "document-table" .Document }}
+	{{ if .Offer.Notes }}
+		<div class="document-notes">
+			<span>Бележки</span>
+			<p class="preline">{{ .Offer.Notes }}</p>
+		</div>
+	{{ end }}
 </section>
-{{template "margin-panel" .Margin}}
-{{end}}
+{{ template "margin-panel" .Margin }}
+{{ end }}

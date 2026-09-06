@@ -1,17 +1,27 @@
-{{define "title"}}Оферти{{end}}
-{{define "main"}}
+{{ define "title" }}Оферти{{ end }}
+{{ define "main" }}
 <header class="page-header">
-    <div>
-        <h1>Оферти</h1>
-        <p class="muted">Оферти за ремонт от целия сервиз · общо {{.Total}}</p>
-    </div>
+	<div>
+		<h1>Оферти</h1>
+		<p class="muted">Оферти за ремонт от целия сервиз · общо {{ .Total }}</p>
+	</div>
 </header>
-<form class="filters compact" method="get"><select name="status">
-        <option value="">Всички статуси</option>
-        <option value="draft" {{if eq (.Form.Get "status" ) "draft" }}selected{{end}}>Чернова</option>
-        <option value="sent" {{if eq (.Form.Get "status" ) "sent" }}selected{{end}}>Изпратена</option>
-        <option value="accepted" {{if eq (.Form.Get "status" ) "accepted" }}selected{{end}}>Приета</option>
-        <option value="rejected" {{if eq (.Form.Get "status" ) "rejected" }}selected{{end}}>Отхвърлена</option>
-    </select><button class="button" type="submit">Филтриране</button></form>
-{{template "document-board" .Board}}
-{{end}}
+<form class="filters compact" method="get">
+	<select name="status">
+		<option value="">Всички статуси</option>
+		<option value="draft" {{ if eq (.Form.Get "status") "draft" }}selected{{ end }}>
+			Чернова
+		</option>
+		<option value="sent" {{ if eq (.Form.Get "status") "sent" }}selected{{ end }}>
+			Изпратена
+		</option>
+		<option value="accepted" {{ if eq (.Form.Get "status") "accepted" }}selected{{ end }}>
+			Приета
+		</option>
+		<option value="rejected" {{ if eq (.Form.Get "status") "rejected" }}selected{{ end }}>
+			Отхвърлена
+		</option>
+	</select><button class="button" type="submit">Филтриране</button>
+</form>
+{{ template "document-board" .Board }}
+{{ end }}

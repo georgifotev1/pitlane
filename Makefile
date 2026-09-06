@@ -1,7 +1,7 @@
 -include .env
 export
 
-.PHONY: dev deps deps-down test audit build build-local migrate-up migrate-down migrate-status demo-seed demo-reset demo-drop
+.PHONY: fmt-templates dev deps deps-down test audit build build-local migrate-up migrate-down migrate-status demo-seed demo-reset demo-drop
 
 .env:
 	cp .env.example .env
@@ -19,10 +19,14 @@ dev: .env deps migrate-up
 test:
 	go test ./...
 
-audit:
+audit: fmt-templates
 	gofmt -w $$(find cmd internal ui -name '*.go')
 	go vet ./...
 	go test ./...
+
+# Go templates confuse plain HTML formatters; gotmplfmt parses text/template.
+fmt-templates:
+	go tool gotmplfmt -w ui/html/*.html internal/mailer/templates/*.html.tmpl
 
 build:
 	docker build -t pitlane:latest .

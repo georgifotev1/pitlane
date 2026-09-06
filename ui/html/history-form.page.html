@@ -1,29 +1,57 @@
-{{define "title"}}{{if .Note}}Редактиране на историята{{else}}Добавяне на история{{end}}{{end}}
-{{define "main"}}
+{{ define "title" }}
+{{ if .Note }}Редактиране на историята{{ else }}Добавяне на история{{ end }}
+{{ end }}
+{{ define "main" }}
 <header class="page-header">
-  <div><a class="back" href="/cars/{{.Car.ID}}">← {{.Car.Plate}}</a>
-    <h1>{{if .Note}}Редактиране на запис{{else}}Добавяне на сервизна история{{end}}</h1>
-    <p class="muted">Запишете обслужване или работа, извършена другаде.</p>
-  </div>
+	<div>
+		<a class="back" href="/cars/{{ .Car.ID }}">← {{ .Car.Plate }}</a>
+		<h1>{{ if .Note }}Редактиране на запис{{ else }}Добавяне на сервизна история{{ end }}</h1>
+		<p class="muted">Запишете обслужване или работа, извършена другаде.</p>
+	</div>
 </header>
 <section class="panel form-panel">
-  <form method="post" class="form-grid">
-    <label class="full">Заглавие<input name="title" value="{{.Form.Get "title"}}"
-        placeholder="напр. Годишно обслужване" autofocus required>{{with errorFor .Form "title"}}<span
-        class="field-error">{{.}}</span>{{end}}</label>
-    <label>Дата<input type="date" name="recorded_at" value="{{.Form.Get "recorded_at"}}" required>{{with errorFor .Form
-      "recorded_at"}}<span class="field-error">{{.}}</span>{{end}}</label>
-    <label class="full">Подробности<textarea name="description" rows="6"
-        placeholder="Извършена работа, сменени части, наблюдения…">{{.Form.Get "description"}}</textarea></label>
-    <div class="full form-actions"><button class="button primary" type="submit">{{if .Note}}Запази
-        промените{{else}}Добави запис{{end}}</button></div>
-  </form>
+	<form method="post" class="form-grid">
+		<label class="full">Заглавие<input
+				name="title"
+				value="{{ .Form.Get "title" }}"
+				placeholder="напр. Годишно обслужване"
+				autofocus
+				required
+			/>{{ with errorFor .Form "title" }}<span class="field-error">{{ . }}</span>{{ end }}</label>
+		<label>Дата<input
+				type="date"
+				name="recorded_at"
+				value="{{ .Form.Get "recorded_at" }}"
+				required
+			/>
+			{{ with errorFor .Form "recorded_at" }}
+				<span class="field-error">{{ . }}</span>
+			{{ end }}</label>
+		<label class="full">Подробности<textarea
+				name="description"
+				rows="6"
+				placeholder="Извършена работа, сменени части, наблюдения…">{{ .Form.Get "description" }}</textarea>
+		</label>
+		<div class="full form-actions">
+			<button class="button primary" type="submit">
+				{{ if .Note }}
+					Запази промените
+				{{ else }}
+					Добави запис
+				{{ end }}
+			</button>
+		</div>
+	</form>
 </section>
-{{if .Note}}<section class="danger-zone">
-  <div><strong>Изтриване на запис</strong>
-    <p>Това действие не може да бъде отменено.</p>
-  </div>
-  <form method="post" action="/history/{{.Note.ID}}/delete"><button class="button danger"
-      type="submit">Изтриване</button></form>
-</section>{{end}}
-{{end}}
+{{ if .Note }}
+	<section class="danger-zone">
+		<div>
+			<strong>Изтриване на запис</strong>
+			<p>Това действие не може да бъде отменено.</p>
+		</div>
+		<form method="post" action="/history/{{ .Note.ID }}/delete">
+			<button class="button danger" type="submit">Изтриване</button>
+		</form>
+	</section>
+{{ end }}
+{{ end }}

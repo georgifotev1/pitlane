@@ -1,35 +1,63 @@
-{{define "title"}}Автомобили{{end}}
-{{define "main"}}
+{{ define "title" }}Автомобили{{ end }}
+{{ define "main" }}
 <header class="page-header">
-    <div>
-        <h1>Автомобили</h1>
-        <p class="muted">Всички автомобили в сервиза · общо {{.Total}}</p>
-    </div>
+	<div>
+		<h1>Автомобили</h1>
+		<p class="muted">Всички автомобили в сервиза · общо {{ .Total }}</p>
+	</div>
 </header>
-<form class="filters" method="get"><input type="search" name="q" value="{{.Form.Get "q"}}"
-        placeholder="Регистрационен номер, VIN, марка, модел"><label class="check"><input type="checkbox"
-            name="archived" value="1" {{if .Form.Get "archived" }}checked{{end}}> Показване на
-        архивираните</label><button class="button" type="submit">Търсене</button></form>
-<section class="panel table-panel">{{if .Cars}}<table>
-        <thead>
-            <tr>
-                <th>Регистрационен номер</th>
-                <th>Автомобил</th>
-                <th>Клиент</th>
-                <th>Пробег</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>{{range .Cars}}<tr class="{{if .Car.ArchivedAt}}archived{{end}}">
-                <td><a class="strong-link plate" href="/cars/{{.Car.ID}}">{{.Car.Plate}}</a>{{if .Car.ArchivedAt}} <span
-                        class="tag">Архивиран</span>{{end}}</td>
-                <td>{{.Car.Make}} {{.Car.Model}}{{if .Car.Year}} <span class="muted">· {{.Car.Year}}</span>{{end}}</td>
-                <td>{{.CustomerName}}</td>
-                <td>{{if .Car.Mileage}}{{.Car.Mileage}} км{{else}}—{{end}}</td>
-                <td class="number"><a href="/cars/{{.Car.ID}}">Преглед →</a></td>
-            </tr>{{end}}</tbody>
-    </table>{{else}}<div class="empty">
-        <h3>Няма намерени автомобили</h3>
-        <p>Добавете автомобил от страницата на неговия клиент.</p>
-    </div>{{end}}</section>
-{{end}}
+<form class="filters" method="get">
+	<input
+		type="search"
+		name="q"
+		value="{{ .Form.Get "q" }}"
+		placeholder="Регистрационен номер, VIN, марка, модел"
+	/><label class="check"><input
+			type="checkbox"
+			name="archived"
+			value="1"
+			{{ if .Form.Get "archived" }}checked{{ end }}
+		/>
+		Показване на архивираните
+	</label><button class="button" type="submit">Търсене</button>
+</form>
+<section class="panel table-panel">
+	{{ if .Cars }}
+		<table>
+			<thead>
+				<tr>
+					<th>Регистрационен номер</th>
+					<th>Автомобил</th>
+					<th>Клиент</th>
+					<th>Пробег</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+				{{ range .Cars }}
+					<tr class="{{ if .Car.ArchivedAt }}archived{{ end }}">
+						<td>
+							<a class="strong-link plate" href="/cars/{{ .Car.ID }}">{{ .Car.Plate }}</a>{{ if .Car.ArchivedAt }}<span class="tag">Архивиран</span>{{ end }}
+						</td>
+						<td>
+							{{ .Car.Make }}
+							{{ .Car.Model }}
+							{{ if .Car.Year }}
+								<span class="muted">· {{ .Car.Year }}</span>
+							{{ end }}
+						</td>
+						<td>{{ .CustomerName }}</td>
+						<td>{{ if .Car.Mileage }}{{ .Car.Mileage }} км{{ else }}—{{ end }}</td>
+						<td class="number"><a href="/cars/{{ .Car.ID }}">Преглед →</a></td>
+					</tr>
+				{{ end }}
+			</tbody>
+		</table>
+	{{ else }}
+		<div class="empty">
+			<h3>Няма намерени автомобили</h3>
+			<p>Добавете автомобил от страницата на неговия клиент.</p>
+		</div>
+	{{ end }}
+</section>
+{{ end }}

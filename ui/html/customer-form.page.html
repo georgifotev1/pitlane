@@ -1,22 +1,45 @@
-{{define "title"}}{{if .Customer}}Редактиране на клиент{{else}}Нов клиент{{end}}{{end}}
-{{define "main"}}
+{{ define "title" }}{{ if .Customer }}Редактиране на клиент{{ else }}Нов клиент{{ end }}{{ end }}
+{{ define "main" }}
 <header class="page-header">
-  <div><a class="back" href="{{if .Customer}}/customers/{{.Customer.ID}}{{else}}/customers{{end}}">← Назад</a>
-    <h1>{{if .Customer}}Редактиране на клиент{{else}}Нов клиент{{end}}</h1>
-  </div>
+	<div>
+		<a
+			class="back"
+			href="{{ if .Customer }}
+			/customers/{{ .Customer.ID }}
+{{ else }}
+			/customers
+{{ end }}">← Назад</a>
+		<h1>{{ if .Customer }}Редактиране на клиент{{ else }}Нов клиент{{ end }}</h1>
+	</div>
 </header>
 <section class="panel form-panel">
-  <form method="post" class="form-grid">
-    <label>Име<input name="name" value="{{.Form.Get "name"}}" autofocus required>{{with errorFor .Form "name"}}<span
-        class="field-error">{{.}}</span>{{end}}</label>
-    <label>Фирма<input name="company" value="{{.Form.Get "company"}}"></label>
-    <label>Имейл<input type="email" name="email" value="{{.Form.Get "email"}}">{{with errorFor .Form "email"}}<span
-        class="field-error">{{.}}</span>{{end}}</label>
-    <label>Телефон<input type="tel" name="phone" value="{{.Form.Get "phone"}}"></label>
-    <label class="full">Адрес<textarea name="address" rows="3">{{.Form.Get "address"}}</textarea></label>
-    <label class="full">Бележки<textarea name="notes" rows="5">{{.Form.Get "notes"}}</textarea></label>
-    <div class="full form-actions"><button class="button primary" type="submit">{{if .Customer}}Запази
-        промените{{else}}Създай клиент{{end}}</button></div>
-  </form>
+	<form method="post" class="form-grid">
+		<label>Име<input
+				name="name"
+				value="{{ .Form.Get "name" }}"
+				autofocus
+				required
+			/>{{ with errorFor .Form "name" }}<span class="field-error">{{ . }}</span>{{ end }}</label>
+		<label>Фирма<input name="company" value="{{ .Form.Get "company" }}" /></label>
+		<label>Имейл<input
+				type="email"
+				name="email"
+				value="{{ .Form.Get "email" }}"
+			/>{{ with errorFor .Form "email" }}<span class="field-error">{{ . }}</span>{{ end }}</label>
+		<label>Телефон<input type="tel" name="phone" value="{{ .Form.Get "phone" }}" /></label>
+		<label class="full">Адрес<textarea name="address" rows="3">{{ .Form.Get "address" }}</textarea>
+		</label>
+		<label class="full">Бележки<textarea name="notes" rows="5">{{ .Form.Get "notes" }}</textarea>
+		</label>
+		<div class="full form-actions">
+			<button class="button primary" type="submit">
+				{{ if .Customer }}
+					Запази промените
+				{{ else }}
+					Създай клиент
+				{{ end }}
+			</button>
+		</div>
+	</form>
 </section>
-{{end}}
+{{ end }}
