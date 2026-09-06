@@ -22,10 +22,19 @@ jobs are out of scope.
    validated and rendered server-side; POST success uses redirect-after-post.
 3. **Embedded UI.** `ui` embeds templates and CSS with `go:embed`. The
    production image contains one static Go executable.
-4. **PostgreSQL.** Keep the existing tenant/customer/car/history/offer schema,
-   raw pgx stores and RLS so deployed data remains compatible.
+4. **PostgreSQL.** Keep the existing tenant/customer/car/history/offer schema
+   and raw pgx stores so deployed data remains compatible. Tenant isolation is
+   enforced in the application layer: `store.WithTenant` opens a transaction
+   for one tenant and every query inside it filters on `tenant_id`. Composite
+   foreign keys such as `(car_id, tenant_id) REFERENCES cars (id, tenant_id)`
+   remain, so a row can never reference a parent in another tenant even if a
+   query is written wrongly. The database enforces no row-level policy of its
+   own — see decision 10.
 5. **Authentication.** Owner-only bcrypt credentials and opaque server-side SCS
-   sessions in PostgreSQL. Cookies are HttpOnly, SameSite=Lax and Secure in
+   sessions in PostgreSQL. Login and password reset run before a tenant is
+   known, so `GetByEmail` and the reset-token lookup query outside
+   `WithTenant`, keyed on the globally unique email or the token hash and never
+   on a client-supplied tenant. Cookies are HttpOnly, SameSite=Lax and Secure in
    production. Go's `CrossOriginProtection` protects unsafe requests. Welcome
    and password-reset messages are rendered from embedded templates and sent
    directly over SMTP; reset tokens are hashed, single-use and valid for one
@@ -54,7 +63,24 @@ jobs are out of scope.
 9. **Deployment.** The Docker build has only a Go build stage and distroless
    runtime. Migrations are embedded and run explicitly with
    `pitlane migrate up`. PostgreSQL and an SMTP provider are the only external
-   services.
+   services. The application is stateless — attachments are S3/R2 keys, not
+   local files — so it runs on any container host with a managed Postgres.
+
+10. **No row-level security.** Earlier revisions created a non-owner
+   `pitlane_app` role and enforced tenancy with RLS policies keyed on a
+   transaction-local `app.tenant_id`, plus `FORCE ROW LEVEL SECURITY` and two
+   `SECURITY DEFINER` bypass functions for the pre-tenant lookups. That is
+   removed: migrations now need no `CREATE ROLE`, no cluster-scoped role
+   management and no owner/app DSN split, which is what a managed Postgres free
+   tier makes awkward.
+
+   The cost is real and is accepted deliberately. Signup is open, so every
+   garage's rows share the same tables, and a query that omits its `tenant_id`
+   filter now returns other tenants' rows instead of none. The remaining
+   defences are the explicit filters in `internal/store`, the composite foreign
+   keys, and the non-empty tenant check in `WithTenant`. Adding a tenant-scoped
+   query without its filter is therefore a security bug, not a style problem —
+   see `AGENTS.md`.
 
 ## Layout
 
@@ -62,7 +88,7 @@ jobs are out of scope.
 cmd/web/            # main, routes, handlers, middleware and views
 internal/forms/     # Edwards-style form validation
 internal/domain/    # business types and offer calculations
-internal/store/     # tenant-scoped PostgreSQL access
+internal/store/     # tenant-scoped PostgreSQL access (filters, not RLS)
 internal/mailer/    # welcome/reset templates and SMTP delivery
 internal/pdf/       # offer PDF renderer
 migrations/         # embedded goose SQL

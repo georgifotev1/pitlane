@@ -18,18 +18,6 @@ CREATE TABLE customers (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- The app role already receives SELECT/INSERT/UPDATE/DELETE on new public
--- tables via ALTER DEFAULT PRIVILEGES in 0001, but we grant explicitly so this
--- migration is self-contained and the pattern is obvious when copied.
-GRANT SELECT, INSERT, UPDATE, DELETE ON customers TO pitlane_app;
-
--- Five-layer tenancy: FORCE RLS so even the table owner is constrained.
-ALTER TABLE customers FORCE ROW LEVEL SECURITY;
-
-CREATE POLICY customers_isolation ON customers
-    USING (tenant_id = current_setting('app.tenant_id')::uuid)
-    WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
-
 -- List query orders by name within a tenant; the search predicate also filters
 -- by tenant_id first.
 CREATE INDEX idx_customers_tenant_name ON customers(tenant_id, name);

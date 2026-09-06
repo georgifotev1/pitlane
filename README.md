@@ -46,8 +46,10 @@ go run ./cmd/web -addr=:4000 -dsn='postgres://...'
 go run ./cmd/web migrate up
 ```
 
-`DSN` is the runtime connection and `MIGRATE_DSN` is the database-owner
-connection used only for migrations. See `.env.example`.
+`DSN` is the runtime connection. `MIGRATE_DSN` is optional and defaults to
+`DSN`; set it when migrations need a different endpoint from the application,
+for example a direct (non-pooled) endpoint on a serverless Postgres provider.
+See `.env.example`.
 
 ## Deployment
 

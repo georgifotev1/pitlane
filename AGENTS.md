@@ -11,7 +11,8 @@ before changing architecture.
   struct dependency injection, handler methods, explicit middleware,
   server-side forms, and post/redirect/get.
 - Use `net/http` ServeMux patterns and keep dependencies minimal.
-- Every tenant query must remain scoped by tenant ID and run through RLS-aware
-  stores. Use SQL placeholders only.
+- Every tenant query MUST filter on `tenant_id` explicitly. The database does
+  not enforce isolation, so a missing filter silently returns other tenants'
+  rows. Go through `store.WithTenant` and use SQL placeholders only.
 - Money is integer cents; tax is basis points and is recomputed server-side.
 - Run `make audit` before considering work complete.

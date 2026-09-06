@@ -74,14 +74,8 @@ ALTER TABLE repairs
     ADD CONSTRAINT repairs_tenant_document_number_key
         UNIQUE (tenant_id, document_number);
 
-GRANT SELECT, INSERT, UPDATE ON document_counters TO pitlane_app;
 
-ALTER TABLE document_counters ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document_counters FORCE ROW LEVEL SECURITY;
 
-CREATE POLICY document_counters_isolation ON document_counters
-    USING (tenant_id = current_setting('app.tenant_id')::uuid)
-    WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
 
 -- +goose Down
 ALTER TABLE repairs DROP COLUMN IF EXISTS document_number;

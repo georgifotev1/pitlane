@@ -101,7 +101,7 @@ func netExpr(column, rateColumn string) string {
 	return fmt.Sprintf("(%[1]s - (%[1]s * %[2]s + (10000 + %[2]s) / 2) / (10000 + %[2]s))", column, rateColumn)
 }
 
-// Load reads every figure the dashboard shows in one RLS-scoped transaction, so
+// Load reads every figure the dashboard shows in one tenant-scoped transaction, so
 // the panels are a consistent snapshot rather than a set of racing reads.
 func (s *DashboardStore) Load(ctx context.Context, tenantID string, now time.Time) (Dashboard, error) {
 	var d Dashboard

@@ -64,9 +64,14 @@ func (s *PasswordResetTokenStore) RequestReset(ctx context.Context, user *domain
 }
 
 func (s *PasswordResetTokenStore) Consume(ctx context.Context, tokenHash, newPasswordHash string) (*domain.User, error) {
+	// Runs outside WithTenant: the reset link carries no session, so the token
+	// hash is the only key available and the tenant is learned from it. Keyed by
+	// the hash alone, never by a client-supplied tenant.
 	row := s.db.pool.QueryRow(ctx, `
-		SELECT id, user_id, tenant_id, expires_at, used_at
-		FROM get_password_reset_token($1)
+		SELECT t.id, t.user_id, u.tenant_id, t.expires_at, t.used_at
+		FROM password_reset_tokens t
+		JOIN users u ON u.id = t.user_id
+		WHERE t.token_hash = $1
 	`, tokenHash)
 	var tokenID, userID, tenantID string
 	var expiresAt time.Time

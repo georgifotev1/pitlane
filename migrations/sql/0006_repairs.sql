@@ -7,9 +7,9 @@
 -- from the offer at conversion, never shared — editing a repair item must never
 -- mutate the offer it came from (the price-freeze rule).
 --
--- Two composite FKs keep the graph tenant-tight the same way offers/cars do
--- (FK checks bypass RLS, so referencing another tenant's row is blocked at the
--- DB level, not left to RLS): (car_id, tenant_id) → cars, and
+-- Two composite FKs keep the graph tenant-tight the same way offers/cars do,
+-- blocking a cross-tenant reference at the DB level rather than leaving it to
+-- the application's WHERE clauses: (car_id, tenant_id) → cars, and
 -- (offer_id, tenant_id) → offers when an offer is present.
 CREATE TABLE repairs (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -84,28 +84,6 @@ CREATE TABLE repair_items (
     -- cannot be dropped while items exist. Open edits replace item rows directly.
     FOREIGN KEY (repair_id, tenant_id) REFERENCES repairs (id, tenant_id) ON DELETE RESTRICT
 );
-
--- The app role receives privileges on new public tables via ALTER DEFAULT
--- PRIVILEGES in 0001, but we grant explicitly so each migration is
--- self-contained and the pattern is obvious when copied.
-GRANT SELECT, INSERT, UPDATE, DELETE ON repairs TO pitlane_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON repair_items TO pitlane_app;
-
--- Five-layer tenancy. Unlike 0002–0004 (which set only FORCE and had ENABLE
--- retrofitted in 0005), new tables enable RLS in their own migration: FORCE so
--- even the table owner is constrained, ENABLE so the policies are actually live.
-ALTER TABLE repairs      FORCE ROW LEVEL SECURITY;
-ALTER TABLE repairs      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE repair_items FORCE ROW LEVEL SECURITY;
-ALTER TABLE repair_items ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY repairs_isolation ON repairs
-    USING (tenant_id = current_setting('app.tenant_id')::uuid)
-    WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
-
-CREATE POLICY repair_items_isolation ON repair_items
-    USING (tenant_id = current_setting('app.tenant_id')::uuid)
-    WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
 
 -- The board lists a tenant's repairs newest first, usually filtered by status.
 CREATE INDEX idx_repairs_tenant_status_created ON repairs(tenant_id, status, created_at DESC);

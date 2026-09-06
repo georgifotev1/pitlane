@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -50,8 +49,7 @@ func New(t *testing.T) *DB {
 		t.Fatalf("run migrations: %v", err)
 	}
 
-	appDSN := strings.Replace(ownerDSN, "user=pitlane", "user=pitlane_app password=pitlane_app", 1)
-	pool, err := pgxpool.New(ctx, appDSN)
+	pool, err := pgxpool.New(ctx, ownerDSN)
 	if err != nil {
 		t.Fatalf("app pool: %v", err)
 	}

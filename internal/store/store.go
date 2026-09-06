@@ -24,7 +24,11 @@ func NewDB(pool *pgxpool.Pool) *DB {
 	return &DB{pool: pool}
 }
 
-// WithTenant runs fn in an RLS-scoped transaction.
+// WithTenant runs fn in a transaction for one tenant.
+//
+// Tenant isolation is enforced in this package, not by the database: every
+// query inside fn must filter on tenant_id. The non-empty check below is the
+// only guard against a caller passing an unset tenant, so keep it.
 func (db *DB) WithTenant(ctx context.Context, tenantID string, fn func(pgx.Tx) error) error {
 	if tenantID == "" {
 		return errors.New("tenantID is required")
@@ -35,13 +39,6 @@ func (db *DB) WithTenant(ctx context.Context, tenantID string, fn func(pgx.Tx) e
 		return fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback(ctx)
-
-	if _, err := tx.Exec(ctx, "SET LOCAL ROLE pitlane_app"); err != nil {
-		return fmt.Errorf("set role: %w", err)
-	}
-	if _, err := tx.Exec(ctx, "SELECT set_config('app.tenant_id', $1, true)", tenantID); err != nil {
-		return fmt.Errorf("set tenant id: %w", err)
-	}
 
 	if err := fn(tx); err != nil {
 		return err
@@ -159,11 +156,14 @@ func (s *UserStore) Create(ctx context.Context, user *domain.User) error {
 	})
 }
 
-// GetByEmail uses the login-time RLS bypass.
+// GetByEmail runs outside WithTenant: login has to find the user before the
+// tenant is known, so email is the only key available. The email column is
+// globally UNIQUE, so this can match at most one tenant's user.
 func (s *UserStore) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	rows, err := s.db.pool.Query(ctx, `
 		SELECT `+userColumns+`
-		FROM get_user_by_email($1)
+		FROM users
+		WHERE email = lower($1)
 	`, email)
 	if err != nil {
 		return nil, fmt.Errorf("get user by email: %w", err)

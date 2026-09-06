@@ -5,8 +5,8 @@
 -- completed repairs half is already in the repairs table.
 --
 -- A history note belongs to exactly one car, within one tenant. Composite FK on
--- (car_id, tenant_id) keeps the graph tenant-tight (FK checks bypass RLS, so a
--- plain car_id FK would not block another tenant's car).
+-- (car_id, tenant_id) keeps the graph tenant-tight: a plain car_id FK would not
+-- block a reference to another tenant's car.
 CREATE TABLE history_notes (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
@@ -54,23 +54,6 @@ CREATE TABLE attachments (
     FOREIGN KEY (repair_id, tenant_id) REFERENCES repairs (id, tenant_id) ON DELETE RESTRICT,
     UNIQUE (id, tenant_id)
 );
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON history_notes TO pitlane_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON attachments TO pitlane_app;
-
--- Five-layer tenancy.
-ALTER TABLE history_notes FORCE ROW LEVEL SECURITY;
-ALTER TABLE history_notes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE attachments FORCE ROW LEVEL SECURITY;
-ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY history_notes_isolation ON history_notes
-    USING (tenant_id = current_setting('app.tenant_id')::uuid)
-    WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
-
-CREATE POLICY attachments_isolation ON attachments
-    USING (tenant_id = current_setting('app.tenant_id')::uuid)
-    WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
 
 -- History reads completed repairs and notes for one car, ordered by date.
 CREATE INDEX idx_history_notes_tenant_car_recorded ON history_notes(tenant_id, car_id, recorded_at DESC);

@@ -14,9 +14,9 @@ import (
 )
 
 // demoCommand runs `pitlane demo <seed|reset|drop>`. It shares the runtime DSN
-// and therefore the pitlane_app role, so every statement it issues is subject
-// to the same row-level security as a request: a demonstration can be built or
-// removed on a live deployment without any path to another tenant's data.
+// and writes through the ordinary stores, so every statement it issues is
+// scoped to one tenant the same way a request is, and the is_demo flag keeps
+// the destructive paths off a real garage.
 func demoCommand(ctx context.Context, dsn string, args []string, out io.Writer) error {
 	if len(args) == 0 {
 		return errors.New("usage: pitlane demo <seed|reset|drop> [-email ...] [-password ...] [-garage ...]")

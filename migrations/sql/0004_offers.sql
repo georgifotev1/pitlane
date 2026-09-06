@@ -1,9 +1,9 @@
 -- +goose Up
 
 -- An offer (repair quote) is written for one car. As with cars→customers in
--- 0003, RLS keeps tenants' rows mutually invisible but does NOT stop a tenant
--- from *referencing* another tenant's car_id on insert (FK checks bypass RLS).
--- The airtight fix is again a COMPOSITE foreign key on (car_id, tenant_id): an
+-- 0003, filtering by tenant_id in the query does not stop a bug from
+-- *referencing* another tenant's car_id on insert.
+-- The structural fix is again a COMPOSITE foreign key on (car_id, tenant_id): an
 -- offer can then only ever point at a car in its own tenant. That FK needs a
 -- unique key on exactly (id, tenant_id) on cars to target. The customer is
 -- reached through the car, so offers carry no customer_id of their own — one
@@ -47,8 +47,8 @@ CREATE TABLE offers (
     updated_at timestamptz NOT NULL DEFAULT now(),
 
     -- Composite FK: an offer and its car always share a tenant at the DB level,
-    -- complementing the RLS policy below. RESTRICT per the deletion policy
-    -- (offers are never deleted; FKs never CASCADE).
+    -- independently of the application's WHERE clauses. RESTRICT per the
+    -- deletion policy (offers are never deleted; FKs never CASCADE).
     FOREIGN KEY (car_id, tenant_id) REFERENCES cars (id, tenant_id) ON DELETE RESTRICT,
 
     -- Target for offer_items' composite FK, so items stay in the offer's tenant.
@@ -83,24 +83,6 @@ CREATE TABLE offer_items (
     -- the item rows directly (never the offer), so this never blocks normal use.
     FOREIGN KEY (offer_id, tenant_id) REFERENCES offers (id, tenant_id) ON DELETE RESTRICT
 );
-
--- The app role receives privileges on new public tables via ALTER DEFAULT
--- PRIVILEGES in 0001, but we grant explicitly so each migration is
--- self-contained and the pattern is obvious when copied.
-GRANT SELECT, INSERT, UPDATE, DELETE ON offers TO pitlane_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON offer_items TO pitlane_app;
-
--- Five-layer tenancy: FORCE RLS so even the table owner is constrained.
-ALTER TABLE offers FORCE ROW LEVEL SECURITY;
-ALTER TABLE offer_items FORCE ROW LEVEL SECURITY;
-
-CREATE POLICY offers_isolation ON offers
-    USING (tenant_id = current_setting('app.tenant_id')::uuid)
-    WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
-
-CREATE POLICY offer_items_isolation ON offer_items
-    USING (tenant_id = current_setting('app.tenant_id')::uuid)
-    WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
 
 -- The offers list is scoped to one car and shows newest first.
 CREATE INDEX idx_offers_tenant_car_created ON offers(tenant_id, car_id, created_at DESC);

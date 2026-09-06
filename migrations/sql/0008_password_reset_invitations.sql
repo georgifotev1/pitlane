@@ -32,52 +32,7 @@ CREATE UNIQUE INDEX invitations_one_pending_per_email
 CREATE INDEX idx_password_reset_tokens_user_created
     ON password_reset_tokens (user_id, created_at);
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON invitations TO pitlane_app;
-
--- Five-layer tenancy.
-ALTER TABLE invitations FORCE ROW LEVEL SECURITY;
-ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY invitations_isolation ON invitations
-    USING (tenant_id = current_setting('app.tenant_id')::uuid)
-    WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
-
--- Pre-tenant lookups for the public reset/accept endpoints, which run without
--- a session and therefore without a tenant context. Same controlled-bypass
--- pattern as get_user_by_email (0001): SECURITY DEFINER + row_security=off,
--- keyed by the token hash, never by a client-supplied tenant.
--- +goose StatementBegin
-CREATE OR REPLACE FUNCTION get_password_reset_token(p_token_hash text)
-RETURNS TABLE (id uuid, user_id uuid, tenant_id uuid, expires_at timestamptz, used_at timestamptz)
-LANGUAGE sql
-SECURITY DEFINER
-SET row_security = off
-AS $$
-    SELECT t.id, t.user_id, u.tenant_id, t.expires_at, t.used_at
-    FROM password_reset_tokens t
-    JOIN users u ON u.id = t.user_id
-    WHERE t.token_hash = p_token_hash;
-$$;
--- +goose StatementEnd
-
--- +goose StatementBegin
-CREATE OR REPLACE FUNCTION get_invitation_by_token(p_token_hash text)
-RETURNS SETOF invitations
-LANGUAGE sql
-SECURITY DEFINER
-SET row_security = off
-AS $$
-    SELECT * FROM invitations WHERE token_hash = p_token_hash;
-$$;
--- +goose StatementEnd
-
-GRANT EXECUTE ON FUNCTION get_password_reset_token(text) TO pitlane_app;
-GRANT EXECUTE ON FUNCTION get_invitation_by_token(text) TO pitlane_app;
 
 -- +goose Down
--- +goose StatementBegin
-DROP FUNCTION IF EXISTS get_invitation_by_token(text);
-DROP FUNCTION IF EXISTS get_password_reset_token(text);
 DROP TABLE IF EXISTS invitations;
 ALTER TABLE users DROP COLUMN IF EXISTS password_changed_at;
--- +goose StatementEnd
