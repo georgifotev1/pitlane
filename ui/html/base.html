@@ -44,8 +44,10 @@
 	<body class="{{ if .CurrentUser }}app-shell{{ else }}auth-shell{{ end }}">
 		{{ if .CurrentUser }}
 			<aside class="sidebar">
-				<a class="brand" href="/dashboard"><img class="brand-mark" src="/static/favicon.svg" width="32" height="32" alt="" /><span>pitlane</span></a>
-				<div class="garage-name">{{ .GarageName }}</div>
+				<a class="brand" href="/dashboard">
+					<img class="brand-mark" src="/static/favicon.svg" width="32" height="32" alt="" />
+					<span>{{ .GarageName }}</span>
+				</a>
 				<nav aria-label="Основна навигация">
 					<a class="{{ if active .CurrentPath "/dashboard" }}active{{ end }}" href="/dashboard">Начало</a>
 					<a class="{{ if active .CurrentPath "/customers" }}active{{ end }}" href="/customers">Клиенти</a>

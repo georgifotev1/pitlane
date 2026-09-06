@@ -137,17 +137,7 @@ h3 {
 .sidebar > .brand {
   padding: 0.25rem 0.5rem;
 }
-.garage-name {
-  margin: 1.25rem 0.5rem 0.75rem;
-  color: var(--sidebar-muted);
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+
 .sidebar nav {
   display: grid;
   gap: 0.2rem;
@@ -1122,9 +1112,6 @@ tr.archived {
     display: flex;
     overflow-x: auto;
     margin-top: 0.75rem;
-  }
-  .garage-name {
-    display: none;
   }
   .sidebar-user {
     position: absolute;
