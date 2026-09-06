@@ -173,7 +173,6 @@ func TestUserStore(t *testing.T) {
 			t.Fatalf("wrong order: got %s then %s", got[0].Email, got[1].Email)
 		}
 
-		// Cross-tenant isolation: another tenant's list must not include these.
 		others, err := us.List(ctx, tenant.ID)
 		if err != nil {
 			t.Fatalf("list other: %v", err)

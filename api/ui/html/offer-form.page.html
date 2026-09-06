@@ -1,0 +1,21 @@
+{{define "title"}}{{if .Offer}}Редактиране на оферта{{else}}Нова оферта{{end}}{{end}}
+{{define "main"}}
+<header class="page-header">
+    <div><a class="back" href="{{if .Offer}}/offers/{{.Offer.ID}}{{else}}/cars/{{.Car.ID}}{{end}}">← Назад</a>
+        <h1>{{if .Offer}}Редактиране на оферта {{.Offer.DocumentNumber}}{{else}}Нова оферта{{end}}</h1>
+        <p class="muted">За {{.Customer.Name}} · <span class="plate">{{.Car.Plate}}</span> {{.Car.Make}} {{.Car.Model}}
+        </p>
+    </div>
+</header>
+<form method="post" class="offer-editor">
+    <section class="panel form-panel">
+        <div class="form-grid"><label class="full">Бележки<textarea name="notes"
+                    rows="3">{{.Form.Get "notes"}}</textarea></label></div>
+    </section>
+    {{template "item-editor" .Editor}}
+    <div class="sticky-actions"><a class="button"
+            href="{{if .Offer}}/offers/{{.Offer.ID}}{{else}}/cars/{{.Car.ID}}{{end}}">Отказ</a><button
+            class="button primary" type="submit">{{if .Offer}}Запази промените{{else}}Създай оферта{{end}}</button>
+    </div>
+</form>
+{{end}}

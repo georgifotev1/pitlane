@@ -1,8 +1,0 @@
-packages:
-  - path: "github.com/gfotev/pitlane/internal/api/dto"
-    output_path: "../frontend/src/lib/generated/types.ts"
-    # ADR §Type pipeline: time.Time serializes as an ISO-8601 string. Mapping it
-    # here keeps `any` out of the generated types (house law). A *time.Time
-    # field becomes an optional `?: string`.
-    type_mappings:
-      time.Time: "string"

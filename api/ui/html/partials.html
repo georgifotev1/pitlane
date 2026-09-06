@@ -1,0 +1,143 @@
+{{define "field-error"}}{{with errorFor .Form .Field}}<p class="field-error">{{.}}</p>{{end}}{{end}}
+
+{{/* Headline figures. Takes a []statTile. */}}
+{{define "stat-tiles"}}<section class="stats">{{range .}}<a href="{{.URL}}">
+    <div class="stat-body"><span>{{.Label}}</span><strong class="money-stat">{{.Value}}</strong>
+      <small class="muted">{{.Sub}}</small>{{if .Delta}}<small
+        class="delta{{if .Rising}} is-up{{end}}{{if .Falling}} is-down{{end}}">{{.Delta}}</small>{{end}}
+    </div>
+  </a>{{end}}</section>{{end}}
+
+{{/* Shared empty state. Takes an emptyState. */}}
+{{define "empty"}}<div class="empty">
+  <h3>{{.Title}}</h3>
+  <p>{{.Text}}</p>{{if .ActionURL}}<a class="button primary" href="{{.ActionURL}}">{{.ActionLabel}}</a>{{end}}
+</div>{{end}}
+
+{{/* The offers board and the repairs board are the same table: a numbered
+     document for a car, its status, its total and what is left after parts.
+     Takes a documentBoard. */}}
+{{define "document-board"}}<section class="panel table-panel">{{if .Rows}}<table>
+    <thead>
+      <tr>
+        <th>{{.NumberHeading}}</th>
+        <th>Клиент</th>
+        <th>Автомобил</th>
+        <th>Статус</th>
+        <th class="number">Общо</th>{{if .ShowProfit}}<th class="number">Печалба</th>{{end}}
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>{{range .Rows}}<tr>
+        <td><a class="strong-link" href="{{.URL}}">{{.Number}}</a><small class="block muted">{{date .CreatedAt}}</small>
+        </td>
+        <td>{{.CustomerName}}</td>
+        <td><span class="plate">{{.CarPlate}}</span></td>
+        <td><span class="status">{{statusLabel .Status}}</span></td>
+        <td class="number"><strong>{{money .TotalCents $.Currency}}</strong></td>{{if $.ShowProfit}}<td
+          class="number">{{if .HasCost}}<strong class="profit">{{money .ProfitCents
+            $.Currency}}</strong><small class="block muted">{{.Margin}} марж</small>{{else}}<span
+            class="muted" title="Няма въведени доставни цени">—</span>{{end}}</td>{{end}}
+        <td class="number"><a href="{{.URL}}">Преглед →</a></td>
+      </tr>{{end}}</tbody>
+  </table>{{else}}{{template "empty" .Empty}}{{end}}</section>{{end}}
+
+{{/* The compact form of the same rows, for dashboard panels. */}}
+{{define "document-list"}}{{if .Rows}}<div class="list">{{range .Rows}}<a class="list-row" href="{{.URL}}">
+    <div>
+      <strong>{{with .TypeLabel}}{{.}} {{end}}{{.Number}} · {{.CarPlate}}</strong><span>{{.CustomerName}} · {{if
+        .Note}}{{.Note}}{{else}}{{date .CreatedAt}}{{end}} · {{statusLabel .Status}}</span>
+    </div>
+    <div class="align-right"><strong>{{money .TotalCents $.Currency}}</strong>{{if and $.ShowProfit .HasCost}}<span>печалба
+        {{money .ProfitCents $.Currency}}</span>{{end}}</div>
+  </a>{{end}}</div>{{else}}{{template "empty" .Empty}}{{end}}{{end}}
+
+{{/* The line items and totals of an offer or a repair. This partial is rendered
+     on the customer's print sheet as well, so it carries no cost or margin
+     data of any kind. Takes a documentView. */}}
+{{define "document-table"}}
+<table>
+  <thead>
+    <tr>
+      <th>Описание</th>
+      <th>Вид</th>
+      <th class="number">Бр.</th>
+      <th class="number">Единична цена с ДДС (€)</th>
+      <th class="number">Общо</th>
+    </tr>
+  </thead>
+  <tbody>{{range .Lines}}<tr>
+      <td>{{.Description}}</td>
+      <td><span class="tag">{{kindLabel .Kind}}</span></td>
+      <td class="number">{{.Quantity}}</td>
+      <td class="number">{{money .UnitPriceCents $.Currency}}</td>
+      <td class="number">{{money .LineTotalCents $.Currency}}</td>
+    </tr>{{end}}</tbody>
+</table>
+<div class="totals">
+  <div><span>Данъчна основа</span><strong>{{money .SubtotalCents .Currency}}</strong></div>
+  <div><span>ДДС ({{percent .TaxRateBps}})</span><strong>{{money .TaxCents .Currency}}</strong></div>
+  <div class="grand-total"><span>Общо</span><strong>{{money .TotalCents .Currency}}</strong></div>
+</div>
+{{end}}
+
+{{/* Internal margin panel. Never rendered on the print sheet or in the PDF.
+     Takes a marginView. */}}
+{{define "margin-panel"}}<section class="panel margin-panel">
+  <div class="panel-header">
+    <div>
+      <h2>Вашата печалба</h2>
+      <p class="muted">Само за вас · сумите са без ДДС</p>
+    </div>
+  </div>{{if .HasCost}}<div class="margin-figures">
+    <div><span>Оборот</span><strong>{{money .NetRevenueCents .Currency}}</strong></div>
+    <div><span>Доставна цена на частите</span><strong>{{money .CostSubtotalCents .Currency}}</strong></div>
+    <div class="margin-result"><span>Остава за сервиза</span><strong class="profit">{{money .ProfitCents
+        .Currency}}</strong><small>{{.Margin}} марж</small></div>
+  </div>{{else}}<div class="margin-empty">
+    <p>Няма въведени доставни цени. Попълнете колоната „Доставна цена“ в редовете, за да видите колко остава за сервиза
+      след частите.</p>
+  </div>{{end}}</section>{{end}}
+
+{{/* The item editor, shared by the offer form and the repair form. Takes an
+     itemEditor. The supplier price column is internal: it is on this form and
+     on nothing the customer receives. */}}
+{{define "item-editor"}}<section class="panel table-panel" data-item-editor>
+  <div class="panel-header">
+    <div>
+      <h2>{{.Title}}</h2>
+      <p class="muted">{{.Hint}}</p>
+    </div><button class="button" type="button" data-add-item>+ Добави ред</button>
+  </div>{{with .Error}}<div class="form-alert inset">{{.}}</div>{{end}}
+  <div class="table-scroll">
+    <table class="item-editor">
+      <thead>
+        <tr>
+          <th>Вид</th>
+          <th>Описание</th>
+          <th>Бр.</th>
+          <th>Цена с ДДС (€)</th>
+          <th class="cost-column">Доставна цена (€)</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody data-item-rows>{{template "item-editor-rows" .Rows}}</tbody>
+    </table>
+  </div>
+  <template data-item-row-template>{{template "item-editor-rows" blankItemRow}}</template>
+</section>{{end}}
+
+{{define "item-editor-rows"}}{{range .}}<tr data-item-row>
+  <td><select name="item_kind">
+      <option value="part" {{if eq .Kind "part" }}selected{{end}}>Част</option>
+      <option value="labor" {{if eq .Kind "labor" }}selected{{end}}>Труд</option>
+      <option value="other" {{if eq .Kind "other" }}selected{{end}}>Друго</option>
+    </select></td>
+  <td><input name="item_description" value="{{.Description}}" placeholder="Описание"></td>
+  <td><input type="number" name="item_quantity" min="1" value="{{.Quantity}}"></td>
+  <td><input name="item_price" inputmode="decimal" value="{{.UnitPrice}}" placeholder="0,00"></td>
+  <td class="cost-column"><input class="cost-input" name="item_cost" inputmode="decimal" value="{{.Cost}}"
+      placeholder="0,00"></td>
+  <td class="item-row-action"><button class="remove-row" type="button" data-remove-item aria-label="Премахни ред"
+      title="Премахни ред">×</button></td>
+</tr>{{end}}{{end}}

@@ -1,1 +1,0 @@
-Placeholder so the embedded FS is non-empty in development. The Docker build replaces this with frontend/dist.

@@ -1,30 +1,15 @@
 # syntax=docker/dockerfile:1
 
-# Single-artifact build (ADR decision 33): the Go binary embeds frontend/dist
-# and serves API + SPA same-origin. Migrations are NOT run on boot — operators
-# run `docker run … api migrate up` explicitly (ADR decision 7).
-
-# --- Stage 1: frontend build -------------------------------------------------
-FROM node:24-alpine AS frontend
-WORKDIR /build
-# pnpm via corepack, version pinned by the packageManager field in package.json.
-COPY frontend/package.json frontend/pnpm-lock.yaml ./
-RUN corepack enable && pnpm install --frozen-lockfile
-COPY frontend/ ./
-RUN pnpm build
-
-# --- Stage 2: Go build -------------------------------------------------------
-FROM golang:1.26-alpine AS api
+# Templates and CSS are embedded by go:embed, so the production image contains
+# one executable and no Node.js runtime or copied asset directory.
+FROM golang:1.26-alpine AS build
 WORKDIR /build
 COPY api/go.mod api/go.sum ./
 RUN go mod download
 COPY api/ ./
-# Overlay the real frontend build onto the embed placeholder path.
-COPY --from=frontend /build/dist ./internal/api/dist
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/pitlane ./cmd/web
 
-# --- Stage 3: runtime --------------------------------------------------------
 FROM gcr.io/distroless/static-debian12:nonroot
-COPY --from=api /out/api /api
+COPY --from=build /out/pitlane /pitlane
 EXPOSE 4000
-ENTRYPOINT ["/api"]
+ENTRYPOINT ["/pitlane"]

@@ -40,9 +40,9 @@ CREATE TABLE repairs (
     tax_cents bigint NOT NULL DEFAULT 0 CHECK (tax_cents >= 0),
     total_cents bigint NOT NULL DEFAULT 0 CHECK (total_cents >= 0),
 
-    -- Odometer reading captured at completion; also written onto the car so its
-    -- current mileage advances. 0 until completed. Preserved on the repair so
-    -- the service-history timeline (Phase 9) can show mileage at each job.
+    -- Odometer reading for the repair; it can be entered while editing or at
+    -- completion and is also synchronized onto the car. Preserved on the repair
+    -- so the service-history timeline can show mileage at each job.
     mileage integer NOT NULL DEFAULT 0 CHECK (mileage >= 0),
 
     notes text NOT NULL DEFAULT '',

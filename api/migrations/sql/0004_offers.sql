@@ -29,15 +29,14 @@ CREATE TABLE offers (
     sent_to text NOT NULL DEFAULT '',
     sent_at timestamptz,
 
-    -- Tax rate is SNAPSHOTTED from the tenant's default (basis points) when the
-    -- offer is created, then editable while draft. Snapshotting means a later
-    -- change to the tenant default never silently re-prices an existing quote.
-    -- No default here: the handler must set it explicitly from the tenant.
+    -- Tax rate is snapshotted in basis points. The application sets Bulgaria's
+    -- fixed standard rate; retaining the snapshot keeps historical documents
+    -- self-contained.
     tax_rate_bps integer NOT NULL CHECK (tax_rate_bps >= 0),
 
-    -- Money snapshots in integer cents (ADR §Domain Model: bigint → int64).
-    -- The server recomputes these from the items on every draft write and they
-    -- freeze at send, so the emailed PDF and any regenerated PDF are identical.
+    -- Money snapshots in integer cents. Item prices and total_cents include
+    -- VAT; subtotal_cents is the net taxable amount and tax_cents is extracted
+    -- once at document level. The server recomputes them on every draft write.
     -- They are derived data, kept here so reads and the PDF never re-sum items.
     subtotal_cents bigint NOT NULL DEFAULT 0 CHECK (subtotal_cents >= 0),
     tax_cents bigint NOT NULL DEFAULT 0 CHECK (tax_cents >= 0),
@@ -66,9 +65,9 @@ CREATE TABLE offer_items (
         CHECK (kind IN ('part', 'labor', 'other')),
     description text NOT NULL,
 
-    -- Whole-unit quantity (parts count / labour hours as whole hours). Kept an
-    -- integer so line math is exact with no rounding; tax (basis points) is the
-    -- only place rounding happens, and it happens once at the offer level.
+    -- Whole-unit quantity (parts count / labour hours as whole hours). Unit
+    -- prices include VAT and stay integer cents, so line math is exact; VAT is
+    -- extracted and rounded once at the offer level.
     quantity integer NOT NULL CHECK (quantity > 0),
     unit_price_cents bigint NOT NULL CHECK (unit_price_cents >= 0),
 

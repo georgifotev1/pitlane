@@ -1,0 +1,25 @@
+{{define "title"}}Редактиране на ремонт{{end}}
+{{define "main"}}
+<header class="page-header">
+    <div><a class="back" href="/repairs/{{.Repair.ID}}">← Назад</a>
+        <h1>Редактиране на ремонт {{.Repair.DocumentNumber}}</h1>
+        <p class="muted">За {{.Customer.Name}} · <span class="plate">{{.Car.Plate}}</span> {{.Car.Make}} {{.Car.Model}}
+        </p>
+    </div>
+</header>
+<form method="post" class="offer-editor">
+    <section class="panel form-panel">
+        <div class="form-grid">
+            <label>Пробег (км)<input type="number" name="mileage" min="0" max="10000000"
+                    value="{{.Form.Get "mileage"}}">{{with errorFor .Form "mileage"}}<span
+                    class="field-error">{{.}}</span>{{end}}</label>
+            <label class="full">Бележки<textarea name="notes" rows="3">{{.Form.Get "notes"}}</textarea></label>
+        </div>
+    </section>
+    {{template "item-editor" .Editor}}
+    <div class="sticky-actions">
+        <a class="button" href="/repairs/{{.Repair.ID}}">Отказ</a>
+        <button class="button primary" type="submit">Запази промените</button>
+    </div>
+</form>
+{{end}}

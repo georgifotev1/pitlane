@@ -10,29 +10,18 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// ErrDuplicatePlate is returned when a Create/Update would collide with an
-// existing active car's plate in the same tenant (the partial unique index in
-// migration 0003). The handler maps it to a 422 on the plate field.
 var ErrDuplicatePlate = errors.New("duplicate plate")
 
-// CarStore follows the CustomerStore pattern exactly: column list + scan helper
-// co-located, every method runs inside WithTenant, every query filters on
-// tenant_id. Cars are a child of Customer, so List is additionally scoped to a
-// customer_id.
 type CarStore struct {
 	db *DB
 }
 
-// NewCarStore builds a store.
 func NewCarStore(db *DB) *CarStore {
 	return &CarStore{db: db}
 }
 
-// carColumns is the canonical select order. scanCar below reads in exactly this
-// order — keep them in sync.
 const carColumns = "id, tenant_id, customer_id, plate, vin, make, model, year, mileage, archived_at, created_at, updated_at"
 
-// scanCar reads one row in carColumns order.
 func scanCar(row pgx.Row) (*domain.Car, error) {
 	var c domain.Car
 	if err := row.Scan(
@@ -44,8 +33,6 @@ func scanCar(row pgx.Row) (*domain.Car, error) {
 	return &c, nil
 }
 
-// CarListParams controls the List query. Zero Limit means "no rows"; the handler
-// clamps to a sane page size.
 type CarListParams struct {
 	Search          string
 	IncludeArchived bool
@@ -53,17 +40,11 @@ type CarListParams struct {
 	Offset          int
 }
 
-// List returns a page of a customer's cars plus the total count matching the
-// filter (before pagination). Both queries run in the same tenant transaction
-// and are scoped to tenant_id AND customer_id.
 func (s *CarStore) List(ctx context.Context, tenantID, customerID string, p CarListParams) ([]*domain.Car, int, error) {
 	var cars []*domain.Car
 	var total int
 
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
-		// $1 tenant, $2 customer, $3 search ('' = match all), $4 include archived.
-		// ILIKE wildcards are concatenated in SQL so the term stays a bound
-		// parameter — no fmt.Sprintf near SQL (house law).
 		const where = `
 			WHERE tenant_id = $1
 			  AND customer_id = $2
@@ -103,23 +84,16 @@ func (s *CarStore) List(ctx context.Context, tenantID, customerID string, p CarL
 	return cars, total, err
 }
 
-// CarSummary is a board row: the car plus its customer's name, joined in for
-// display so the tenant-wide board renders without extra round-trips.
 type CarSummary struct {
 	Car          *domain.Car
 	CustomerName string
 }
 
-// ListAll returns a tenant-wide page of cars (plate order) plus the total
-// count matching the filters. Unlike List, it is not scoped to one customer —
-// instead each row is enriched with the customer name via a join that stays
-// in-tenant (composite key). Search and archived filters mirror List exactly.
 func (s *CarStore) ListAll(ctx context.Context, tenantID string, p CarListParams) ([]CarSummary, int, error) {
 	var out []CarSummary
 	var total int
 
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
-		// $1 tenant, $2 search ('' = match all), $3 include archived.
 		const where = `
 			WHERE c.tenant_id = $1
 			  AND ($2 = '' OR c.plate ILIKE '%' || $2 || '%'
@@ -168,7 +142,6 @@ func (s *CarStore) ListAll(ctx context.Context, tenantID string, p CarListParams
 	return out, total, err
 }
 
-// Get returns one car scoped to the tenant, or ErrNotFound.
 func (s *CarStore) Get(ctx context.Context, tenantID, id string) (*domain.Car, error) {
 	var car *domain.Car
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
@@ -189,9 +162,6 @@ func (s *CarStore) Get(ctx context.Context, tenantID, id string) (*domain.Car, e
 	return car, err
 }
 
-// Create inserts a car and populates server-assigned timestamps via RETURNING.
-// A plate collision with an active car in the tenant surfaces as
-// ErrDuplicatePlate.
 func (s *CarStore) Create(ctx context.Context, c *domain.Car) error {
 	return s.db.WithTenant(ctx, c.TenantID, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
@@ -204,10 +174,6 @@ func (s *CarStore) Create(ctx context.Context, c *domain.Car) error {
 	})
 }
 
-// Update writes all mutable fields (PUT semantics) and bumps updated_at.
-// customer_id is immutable (a car does not move between customers). Returns
-// ErrNotFound if the car does not exist in this tenant, or ErrDuplicatePlate on
-// a plate collision.
 func (s *CarStore) Update(ctx context.Context, c *domain.Car) error {
 	return s.db.WithTenant(ctx, c.TenantID, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `
@@ -226,8 +192,6 @@ func (s *CarStore) Update(ctx context.Context, c *domain.Car) error {
 	})
 }
 
-// Archive soft-deletes a car by stamping archived_at. Archiving an already
-// archived (or nonexistent) car returns ErrNotFound.
 func (s *CarStore) Archive(ctx context.Context, tenantID, id string) error {
 	return s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
@@ -245,9 +209,6 @@ func (s *CarStore) Archive(ctx context.Context, tenantID, id string) error {
 	})
 }
 
-// mapCarWriteError translates a Postgres unique-violation (23505 — the partial
-// unique index on active plates) into ErrDuplicatePlate; everything else passes
-// through unchanged.
 func mapCarWriteError(err error) error {
 	if err == nil {
 		return nil

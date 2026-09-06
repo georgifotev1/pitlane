@@ -1,137 +1,97 @@
-# pitlane
+# Pitlane
 
-Multi-tenant SaaS dashboard for car service owners: Go JSON API + React SPA, shipped as a single binary. Architecture contract: [`ADR.md`](ADR.md) · execution plan: [`AGENT_PLAN.md`](AGENT_PLAN.md) · milestones: [`ROADMAP.md`](ROADMAP.md).
+A small, server-rendered garage manager built in Go. An owner can:
 
-## Prerequisites
+- create and update a garage profile;
+- manage customers and cars;
+- keep a service-history timeline for each car;
+- create and edit offers with parts/labour lines;
+- accept offers into repairs and track work through completion;
+- see completed repairs in service history and track recognized revenue;
+- record what each part cost from the supplier and see the margin it leaves;
+- open a print-friendly offer or download a generated PDF;
+- receive a welcome email and reset a forgotten password by email.
 
-- Go (version in `api/go.mod`)
-- Node.js 24+ with **pnpm** (`corepack enable` if missing)
-- Docker with Compose v2
+There is no React/Node build, JSON API, offer email, job queue or object storage.
+Go embeds all HTML templates and CSS into the executable.
 
-## Quickstart
+## Run locally
+
+Requirements: Go, Docker and Docker Compose.
 
 ```sh
 make dev
 ```
 
-First run copies `.env.example` → `.env`, starts postgres/mailpit/minio, then runs the API and the Vite dev server in parallel.
+This creates `.env`, starts PostgreSQL and Mailpit, applies embedded migrations
+and runs the web app at <http://localhost:4000>. On first use, choose **Create
+your garage**. Welcome and reset emails appear in Mailpit at
+<http://localhost:8025>.
 
-| What          | URL                          |
-| ------------- | ---------------------------- |
-| App (Vite)    | http://localhost:5173        |
-| API           | http://localhost:4000/api/v1 |
-| Mailpit UI    | http://localhost:8025        |
-| MinIO console | http://localhost:9001        |
-
-## Commands
-
-| Command               | What it does                                             |
-| --------------------- | -------------------------------------------------------- |
-| `make dev`            | Deps up + Go API + Vite dev server (proxy to :4000)      |
-| `make test`           | Go tests (unit + testcontainers integration, Phase 2+)   |
-| `make types`          | Regenerate `frontend/src/lib/generated/types.ts` (tygo)  |
-| `make build`          | Production Docker image (`pitlane:latest`)               |
-| `make migrate-up` / `migrate-down` / `migrate-status` | goose + River migrations via the api binary |
-| `make audit`          | go vet, tsc, oxlint, pnpm audit, tygo staleness, Lingui catalog |
-| `make deps` / `deps-down` | Start/stop the docker-compose stack                  |
-
-## Production rehearsal
-
-The single deployable artifact is the Docker image: one binary serves the API
-and the embedded SPA, migrations run only as an explicit operator command.
+Useful commands:
 
 ```sh
-make build                                                # pitlane:latest
-docker compose -f docker-compose.prod.yml up -d db
-docker compose -f docker-compose.prod.yml run --rm app migrate up
-docker compose -f docker-compose.prod.yml up -d app       # http://localhost:4000
+make test             # Go tests
+make audit            # format, vet and test
+make migrate-status
+make build             # pitlane:latest Docker image
+make build-local       # bin/pitlane
+make deps-down
 ```
 
-## Backups
+The executable also accepts flags:
 
-`scripts/backup.sh` streams `pg_dump | gzip` into the `pitlane-backups` MinIO
-bucket (R2 in production; override with the `BACKUP_S3_*` env vars). It only
-writes timestamped objects — retention is a bucket lifecycle policy. Phase D
-schedules it nightly and rehearses a restore.
+```sh
+cd api
+go run ./cmd/web -addr=:4000 -dsn='postgres://...'
+go run ./cmd/web migrate up
+```
 
-## Adding an entity (the customer pattern)
+`DSN` is the runtime connection and `MIGRATE_DSN` is the database-owner
+connection used only for migrations. See `.env.example`.
 
-Customers (Phase 3) are the reference slice every later entity copies. Work in
-this order — each step compiles before the next, and nothing skips (AGENTS.md
-"workflow per slice"). File references point at the customer implementation.
+## Deployment
 
-1. **Migration** — `api/migrations/sql/NNNN_<entity>.sql`. Table with
-   `tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT`, plain
-   `NOT NULL DEFAULT ''` columns for optional strings (Go reads them as plain
-   strings — no `sql.NullString`), `archived_at timestamptz` for soft-deletes.
-   Then the five-layer tenancy boilerplate: `GRANT … TO pitlane_app`,
-   `ALTER TABLE … FORCE ROW LEVEL SECURITY`, and a
-   `<entity>_isolation` policy with `USING` **and** `WITH CHECK` on
-   `tenant_id = current_setting('app.tenant_id')::uuid`. Index `(tenant_id, …)`
-   for the list ordering. **A tenant-owned table without its RLS policy is a
-   blocking bug.**
-2. **Domain** — `internal/domain/domain.go`: the plain struct (`*time.Time` for
-   `archived_at`).
-3. **Store** — `internal/store/<entity>.go`. Column-list constant + `scan<Entity>`
-   helper co-located (scan order matches the column list). Every method runs
-   inside `db.WithTenant(ctx, tenantID, …)` and filters on `tenant_id` — even
-   primary-key lookups. `Get`/`Update`/`Archive` return `store.ErrNotFound` on
-   zero rows. **Every method gets a real-Postgres integration test**
-   (`internal/store/<entity>_test.go`), including a cross-tenant invisibility
-   case — this is the compensating control for raw `database/sql`, not optional.
-4. **DTO** — `internal/api/dto/dto.go`: `…Response`, `Create…Request`,
-   `Update…Request`, and reuse `ListMetadata` for list envelopes. Only DTOs
-   serialize; domain/store structs never cross the boundary.
-5. **Handlers** — `internal/api/<entity>_handlers.go`. Decode → trim →
-   `validate…` (returns the field→code map → 422 via `renderValidation`) →
-   store call → **audit-log write on every mutation** → render. Single-entity
-   responses use a named envelope (`{"customer": …}`); lists return
-   `{"customers": [...], "metadata": {...}}`. Map `ErrNotFound` → 404.
-6. **Routes** — `internal/api/routes.go`: wrap each route with
-   `s.protected(domain.Permission…Read|Write, handler)` (requireAuth +
-   requirePermission). Soft-delete is `POST /…/{id}/archive` → 204, leaving
-   `DELETE` free for a future hard-delete of dependent-free records
-   (ADR §Deletion policy). Wire the store into `Server`, `ServerDeps`,
-   `NewServer`, `cmd/api/main.go`, and the test harness in `isolation_test.go`.
-7. **Types** — `make types` (tygo). Never hand-edit `generated/`.
-8. **Client** — `frontend/src/lib/api.ts` (single-key envelopes via `request`,
-   whole-body list responses via `requestBody`) + `frontend/src/lib/queryKeys.ts`.
-9. **UI** — a list route with typed URL search params (`validateSearch`), a
-   detail route, and create/edit/archive dialogs. Reuse the RHF +
-   `applyServerErrors` form pattern; every user-facing string flows through
-   `<Trans>` / `t` with a real Bulgarian translation in `locales/bg.po`.
-10. **Isolation test** — extend the two-tenant test
-    (`internal/api/<entity>_handlers_test.go`) so tenant B provably cannot list,
-    read, update, or archive tenant A's rows. Every entity joins this test.
+The image is a Go build plus a distroless runtime. It contains `/pitlane`, the
+embedded templates/CSS, and embedded Goose migrations.
 
-### Child entities (the car pattern)
+```sh
+make build
+docker compose -f docker-compose.prod.yml up -d db
+docker compose -f docker-compose.prod.yml run --rm app migrate up
+docker compose -f docker-compose.prod.yml up -d app
+```
 
-Cars (Phase 4) copy the customer slice above, with three additions every future
-child entity (offers, repairs) reuses:
+Fly.io uses the same image and runs `migrate up` as its release command. Set
+`DSN`, `MIGRATE_DSN`, `APP_BASE_URL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`,
+`SMTP_PASSWORD`, and `SMTP_FROM` for production before deploying.
 
-1. **Nested routes** — a car belongs to a customer, so list/create are nested:
-   `GET|POST /customers/{customerId}/cars`; item ops address the child directly
-   (`/cars/{id}`). The handler verifies the parent exists in the tenant (clean
-   404) before touching the child.
-2. **Composite foreign key** — `cars(customer_id, tenant_id) REFERENCES
-   customers(id, tenant_id)` guarantees a child and its parent share a tenant at
-   the DB level. RLS alone does **not** stop referencing another tenant's parent
-   on insert (RI checks bypass RLS), so the composite FK is the airtight
-   complement. It needs a `UNIQUE (id, tenant_id)` on the parent to target.
-3. **Unique-constraint → 422** — plate is unique per tenant among active cars
-   (partial unique index `WHERE archived_at IS NULL`, so archiving frees the
-   plate). The store maps Postgres `23505` to `store.ErrDuplicatePlate`; the
-   handler renders it as a 422 with `{"plate": "duplicate"}`, the same field-code
-   channel as validation errors. The `duplicate` code is registered in
-   `validator` and `lib/errorCodes.ts`.
+### Demonstration data
 
-Because cars nest inside the customer detail page rather than a route of their
-own, the cars list uses local component state (not URL search params) for its
-archived toggle — the URL-search-param pattern stays demonstrated by the
-customers list route.
+`pitlane demo` builds a separate garage with a year of finished work behind it,
+quotes in every state and a couple of jobs left standing still, so the product
+can be shown to a prospect on a real deployment. Everything is relative to the
+day it runs, so the dashboard always shows a full twelve months.
 
-## House rules
+```sh
+make demo-seed                       # locally
+fly ssh console -C "/pitlane demo reset"
+docker compose -f docker-compose.prod.yml run --rm app demo reset
+```
 
-- `frontend/src/lib/generated/` is generated by tygo — never hand-edit; run `make types` after changing DTOs.
-- Package manager is **pnpm**; lockfile is `pnpm-lock.yaml`, CI installs with `pnpm install --frozen-lockfile`.
-- See `AGENTS.md` for the full standing instructions.
+`seed` creates it, `reset` rebuilds it from scratch (run this before a
+demonstration to undo whatever the last one clicked on), and `drop` removes it.
+The default login is `demo@pitlane.bg` / `pitlane-demo`; override with `-email`,
+`-password` and `-garage`.
+
+The demonstration garage is a normal tenant, isolated by the same row-level
+security as every other, and it is flagged `is_demo`. That flag is what lets
+`reset` and `drop` delete data at all: pointed at a real garage they refuse and
+change nothing.
+
+## Architecture
+
+The implementation follows the Snippetbox style from Alex Edwards: handlers are
+methods on a small `application` struct, dependencies are explicit, templates
+are rendered server-side, forms retain validation errors, middleware is
+hand-written, and successful writes use post/redirect/get. See [`ADR.md`](ADR.md).

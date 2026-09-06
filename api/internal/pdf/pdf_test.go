@@ -8,8 +8,6 @@ import (
 	"github.com/gfotev/pitlane/internal/domain"
 )
 
-// sampleData builds a fully-populated offer with Cyrillic content so the render
-// exercises the embedded font as it would in production.
 func sampleData() OfferData {
 	created := time.Date(2026, 7, 22, 10, 0, 0, 0, time.UTC)
 	return OfferData{
@@ -35,14 +33,15 @@ func sampleData() OfferData {
 			Mileage: 145000,
 		},
 		Offer: &domain.Offer{
-			ID:            "11112222-3333-4444-5555-666677778888",
-			Status:        domain.OfferStatusSent,
-			TaxRateBps:    1900,
-			SubtotalCents: 15000,
-			TaxCents:      2850,
-			TotalCents:    17850,
-			Notes:         "Офертата е валидна 30 дни. Цените са с включено ДДС.",
-			CreatedAt:     created,
+			ID:             "11112222-3333-4444-5555-666677778888",
+			DocumentNumber: "OF-2026-000001",
+			Status:         domain.OfferStatusSent,
+			TaxRateBps:     1900,
+			SubtotalCents:  12605,
+			TaxCents:       2395,
+			TotalCents:     15000,
+			Notes:          "Офертата е валидна 30 дни. Цените са с включено ДДС.",
+			CreatedAt:      created,
 			Items: []domain.OfferItem{
 				{Kind: domain.OfferItemKindPart, Description: "Накладки за спирачки", Quantity: 2, UnitPriceCents: 4500, LineTotalCents: 9000},
 				{Kind: domain.OfferItemKindLabor, Description: "Монтаж", Quantity: 1, UnitPriceCents: 6000, LineTotalCents: 6000},
@@ -61,19 +60,14 @@ func TestRenderOffer(t *testing.T) {
 	if len(b) == 0 {
 		t.Fatal("empty pdf")
 	}
-	// The PDF magic number proves we produced a real document, not stray bytes.
 	if !bytes.HasPrefix(b, []byte("%PDF-")) {
 		t.Fatalf("not a pdf: first bytes %q", b[:min(8, len(b))])
 	}
-	// %%EOF trailer proves the document was closed, not truncated mid-stream.
 	if !bytes.Contains(b, []byte("%%EOF")) {
 		t.Fatal("pdf missing EOF trailer")
 	}
 }
 
-// TestRenderOfferMinimal proves the renderer tolerates an offer with only the
-// required fields — no notes, no optional customer/car fields — so a bare draft
-// still produces a valid document (empty cells, no panic).
 func TestRenderOfferMinimal(t *testing.T) {
 	r := NewRenderer()
 	d := OfferData{
@@ -81,9 +75,10 @@ func TestRenderOfferMinimal(t *testing.T) {
 		Customer: &domain.Customer{Name: "Клиент"},
 		Car:      &domain.Car{Plate: "X1"},
 		Offer: &domain.Offer{
-			ID:         "abcdef01-0000-0000-0000-000000000000",
-			TaxRateBps: 0,
-			CreatedAt:  time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			ID:             "abcdef01-0000-0000-0000-000000000000",
+			DocumentNumber: "OF-2026-000002",
+			TaxRateBps:     0,
+			CreatedAt:      time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 			Items: []domain.OfferItem{
 				{Kind: domain.OfferItemKindOther, Description: "Диагностика", Quantity: 1, UnitPriceCents: 3000, LineTotalCents: 3000},
 			},
@@ -126,10 +121,8 @@ func TestMoney(t *testing.T) {
 		currency string
 		want     string
 	}{
-		// Bulgaria is on the euro: EUR and an unset currency both render "€".
 		{15000, "EUR", "150,00 €"},
 		{123456, "", "1 234,56 €"},
-		// A foreign currency keeps its ISO code; the lev is gone entirely.
 		{15000, "USD", "150,00 USD"},
 	}
 	for _, c := range cases {

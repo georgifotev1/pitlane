@@ -1,6 +1,4 @@
-// Package store is the raw database/sql access layer. Every tenant-owned query
-// includes tenant_id and runs inside WithTenant, which sets the app role and
-// app.tenant_id for Postgres RLS (ADR §Multi-Tenancy).
+// Package store provides tenant-scoped PostgreSQL access.
 package store
 
 import (
@@ -14,28 +12,19 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// ErrNotFound is returned when a query returns zero rows where one was expected.
 var ErrNotFound = errors.New("not found")
 
-// ErrInvalidToken is returned when a password-reset or invitation token is
-// unknown, expired, or already used. One error for all three on purpose: the
-// client gets a single "link is invalid or expired" code and learns nothing
-// about which case fired. Handlers map it to a 400 with code invalid_token.
 var ErrInvalidToken = errors.New("token is invalid, expired or already used")
 
-// DB wraps the pgx pool and provides the RLS-aware transaction helper.
 type DB struct {
 	pool *pgxpool.Pool
 }
 
-// NewDB wraps a pool.
 func NewDB(pool *pgxpool.Pool) *DB {
 	return &DB{pool: pool}
 }
 
-// WithTenant runs fn inside a transaction that has switched into the
-// pitlane_app role and set app.tenant_id. This enforces RLS regardless of the
-// connection user (the app role in production, the superuser in tests).
+// WithTenant runs fn in an RLS-scoped transaction.
 func (db *DB) WithTenant(ctx context.Context, tenantID string, fn func(pgx.Tx) error) error {
 	if tenantID == "" {
 		return errors.New("tenantID is required")
@@ -64,17 +53,14 @@ func (db *DB) WithTenant(ctx context.Context, tenantID string, fn func(pgx.Tx) e
 	return nil
 }
 
-// TenantStore handles the root tenant entity.
 type TenantStore struct {
 	db *DB
 }
 
-// NewTenantStore builds a store.
 func NewTenantStore(db *DB) *TenantStore {
 	return &TenantStore{db: db}
 }
 
-// Create inserts a tenant under its own tenant_id.
 func (s *TenantStore) Create(ctx context.Context, tenant *domain.Tenant) error {
 	return s.db.WithTenant(ctx, tenant.ID, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
@@ -86,10 +72,6 @@ func (s *TenantStore) Create(ctx context.Context, tenant *domain.Tenant) error {
 	})
 }
 
-// CreateWithOwner inserts a tenant and its owner user in ONE transaction: the
-// signup unit. Previously these were two separate transactions, so a duplicate
-// email left an orphaned tenant row behind. A duplicate email returns
-// ErrDuplicateEmail and rolls the tenant insert back with it.
 func (s *TenantStore) CreateWithOwner(ctx context.Context, tenant *domain.Tenant, owner *domain.User) error {
 	return s.db.WithTenant(ctx, tenant.ID, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `
@@ -107,7 +89,6 @@ func (s *TenantStore) CreateWithOwner(ctx context.Context, tenant *domain.Tenant
 	})
 }
 
-// GetByID returns a tenant by ID, scoped to the tenant itself.
 func (s *TenantStore) GetByID(ctx context.Context, tenantID string) (*domain.Tenant, error) {
 	var tenant *domain.Tenant
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
@@ -130,22 +111,33 @@ func (s *TenantStore) GetByID(ctx context.Context, tenantID string) (*domain.Ten
 	return tenant, err
 }
 
-// UserStore handles users. Email is globally unique, but all other access is
-// tenant-scoped.
+func (s *TenantStore) Update(ctx context.Context, tenant *domain.Tenant) error {
+	return s.db.WithTenant(ctx, tenant.ID, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, `
+			UPDATE tenants
+			SET name = $2, address = $3, vat_number = $4, currency = $5,
+			    default_tax_rate = $6, updated_at = now()
+			WHERE id = $1
+			RETURNING updated_at
+		`, tenant.ID, tenant.Name, tenant.Address, tenant.VATNumber,
+			tenant.Currency, tenant.DefaultTaxRate).Scan(&tenant.UpdatedAt)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	})
+}
+
 type UserStore struct {
 	db *DB
 }
 
-// NewUserStore builds a store.
 func NewUserStore(db *DB) *UserStore {
 	return &UserStore{db: db}
 }
 
-// ErrDuplicateEmail is returned when a user insert hits the global unique
-// constraint on users.email. Handlers map it to a 422 on the email field.
 var ErrDuplicateEmail = errors.New("duplicate email")
 
-// userColumns is the canonical select order; scanUser reads in this order.
 const userColumns = "id, tenant_id, email, password_hash, role, name, password_changed_at, created_at, updated_at"
 
 func scanUser(row pgx.Row) (*domain.User, error) {
@@ -157,8 +149,6 @@ func scanUser(row pgx.Row) (*domain.User, error) {
 	return &u, nil
 }
 
-// Create inserts a user under the tenant. A duplicate email (global unique
-// index) returns ErrDuplicateEmail.
 func (s *UserStore) Create(ctx context.Context, user *domain.User) error {
 	return s.db.WithTenant(ctx, user.TenantID, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
@@ -169,9 +159,7 @@ func (s *UserStore) Create(ctx context.Context, user *domain.User) error {
 	})
 }
 
-// GetByEmail looks up a user by email globally. It uses the SECURITY DEFINER
-// function get_user_by_email, which is the only controlled RLS bypass in the
-// schema because the login endpoint does not yet know the tenant context.
+// GetByEmail uses the login-time RLS bypass.
 func (s *UserStore) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	rows, err := s.db.pool.Query(ctx, `
 		SELECT `+userColumns+`
@@ -195,7 +183,6 @@ func (s *UserStore) GetByEmail(ctx context.Context, email string) (*domain.User,
 	return u, nil
 }
 
-// GetByID returns a user scoped to the tenant.
 func (s *UserStore) GetByID(ctx context.Context, tenantID, userID string) (*domain.User, error) {
 	var user *domain.User
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
@@ -216,8 +203,6 @@ func (s *UserStore) GetByID(ctx context.Context, tenantID, userID string) (*doma
 	return user, err
 }
 
-// List returns every user in the tenant, oldest first (the owner, created at
-// signup, naturally sorts first). Used by the team-management screen.
 func (s *UserStore) List(ctx context.Context, tenantID string) ([]*domain.User, error) {
 	var users []*domain.User
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
@@ -244,9 +229,6 @@ func (s *UserStore) List(ctx context.Context, tenantID string) ([]*domain.User, 
 	return users, err
 }
 
-// UpdateRole changes a user's role. The business guards (no self-change, the
-// owner role immutable through this path) live in the handler — the store only
-// enforces tenant scoping and existence (ErrNotFound).
 func (s *UserStore) UpdateRole(ctx context.Context, tenantID, userID string, role domain.Role) error {
 	return s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
 		ct, err := tx.Exec(ctx, `
@@ -263,18 +245,12 @@ func (s *UserStore) UpdateRole(ctx context.Context, tenantID, userID string, rol
 	})
 }
 
-// UpdatePassword sets a new bcrypt hash and stamps password_changed_at, which
-// is what invalidates every session created before the change (ADR §Security:
-// a reset destroys all other sessions). Called by the reset-consume path
-// inside its transaction, so it takes the tx-scoped form via Consume.
 func (s *UserStore) UpdatePassword(ctx context.Context, tenantID, userID, passwordHash string) error {
 	return s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
 		return updatePasswordTx(ctx, tx, tenantID, userID, passwordHash)
 	})
 }
 
-// updatePasswordTx is the tx-local half of UpdatePassword, shared with the
-// reset-consume transaction.
 func updatePasswordTx(ctx context.Context, tx pgx.Tx, tenantID, userID, passwordHash string) error {
 	ct, err := tx.Exec(ctx, `
 		UPDATE users SET password_hash = $3, password_changed_at = now(), updated_at = now()
@@ -289,9 +265,6 @@ func updatePasswordTx(ctx context.Context, tx pgx.Tx, tenantID, userID, password
 	return nil
 }
 
-// mapUserWriteError translates a Postgres unique-violation (23505 — the global
-// unique index on users.email) into ErrDuplicateEmail; everything else passes
-// through unchanged. Same pattern as mapCarWriteError.
 func mapUserWriteError(err error) error {
 	if err == nil {
 		return nil
@@ -303,17 +276,14 @@ func mapUserWriteError(err error) error {
 	return err
 }
 
-// AuditLogStore writes the audit trail.
 type AuditLogStore struct {
 	db *DB
 }
 
-// NewAuditLogStore builds a store.
 func NewAuditLogStore(db *DB) *AuditLogStore {
 	return &AuditLogStore{db: db}
 }
 
-// Insert records a mutating action.
 func (s *AuditLogStore) Insert(ctx context.Context, tenantID, userID, action, entityType, entityID string, payload map[string]any) error {
 	return s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
 		var eid any

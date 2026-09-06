@@ -117,7 +117,6 @@ func TestCustomerStore(t *testing.T) {
 	})
 
 	t.Run("List paginates, searches, and filters archived", func(t *testing.T) {
-		// Fresh tenant so counts are deterministic regardless of prior subtests.
 		lt := newTenant("ListGarage")
 		if err := ts.Create(ctx, lt); err != nil {
 			t.Fatalf("create list tenant: %v", err)
@@ -157,7 +156,6 @@ func TestCustomerStore(t *testing.T) {
 			t.Fatalf("search wrong: total %d, %+v", total, names2(found))
 		}
 
-		// Archive one; it drops from the default list but appears when included.
 		if err := cs.Archive(ctx, lt.ID, all[0].ID); err != nil {
 			t.Fatalf("archive: %v", err)
 		}
@@ -187,7 +185,6 @@ func TestCustomerStore(t *testing.T) {
 			t.Fatalf("create mine: %v", err)
 		}
 
-		// Other tenant cannot Get, Update, or Archive my customer.
 		if _, err := cs.Get(ctx, other.ID, mine.ID); err != ErrNotFound {
 			t.Fatalf("cross-tenant Get: expected ErrNotFound, got %v", err)
 		}
@@ -200,7 +197,6 @@ func TestCustomerStore(t *testing.T) {
 		if err := cs.Archive(ctx, other.ID, mine.ID); err != ErrNotFound {
 			t.Fatalf("cross-tenant Archive: expected ErrNotFound, got %v", err)
 		}
-		// And my customer is unchanged.
 		got, err := cs.Get(ctx, tenant.ID, mine.ID)
 		if err != nil {
 			t.Fatalf("get mine: %v", err)

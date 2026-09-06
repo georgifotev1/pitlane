@@ -9,24 +9,16 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// CustomerStore is the pattern-setting entity store every later entity copies:
-// column list + scan helper co-located (ADR scan discipline), every method runs
-// inside WithTenant, every query filters on tenant_id even on primary-key
-// lookups.
 type CustomerStore struct {
 	db *DB
 }
 
-// NewCustomerStore builds a store.
 func NewCustomerStore(db *DB) *CustomerStore {
 	return &CustomerStore{db: db}
 }
 
-// customerColumns is the canonical select order. scanCustomer below reads in
-// exactly this order — keep them in sync.
 const customerColumns = "id, tenant_id, name, company, email, phone, address, notes, archived_at, created_at, updated_at"
 
-// scanCustomer reads one row in customerColumns order.
 func scanCustomer(row pgx.Row) (*domain.Customer, error) {
 	var c domain.Customer
 	if err := row.Scan(
@@ -38,8 +30,6 @@ func scanCustomer(row pgx.Row) (*domain.Customer, error) {
 	return &c, nil
 }
 
-// CustomerListParams controls the List query. Zero Limit means "no rows"; the
-// handler is responsible for clamping to a sane page size.
 type CustomerListParams struct {
 	Search          string
 	IncludeArchived bool
@@ -47,17 +37,11 @@ type CustomerListParams struct {
 	Offset          int
 }
 
-// List returns a page of customers plus the total count matching the filter
-// (before pagination), so the handler can build pagination metadata. Both the
-// page query and the count run in the same tenant transaction.
 func (s *CustomerStore) List(ctx context.Context, tenantID string, p CustomerListParams) ([]*domain.Customer, int, error) {
 	var customers []*domain.Customer
 	var total int
 
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
-		// $2 = search term (empty means "match all"); $3 = include archived.
-		// The ILIKE wildcards are concatenated in SQL so the term stays a bound
-		// parameter — no fmt.Sprintf near SQL (house law).
 		const where = `
 			WHERE tenant_id = $1
 			  AND ($2 = '' OR name ILIKE '%' || $2 || '%'
@@ -96,7 +80,6 @@ func (s *CustomerStore) List(ctx context.Context, tenantID string, p CustomerLis
 	return customers, total, err
 }
 
-// Get returns one customer scoped to the tenant, or ErrNotFound.
 func (s *CustomerStore) Get(ctx context.Context, tenantID, id string) (*domain.Customer, error) {
 	var customer *domain.Customer
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
@@ -117,9 +100,6 @@ func (s *CustomerStore) Get(ctx context.Context, tenantID, id string) (*domain.C
 	return customer, err
 }
 
-// Create inserts a customer and populates server-assigned timestamps via
-// RETURNING. The caller supplies the ID (uuid generated in the handler, matching
-// the user-creation pattern).
 func (s *CustomerStore) Create(ctx context.Context, c *domain.Customer) error {
 	return s.db.WithTenant(ctx, c.TenantID, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
@@ -131,8 +111,6 @@ func (s *CustomerStore) Create(ctx context.Context, c *domain.Customer) error {
 	})
 }
 
-// Update writes all mutable fields (PUT semantics) and bumps updated_at.
-// Returns ErrNotFound if the customer does not exist in this tenant.
 func (s *CustomerStore) Update(ctx context.Context, c *domain.Customer) error {
 	return s.db.WithTenant(ctx, c.TenantID, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `
@@ -151,9 +129,6 @@ func (s *CustomerStore) Update(ctx context.Context, c *domain.Customer) error {
 	})
 }
 
-// Archive soft-deletes a customer by stamping archived_at. Archiving an already
-// archived (or nonexistent) customer returns ErrNotFound, so the handler can map
-// it to a clean 404.
 func (s *CustomerStore) Archive(ctx context.Context, tenantID, id string) error {
 	return s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `

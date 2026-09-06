@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="bg">
+<head><meta charset="utf-8"></head>
+<body style="font-family: sans-serif; line-height: 1.5; color: #252525;">
+  <p>Здравейте{{if .UserName}}, {{.UserName}}{{end}},</p>
+  <p>Добре дошли в Pitlane! Вашият сервиз <strong>„{{.GarageName}}“</strong> е готов.</p>
+  <p><a href="{{.LoginURL}}" style="display: inline-block; padding: 10px 18px; background: #ea580c; color: #fff; text-decoration: none; border-radius: 6px;">Отворете Pitlane</a></p>
+  <p>Ако бутонът не работи, копирайте адреса в браузъра си:</p>
+  <p style="word-break: break-all;"><a href="{{.LoginURL}}">{{.LoginURL}}</a></p>
+  <p>Поздрави,<br>Екипът на Pitlane</p>
+</body>
+</html>

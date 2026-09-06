@@ -4,30 +4,23 @@ import "testing"
 
 func TestTaxCents(t *testing.T) {
 	tests := []struct {
-		name     string
-		subtotal int64
-		bps      int
-		want     int64
+		name  string
+		total int64
+		bps   int
+		want  int64
 	}{
-		{"zero subtotal", 0, 1900, 0},
+		{"zero total", 0, 2000, 0},
 		{"zero rate", 10000, 0, 0},
-		{"exact 19% of 100.00", 10000, 1900, 1900},
-		{"exact 20% of 50.00", 5000, 2000, 1000},
-		// 19% of 1.00 = 0.19 exactly.
-		{"small exact", 100, 1900, 19},
-		// 19% of 1.05 = 0.1995 → rounds half up to 0.20 (20 cents).
-		{"rounds half up", 105, 1900, 20},
-		// 19% of 0.50 = 0.095 → 0.10? 50*1900=95000, +5000=100000, /10000=10.
-		{"half rounds up to 10", 50, 1900, 10},
-		// 7.5% of 133 cents = 9.975 → 10. 133*750=99750,+5000=104750,/10000=10.
-		{"fractional bps rounds up", 133, 750, 10},
-		// 19% of 3.33 = 0.6327 → 0.63. 333*1900=632700,+5000=637700,/10000=63.
-		{"rounds down", 333, 1900, 63},
+		{"20% included in 120.00", 12000, 2000, 2000},
+		{"20% included in 30.00", 3000, 2000, 500},
+		{"19% included in 150.00", 15000, 1900, 2395},
+		{"included tax rounds half up", 3, 2000, 1},
+		{"included tax rounds down", 2, 2000, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := TaxCents(tt.subtotal, tt.bps); got != tt.want {
-				t.Fatalf("TaxCents(%d, %d) = %d, want %d", tt.subtotal, tt.bps, got, tt.want)
+			if got := TaxCents(tt.total, tt.bps); got != tt.want {
+				t.Fatalf("TaxCents(%d, %d) = %d, want %d", tt.total, tt.bps, got, tt.want)
 			}
 		})
 	}
@@ -37,9 +30,9 @@ func TestOfferRecompute(t *testing.T) {
 	o := &Offer{
 		TaxRateBps: 1900,
 		Items: []OfferItem{
-			{UnitPriceCents: 2500, Quantity: 3}, // 75.00
-			{UnitPriceCents: 999, Quantity: 1},  // 9.99
-			{UnitPriceCents: 500, Quantity: 2},  // 10.00
+			{UnitPriceCents: 2500, Quantity: 3},
+			{UnitPriceCents: 999, Quantity: 1},
+			{UnitPriceCents: 500, Quantity: 2},
 		},
 	}
 	o.Recompute()
@@ -50,15 +43,14 @@ func TestOfferRecompute(t *testing.T) {
 			t.Fatalf("item[%d] line total = %d, want %d", i, o.Items[i].LineTotalCents, want)
 		}
 	}
-	// subtotal = 94.99; tax 19% = 18.0481 → 1805; total = 113.04.
-	if o.SubtotalCents != 9499 {
-		t.Fatalf("subtotal = %d, want 9499", o.SubtotalCents)
+	if o.SubtotalCents != 7982 {
+		t.Fatalf("subtotal = %d, want 7982", o.SubtotalCents)
 	}
-	if o.TaxCents != 1805 {
-		t.Fatalf("tax = %d, want 1805", o.TaxCents)
+	if o.TaxCents != 1517 {
+		t.Fatalf("tax = %d, want 1517", o.TaxCents)
 	}
-	if o.TotalCents != 11304 {
-		t.Fatalf("total = %d, want 11304", o.TotalCents)
+	if o.TotalCents != 9499 {
+		t.Fatalf("total = %d, want 9499", o.TotalCents)
 	}
 }
 
@@ -82,19 +74,14 @@ func TestOfferStatusTransitions(t *testing.T) {
 	}
 
 	deny := []struct{ from, to OfferStatus }{
-		// draft → sent is NOT a status-machine move: sending is the only path to
-		// sent (POST /offers/{id}/send), so SetStatus must reject it.
 		{OfferStatusDraft, OfferStatusSent},
-		// sent → accepted is NOT a status-machine move either: accepting an offer
-		// converts it to a repair (POST /offers/{id}/accept), so the generic
-		// machine must reject it — only the accept path can accept.
 		{OfferStatusSent, OfferStatusAccepted},
-		{OfferStatusDraft, OfferStatusAccepted}, // must be sent first anyway
-		{OfferStatusDraft, OfferStatusDraft},    // no-op is not a transition
-		{OfferStatusSent, OfferStatusDraft},     // cannot un-send
-		{OfferStatusAccepted, OfferStatusSent},  // terminal
-		{OfferStatusRejected, OfferStatusSent},  // terminal
-		{OfferStatusExpired, OfferStatusSent},   // terminal
+		{OfferStatusDraft, OfferStatusAccepted},
+		{OfferStatusDraft, OfferStatusDraft},
+		{OfferStatusSent, OfferStatusDraft},
+		{OfferStatusAccepted, OfferStatusSent},
+		{OfferStatusRejected, OfferStatusSent},
+		{OfferStatusExpired, OfferStatusSent},
 	}
 	for _, tc := range deny {
 		if tc.from.CanTransitionTo(tc.to) {
@@ -107,13 +94,12 @@ func TestRepairRecompute(t *testing.T) {
 	r := &Repair{
 		TaxRateBps: 1900,
 		Items: []RepairItem{
-			{Quantity: 2, UnitPriceCents: 4500}, // 90.00
-			{Quantity: 1, UnitPriceCents: 6000}, // 60.00
+			{Quantity: 2, UnitPriceCents: 4500},
+			{Quantity: 1, UnitPriceCents: 6000},
 		},
 	}
 	r.Recompute()
-	// subtotal 150.00; tax 19% = 28.50; total 178.50.
-	if r.SubtotalCents != 15000 || r.TaxCents != 2850 || r.TotalCents != 17850 {
+	if r.SubtotalCents != 12605 || r.TaxCents != 2395 || r.TotalCents != 15000 {
 		t.Fatalf("totals wrong: sub=%d tax=%d total=%d", r.SubtotalCents, r.TaxCents, r.TotalCents)
 	}
 	if r.Items[0].LineTotalCents != 9000 || r.Items[1].LineTotalCents != 6000 {
@@ -133,17 +119,72 @@ func TestRepairStatusTransitions(t *testing.T) {
 	}
 
 	deny := []struct{ from, to RepairStatus }{
-		// completion is the complete path's job (records mileage), never the
-		// generic status machine — so → completed is denied from every state.
 		{RepairStatusOpen, RepairStatusCompleted},
 		{RepairStatusInProgress, RepairStatusCompleted},
-		{RepairStatusOpen, RepairStatusOpen},               // no-op
-		{RepairStatusCompleted, RepairStatusOpen},          // terminal
-		{RepairStatusCompleted, RepairStatusInProgress},    // terminal
+		{RepairStatusOpen, RepairStatusOpen},
+		{RepairStatusCompleted, RepairStatusOpen},
+		{RepairStatusCompleted, RepairStatusInProgress},
 	}
 	for _, tc := range deny {
 		if tc.from.CanTransitionTo(tc.to) {
 			t.Errorf("expected %s → %s denied", tc.from, tc.to)
+		}
+	}
+}
+
+func TestRecomputeTracksSupplierCostAndProfit(t *testing.T) {
+	// A part bought for 40,00 and sold for 60,00; labour at 50,00 with no cost.
+	o := &Offer{
+		TaxRateBps: StandardVATRateBPS,
+		Items: []OfferItem{
+			{Kind: OfferItemKindPart, Quantity: 2, UnitPriceCents: 6000, CostCents: 4000},
+			{Kind: OfferItemKindLabor, Quantity: 1, UnitPriceCents: 5000},
+		},
+	}
+	o.Recompute()
+
+	if o.TotalCents != 17000 {
+		t.Fatalf("total = %d; want 17000", o.TotalCents)
+	}
+	if o.Items[0].LineCostCents != 8000 {
+		t.Fatalf("line cost = %d; want 8000", o.Items[0].LineCostCents)
+	}
+	if o.CostTotalCents != 8000 {
+		t.Fatalf("cost total = %d; want 8000", o.CostTotalCents)
+	}
+	// Both sides are compared net of VAT: 17000 and 8000 inclusive of 20% are
+	// 14167 and 6667 net, leaving 7500.
+	if o.CostSubtotalCents != 6667 {
+		t.Fatalf("net cost = %d; want 6667", o.CostSubtotalCents)
+	}
+	if got, want := o.ProfitCents(), o.SubtotalCents-o.CostSubtotalCents; got != want {
+		t.Fatalf("profit = %d; want %d", got, want)
+	}
+	// 7500 kept on 14167 of net revenue: 52.93%.
+	if got := o.MarginBps(); got != 5293 {
+		t.Fatalf("margin = %d bps; want 5293", got)
+	}
+}
+
+func TestRecomputeWithoutCostReportsNoSpend(t *testing.T) {
+	r := &Repair{
+		TaxRateBps: StandardVATRateBPS,
+		Items:      []RepairItem{{Kind: OfferItemKindLabor, Quantity: 1, UnitPriceCents: 12000}},
+	}
+	r.Recompute()
+
+	if r.CostTotalCents != 0 || r.CostSubtotalCents != 0 {
+		t.Fatalf("cost = %d/%d; want 0/0", r.CostTotalCents, r.CostSubtotalCents)
+	}
+	if r.ProfitCents() != r.SubtotalCents {
+		t.Fatalf("profit = %d; want the full net revenue %d", r.ProfitCents(), r.SubtotalCents)
+	}
+}
+
+func TestNetCentsIsTheComplementOfTaxCents(t *testing.T) {
+	for _, gross := range []int64{0, 1, 99, 12345, 999999} {
+		if got := NetCents(gross, StandardVATRateBPS) + TaxCents(gross, StandardVATRateBPS); got != gross {
+			t.Fatalf("net+tax = %d; want %d", got, gross)
 		}
 	}
 }

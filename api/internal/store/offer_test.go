@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/gfotev/pitlane/internal/domain"
@@ -11,9 +12,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// fakeEnqueuer stands in for the real River enqueuer in store tests. It counts
-// calls and can be told to fail, which lets MarkSending's transactional-enqueue
-// contract be exercised without a River client.
 type fakeEnqueuer struct {
 	calls   int
 	failErr error
@@ -37,9 +35,6 @@ func newOffer(tenantID, carID string) *domain.Offer {
 	}
 }
 
-// offerFixture spins up a tenant + customer + car so offers have a valid,
-// same-tenant car to anchor to (composite FK). Returns the DB (for building
-// sibling rows) and the store bundle.
 func offerFixture(t *testing.T) (context.Context, *DB, *OfferStore, *domain.Tenant, *domain.Car) {
 	t.Helper()
 	tdb := testdb.New(t)
@@ -69,6 +64,27 @@ func offerFixture(t *testing.T) (context.Context, *DB, *OfferStore, *domain.Tena
 func TestOfferStore(t *testing.T) {
 	ctx, _, offers, tenant, car := offerFixture(t)
 
+	t.Run("Create allocates sequential tenant document numbers", func(t *testing.T) {
+		ctx2, _, offers2, tenant2, car2 := offerFixture(t)
+		first := newOffer(tenant2.ID, car2.ID)
+		second := newOffer(tenant2.ID, car2.ID)
+		if err := offers2.Create(ctx2, first); err != nil {
+			t.Fatalf("create first: %v", err)
+		}
+		if err := offers2.Create(ctx2, second); err != nil {
+			t.Fatalf("create second: %v", err)
+		}
+		if !strings.HasPrefix(first.DocumentNumber, "OF-") || !strings.HasSuffix(first.DocumentNumber, "-000001") {
+			t.Fatalf("first document number = %q", first.DocumentNumber)
+		}
+		if !strings.HasPrefix(second.DocumentNumber, "OF-") || !strings.HasSuffix(second.DocumentNumber, "-000002") {
+			t.Fatalf("second document number = %q", second.DocumentNumber)
+		}
+		if first.DocumentNumber[3:7] != second.DocumentNumber[3:7] {
+			t.Fatalf("documents should use the same annual series: %q, %q", first.DocumentNumber, second.DocumentNumber)
+		}
+	})
+
 	t.Run("Create computes totals, defaults status, Get round-trips items", func(t *testing.T) {
 		o := newOffer(tenant.ID, car.ID)
 		o.Notes = "Estimate valid 30 days"
@@ -78,11 +94,13 @@ func TestOfferStore(t *testing.T) {
 		if o.Status != domain.OfferStatusDraft || o.SendStatus != domain.SendStatusPending {
 			t.Fatalf("wrong initial lifecycle: status=%s send=%s", o.Status, o.SendStatus)
 		}
+		if !strings.HasPrefix(o.DocumentNumber, "OF-") {
+			t.Fatalf("document number not allocated: %q", o.DocumentNumber)
+		}
 		if o.CreatedAt.IsZero() || o.UpdatedAt.IsZero() {
 			t.Fatalf("timestamps not populated: %+v", o)
 		}
-		// subtotal = 90.00 + 60.00 = 150.00; tax 19% = 28.50; total = 178.50.
-		if o.SubtotalCents != 15000 || o.TaxCents != 2850 || o.TotalCents != 17850 {
+		if o.SubtotalCents != 12605 || o.TaxCents != 2395 || o.TotalCents != 15000 {
 			t.Fatalf("totals wrong: sub=%d tax=%d total=%d", o.SubtotalCents, o.TaxCents, o.TotalCents)
 		}
 
@@ -96,7 +114,6 @@ func TestOfferStore(t *testing.T) {
 		if len(got.Items) != 2 {
 			t.Fatalf("expected 2 items, got %d", len(got.Items))
 		}
-		// Editor order preserved, line totals persisted server-side.
 		if got.Items[0].Description != "Brake pads" || got.Items[0].LineTotalCents != 9000 || got.Items[0].SortOrder != 0 {
 			t.Fatalf("item[0] wrong: %+v", got.Items[0])
 		}
@@ -134,8 +151,7 @@ func TestOfferStore(t *testing.T) {
 		if len(got.Items) != 1 || got.Items[0].Description != "Diagnostics" {
 			t.Fatalf("items not replaced: %+v", got.Items)
 		}
-		// subtotal 30.00, tax 20% = 6.00, total 36.00.
-		if got.SubtotalCents != 3000 || got.TaxCents != 600 || got.TotalCents != 3600 {
+		if got.SubtotalCents != 2500 || got.TaxCents != 500 || got.TotalCents != 3000 {
 			t.Fatalf("recompute wrong: sub=%d tax=%d total=%d", got.SubtotalCents, got.TaxCents, got.TotalCents)
 		}
 		if got.Notes != "revised" {
@@ -159,17 +175,13 @@ func TestOfferStore(t *testing.T) {
 			t.Fatalf("create: %v", err)
 		}
 
-		// draft → rejected is not allowed (must send first).
 		if _, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusRejected); err != ErrInvalidStatusTransition {
 			t.Fatalf("expected ErrInvalidStatusTransition, got %v", err)
 		}
-		// draft → sent is NOT a status-machine move: sending is the only path
-		// to sent (MarkSending), so SetStatus rejects it too.
 		if _, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusSent); err != ErrInvalidStatusTransition {
 			t.Fatalf("expected ErrInvalidStatusTransition for draft→sent, got %v", err)
 		}
 
-		// Reach sent through the send path, then the post-send machine applies.
 		sent, err := offers.MarkSending(ctx, tenant.ID, o.ID, "customer@example.com", &fakeEnqueuer{})
 		if err != nil {
 			t.Fatalf("send: %v", err)
@@ -181,8 +193,6 @@ func TestOfferStore(t *testing.T) {
 			t.Fatalf("MarkSending should return items, got %d", len(sent.Items))
 		}
 
-		// sent → accepted is NOT a generic move: accepting converts to a repair
-		// (RepairStore.CreateFromOffer), so SetStatus must reject it.
 		if _, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusAccepted); err != ErrInvalidStatusTransition {
 			t.Fatalf("expected ErrInvalidStatusTransition for sent→accepted, got %v", err)
 		}
@@ -195,7 +205,6 @@ func TestOfferStore(t *testing.T) {
 			t.Fatalf("status not rejected: %s", rejected.Status)
 		}
 
-		// rejected is terminal.
 		if _, err := offers.SetStatus(ctx, tenant.ID, o.ID, domain.OfferStatusExpired); err != ErrInvalidStatusTransition {
 			t.Fatalf("expected terminal, got %v", err)
 		}
@@ -221,7 +230,6 @@ func TestOfferStore(t *testing.T) {
 			t.Fatalf("expected ErrOfferNotDraft, got %v", err)
 		}
 
-		// The offer must be untouched by the rejected write.
 		got, err := offers.Get(ctx, tenant.ID, o.ID)
 		if err != nil {
 			t.Fatalf("get: %v", err)
@@ -232,8 +240,6 @@ func TestOfferStore(t *testing.T) {
 	})
 
 	t.Run("List is scoped to a car and ordered newest first", func(t *testing.T) {
-		// Fresh tenant so counts are deterministic. car2 gets 3 offers; a second
-		// car in the same tenant gets one that must NOT leak into car2's list.
 		ctx2, db2, offers2, tenant2, car2 := offerFixture(t)
 
 		sibling := newCar(tenant2.ID, car2.CustomerID, "SIB0001")
@@ -266,26 +272,21 @@ func TestOfferStore(t *testing.T) {
 				t.Fatalf("leaked another car's offer: %s", o.CarID)
 			}
 		}
-		// Newest first: created_at DESC.
 		if list[0].CreatedAt.Before(list[1].CreatedAt) {
 			t.Fatalf("not newest-first: %v then %v", list[0].CreatedAt, list[1].CreatedAt)
 		}
-		// List view omits items.
 		if list[0].Items != nil {
 			t.Fatalf("list should not load items")
 		}
 	})
 
 	t.Run("ListAll is a tenant-wide board with status filter and enrichment", func(t *testing.T) {
-		// Fresh tenant so counts are deterministic. Two cars under one customer;
-		// a second fixture's tenant must never appear.
 		ctx2, db2, offers2, tenant2, car2 := offerFixture(t)
 		other := newCar(tenant2.ID, car2.CustomerID, "OT9999HH")
 		if err := NewCarStore(db2).Create(ctx2, other); err != nil {
 			t.Fatalf("create second car: %v", err)
 		}
 
-		// One draft on car2, one sent offer on the other car.
 		draft := newOffer(tenant2.ID, car2.ID)
 		if err := offers2.Create(ctx2, draft); err != nil {
 			t.Fatalf("create draft: %v", err)
@@ -298,7 +299,6 @@ func TestOfferStore(t *testing.T) {
 			t.Fatalf("send: %v", err)
 		}
 
-		// No filter: both cars' offers, newest first, enriched.
 		board, total, err := offers2.ListAll(ctx2, tenant2.ID, OfferBoardParams{Limit: 10, Offset: 0})
 		if err != nil {
 			t.Fatalf("list all: %v", err)
@@ -319,12 +319,10 @@ func TestOfferStore(t *testing.T) {
 		if byID[sent.ID].CarPlate != other.Plate || byID[sent.ID].CustomerName != "Ivan Petrov" {
 			t.Fatalf("sent enrichment wrong: %+v", byID[sent.ID])
 		}
-		// Board view omits items.
 		if board[0].Offer.Items != nil {
 			t.Fatalf("board should not load items")
 		}
 
-		// Status filter: only drafts.
 		drafts, total, err := offers2.ListAll(ctx2, tenant2.ID, OfferBoardParams{Status: "draft", Limit: 10, Offset: 0})
 		if err != nil {
 			t.Fatalf("list drafts: %v", err)
@@ -333,7 +331,6 @@ func TestOfferStore(t *testing.T) {
 			t.Fatalf("draft filter wrong: total=%d len=%d", total, len(drafts))
 		}
 
-		// Pagination: one per page.
 		page1, total, err := offers2.ListAll(ctx2, tenant2.ID, OfferBoardParams{Limit: 1, Offset: 0})
 		if err != nil {
 			t.Fatalf("page 1: %v", err)
@@ -342,7 +339,6 @@ func TestOfferStore(t *testing.T) {
 			t.Fatalf("page 1 wrong: total=%d len=%d", total, len(page1))
 		}
 
-		// Cross-tenant: the other fixture's tenant sees none of these.
 		_, _, offers3, tenant3, _ := offerFixture(t)
 		foreign, total, err := offers3.ListAll(ctx2, tenant3.ID, OfferBoardParams{Limit: 10, Offset: 0})
 		if err != nil {
@@ -397,7 +393,6 @@ func TestOfferStore(t *testing.T) {
 		if enq.calls != 1 {
 			t.Fatalf("expected exactly one enqueue, got %d", enq.calls)
 		}
-		// A second send while pending is not allowed (only failed retries are).
 		if _, err := offers.MarkSending(ctx, tenant.ID, o.ID, "customer@example.com", enq); err != ErrOfferNotSendable {
 			t.Fatalf("expected ErrOfferNotSendable on re-send, got %v", err)
 		}
@@ -412,7 +407,6 @@ func TestOfferStore(t *testing.T) {
 		if _, err := offers.MarkSending(ctx, tenant.ID, o.ID, "customer@example.com", &fakeEnqueuer{failErr: boom}); !errors.Is(err, boom) {
 			t.Fatalf("expected enqueue error, got %v", err)
 		}
-		// The offer must be untouched — no half-sent state (transactional enqueue).
 		got, err := offers.Get(ctx, tenant.ID, o.ID)
 		if err != nil {
 			t.Fatalf("get: %v", err)
@@ -441,7 +435,6 @@ func TestOfferStore(t *testing.T) {
 			t.Fatalf("not marked sent: send=%s sentAt=%v", got.SendStatus, got.SentAt)
 		}
 
-		// A delivered offer cannot be re-sent (only failed sends can retry).
 		if _, err := offers.MarkSending(ctx, tenant.ID, o.ID, "customer@example.com", &fakeEnqueuer{}); err != ErrOfferNotSendable {
 			t.Fatalf("expected ErrOfferNotSendable for delivered offer, got %v", err)
 		}

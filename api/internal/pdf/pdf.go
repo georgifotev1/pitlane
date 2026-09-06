@@ -1,12 +1,3 @@
-// Package pdf renders offers to PDF. The concrete Renderer wraps maroto v2
-// (ADR §13: server-side generation, never stored, regenerated on demand). The
-// API layer owns the consuming interface (ADR §106: interfaces where consumed);
-// this package only exports the concrete renderer and its input bundle.
-//
-// The whole app is Bulgarian-only (Phase 2.5), so the document is rendered in
-// Bulgarian with bg-BG number/date formatting. Labels are constants here rather
-// than flowing through Lingui — the SPA catalog covers the browser UI, and this
-// is a server-side document with a single, fixed locale.
 package pdf
 
 import (
@@ -29,10 +20,6 @@ import (
 	"golang.org/x/image/font/gofont/goregular"
 )
 
-// OfferData is the complete render input: everything the document shows,
-// pre-loaded by the handler. The renderer performs no I/O — it is a pure
-// function from this bundle to bytes, which keeps it trivially testable and
-// safe for concurrent use.
 type OfferData struct {
 	Tenant   *domain.Tenant
 	Customer *domain.Customer
@@ -40,15 +27,9 @@ type OfferData struct {
 	Offer    *domain.Offer
 }
 
-// fontFamily is the registered family name for the embedded Go font. The Go
-// font family (Bigelow & Holmes, shipped as TTF bytes by golang.org/x/image —
-// already in the module graph via maroto) is used because the default Arial
-// covers only Latin-1 and would drop every Cyrillic glyph. It is open-licensed,
-// compact (~150KB/style), and needs no runtime file or external download.
+// Embedded Go fonts provide Cyrillic support without runtime files.
 const fontFamily = "go"
 
-// Bulgarian document strings. Kept together so the whole vocabulary of the
-// document is visible in one place.
 const (
 	lblTitle    = "ОФЕРТА"
 	lblNumber   = "№"
@@ -61,23 +42,18 @@ const (
 	lblDesc     = "Описание"
 	lblKind     = "Вид"
 	lblQty      = "Кол."
-	lblUnit     = "Ед. цена"
-	lblLine     = "Сума"
-	lblSubtotal = "Междинна сума"
+	lblUnit     = "Ед. цена с ДДС"
+	lblLine     = "Сума с ДДС"
+	lblSubtotal = "Данъчна основа"
 	lblTax      = "ДДС"
 	lblTotal    = "Общо"
 	lblNotes    = "Забележки"
 )
 
-// Renderer generates offer PDFs. The embedded fonts are parsed once at
-// construction and reused across renders (they are read-only), so a single
-// Renderer is shared for the process lifetime.
 type Renderer struct {
 	fonts []*entity.CustomFont
 }
 
-// NewRenderer builds a Renderer with the embedded Cyrillic-capable fonts
-// registered in Normal and Bold styles (the only two the layout uses).
 func NewRenderer() *Renderer {
 	return &Renderer{
 		fonts: []*entity.CustomFont{
@@ -87,11 +63,8 @@ func NewRenderer() *Renderer {
 	}
 }
 
-// grey is the table-header / rule tint.
 var grey = &props.Color{Red: 90, Green: 90, Blue: 90}
 
-// RenderOffer produces the PDF bytes for one offer. It never touches the
-// database or filesystem; the handler supplies every field.
 func (r *Renderer) RenderOffer(data OfferData) ([]byte, error) {
 	o := data.Offer
 	currency := data.Tenant.Currency
@@ -100,7 +73,7 @@ func (r *Renderer) RenderOffer(data OfferData) ([]byte, error) {
 		WithPageSize(pagesize.A4).
 		WithCustomFonts(r.fonts).
 		WithDefaultFont(&props.Font{Family: fontFamily, Size: 10}).
-		WithTitle(lblTitle+" "+lblNumber+shortID(o.ID), true).
+		WithTitle(lblTitle+" "+lblNumber+o.DocumentNumber, true).
 		WithAuthor(data.Tenant.Name, true).
 		WithSubject(lblTitle, true).
 		WithCreator("pitlane", true).
@@ -124,8 +97,6 @@ func (r *Renderer) RenderOffer(data OfferData) ([]byte, error) {
 	return doc.GetBytes(), nil
 }
 
-// addHeader draws the garage identity on the left and the offer's number/date
-// on the right.
 func (r *Renderer) addHeader(m core.Maroto, data OfferData) {
 	t := data.Tenant
 	o := data.Offer
@@ -136,7 +107,7 @@ func (r *Renderer) addHeader(m core.Maroto, data OfferData) {
 	)
 	m.AddRow(5,
 		text.NewCol(8, t.Address, props.Text{Size: 9, Color: grey}),
-		text.NewCol(4, lblNumber+" "+shortID(o.ID), props.Text{Size: 9, Color: grey, Align: align.Right}),
+		text.NewCol(4, lblNumber+" "+o.DocumentNumber, props.Text{Size: 9, Color: grey, Align: align.Right}),
 	)
 	m.AddRow(5,
 		text.NewCol(8, vatLine(t.VATNumber), props.Text{Size: 9, Color: grey}),
@@ -144,8 +115,6 @@ func (r *Renderer) addHeader(m core.Maroto, data OfferData) {
 	)
 }
 
-// addParties draws the customer block beside the car block, one field per row
-// so the two columns stay aligned. Empty fields render as blank cells.
 func (r *Renderer) addParties(m core.Maroto, data OfferData) {
 	c := data.Customer
 	car := data.Car
@@ -160,7 +129,6 @@ func (r *Renderer) addParties(m core.Maroto, data OfferData) {
 	pairRow(m, c.Address, mileageLine(car.Mileage))
 }
 
-// addItems draws the tinted header row and one row per line item.
 func (r *Renderer) addItems(m core.Maroto, o *domain.Offer, currency string) {
 	head := m.AddRow(7,
 		text.NewCol(5, lblDesc, props.Text{Style: fontstyle.Bold, Size: 9, Top: 1.5}),
@@ -182,8 +150,6 @@ func (r *Renderer) addItems(m core.Maroto, o *domain.Offer, currency string) {
 	}
 }
 
-// addTotals draws the subtotal / tax / total block, right-aligned under the
-// item table's money columns.
 func (r *Renderer) addTotals(m core.Maroto, o *domain.Offer, currency string) {
 	totalRow := func(height float64, label, value string, bold bool) {
 		style := fontstyle.Normal
@@ -201,7 +167,6 @@ func (r *Renderer) addTotals(m core.Maroto, o *domain.Offer, currency string) {
 	totalRow(8, lblTotal, money(o.TotalCents, currency), true)
 }
 
-// addNotes appends the free-text notes block if the offer carries any.
 func (r *Renderer) addNotes(m core.Maroto, o *domain.Offer) {
 	if o.Notes == "" {
 		return
@@ -211,12 +176,10 @@ func (r *Renderer) addNotes(m core.Maroto, o *domain.Offer) {
 	m.AddAutoRow(text.NewCol(12, o.Notes, props.Text{Size: 9, Color: grey}))
 }
 
-// rule draws a thin horizontal separator row.
 func rule(m core.Maroto) {
 	m.AddRow(4, line.NewCol(12, props.Line{Color: &props.Color{Red: 210, Green: 210, Blue: 210}, Thickness: 0.2}))
 }
 
-// pairRow renders two side-by-side text cells (customer field | car field).
 func pairRow(m core.Maroto, left, right string) {
 	m.AddRow(5,
 		text.NewCol(6, left, props.Text{Size: 9}),
@@ -224,10 +187,6 @@ func pairRow(m core.Maroto, left, right string) {
 	)
 }
 
-// --- formatting helpers (bg-BG conventions) -------------------------------
-
-// formatCents renders integer cents as "1 234,56": space-grouped thousands and
-// a comma decimal separator, matching the SPA's bg-BG money formatting.
 func formatCents(cents int64) string {
 	neg := cents < 0
 	if neg {
@@ -249,17 +208,10 @@ func formatCents(cents int64) string {
 	return s
 }
 
-// FormatMoney renders integer cents with the tenant currency in bg-BG style
-// ("1 234,56 €"). Exported so other server-side documents that must match the
-// PDF exactly — notably the offer email (Phase 7) — format money identically,
-// with no second implementation to drift.
 func FormatMoney(cents int64, currency string) string {
 	return money(cents, currency)
 }
 
-// money appends the tenant currency symbol to a formatted amount. Bulgaria
-// adopted the euro on 2026-01-01, so an unset or euro currency renders with the
-// "€" sign; any other ISO code is shown verbatim.
 func money(cents int64, currency string) string {
 	suffix := currency
 	if currency == "" || currency == "EUR" {
@@ -268,8 +220,6 @@ func money(cents int64, currency string) string {
 	return formatCents(cents) + " " + suffix
 }
 
-// percent renders a basis-points rate as a human percentage: 1900 → "19%",
-// 1950 → "19,50%".
 func percent(bps int) string {
 	if bps%100 == 0 {
 		return strconv.Itoa(bps/100) + "%"
@@ -286,21 +236,6 @@ func kindLabel(k domain.OfferItemKind) string {
 	default:
 		return "Друго"
 	}
-}
-
-// ShortID is the compact human-facing offer number (first UUID segment) printed
-// on the PDF. Exported so the offer email cites the same number as the document.
-func ShortID(id string) string {
-	return shortID(id)
-}
-
-// shortID returns the first segment of a UUID for a compact human-facing
-// offer number (the full ID stays the canonical reference).
-func shortID(id string) string {
-	if len(id) >= 8 {
-		return id[:8]
-	}
-	return id
 }
 
 func vatLine(vat string) string {

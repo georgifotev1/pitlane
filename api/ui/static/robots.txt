@@ -1,0 +1,9 @@
+User-agent: *
+Disallow: /dashboard
+Disallow: /garage
+Disallow: /customers
+Disallow: /cars
+Disallow: /history
+Disallow: /offers
+Disallow: /repairs
+Disallow: /account/reset-password

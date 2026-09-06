@@ -8,8 +8,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// historyFixture creates a tenant, customer, car, offer store, and repair store
-// so history tests can produce completed repairs and notes.
 func historyFixture(t *testing.T) (context.Context, *DB, *HistoryStore, *RepairStore, *OfferStore, *domain.Tenant, *domain.Car) {
 	t.Helper()
 	ctx, db, repairs, offers, tenant, _, car := repairFixture(t)
@@ -30,7 +28,6 @@ func TestHistoryStore(t *testing.T) {
 	})
 
 	t.Run("ListByCar shows completed repairs and notes in date order", func(t *testing.T) {
-		// Complete a repair.
 		o := sentOffer(t, ctx, offers, tenant.ID, car.ID)
 		r, err := repairs.CreateFromOffer(ctx, tenant.ID, o.ID)
 		if err != nil {
@@ -40,7 +37,6 @@ func TestHistoryStore(t *testing.T) {
 			t.Fatalf("complete: %v", err)
 		}
 
-		// Add a manual note.
 		note := &domain.HistoryNote{
 			ID:          uuid.NewString(),
 			TenantID:    tenant.ID,
@@ -59,15 +55,13 @@ func TestHistoryStore(t *testing.T) {
 		if len(entries) != 2 {
 			t.Fatalf("expected 2 entries, got %d", len(entries))
 		}
-		// Newest first by default: both have similar timestamps, so the note (created
-		// after the completed repair) should be first.
 		seenRepair := false
 		seenNote := false
 		for _, e := range entries {
 			switch e.Type {
 			case "repair":
 				seenRepair = true
-				if e.Mileage != 125000 || e.TotalCents != 17850 {
+				if e.Mileage != 125000 || e.TotalCents != 15000 {
 					t.Fatalf("repair entry wrong: %+v", e)
 				}
 			case "note":

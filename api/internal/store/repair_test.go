@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/gfotev/pitlane/internal/domain"
@@ -9,9 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// repairFixture spins up a tenant + customer + car and both the offer and
-// repair stores, so a repair can be born the only way it can — by converting a
-// sent offer.
 func repairFixture(t *testing.T) (context.Context, *DB, *RepairStore, *OfferStore, *domain.Tenant, *domain.Customer, *domain.Car) {
 	t.Helper()
 	tdb := testdb.New(t)
@@ -38,8 +36,6 @@ func repairFixture(t *testing.T) (context.Context, *DB, *RepairStore, *OfferStor
 	return ctx, db, NewRepairStore(db), NewOfferStore(db), tenant, customer, car
 }
 
-// sentOffer creates a draft offer and drives it to `sent` so it can be
-// converted. newOffer (offer_test.go) builds the two-line, 19% fixture.
 func sentOffer(t *testing.T, ctx context.Context, offers *OfferStore, tenantID, carID string) *domain.Offer {
 	t.Helper()
 	o := newOffer(tenantID, carID)
@@ -65,27 +61,34 @@ func TestRepairStore(t *testing.T) {
 		if r.Status != domain.RepairStatusOpen {
 			t.Fatalf("new repair should be open, got %s", r.Status)
 		}
+		if !strings.HasPrefix(r.DocumentNumber, "RP-") || !strings.HasSuffix(r.DocumentNumber, "-000001") {
+			t.Fatalf("repair document number = %q", r.DocumentNumber)
+		}
+		if !strings.HasPrefix(o.DocumentNumber, "OF-") {
+			t.Fatalf("offer document number = %q", o.DocumentNumber)
+		}
 		if r.OfferID == nil || *r.OfferID != o.ID {
 			t.Fatalf("provenance not linked: %+v", r.OfferID)
 		}
 		if r.CarID != car.ID {
 			t.Fatalf("car not carried over: %s", r.CarID)
 		}
-		// Totals reproduce the offer's frozen snapshot exactly.
-		if r.SubtotalCents != 15000 || r.TaxCents != 2850 || r.TotalCents != 17850 {
+		if r.SubtotalCents != 12605 || r.TaxCents != 2395 || r.TotalCents != 15000 {
 			t.Fatalf("totals wrong: sub=%d tax=%d total=%d", r.SubtotalCents, r.TaxCents, r.TotalCents)
 		}
 		if len(r.Items) != 2 {
 			t.Fatalf("expected 2 copied items, got %d", len(r.Items))
 		}
-		// Items are a COPY: fresh IDs, linked to the repair, not the offer.
+		byOffer, err := repairs.GetByOffer(ctx, tenant.ID, o.ID)
+		if err != nil || byOffer.ID != r.ID {
+			t.Fatalf("get by offer: repair=%+v err=%v", byOffer, err)
+		}
 		for _, it := range r.Items {
 			if it.RepairID != r.ID {
 				t.Fatalf("item not linked to repair: %+v", it)
 			}
 		}
 
-		// The offer is now accepted (accept ≡ convert).
 		acc, err := offers.Get(ctx, tenant.ID, o.ID)
 		if err != nil {
 			t.Fatalf("reload offer: %v", err)
@@ -102,7 +105,7 @@ func TestRepairStore(t *testing.T) {
 			t.Fatalf("convert: %v", err)
 		}
 
-		// Rewrite the repair's items completely.
+		r.Mileage = 90000
 		r.Items = []domain.RepairItem{
 			{Kind: domain.OfferItemKindLabor, Description: "Extra diagnosis", Quantity: 3, UnitPriceCents: 5000},
 		}
@@ -110,45 +113,47 @@ func TestRepairStore(t *testing.T) {
 			t.Fatalf("update repair: %v", err)
 		}
 
-		// The source offer's items and totals are unchanged.
 		off, err := offers.Get(ctx, tenant.ID, o.ID)
 		if err != nil {
 			t.Fatalf("reload offer: %v", err)
 		}
-		if len(off.Items) != 2 || off.TotalCents != 17850 {
+		if len(off.Items) != 2 || off.TotalCents != 15000 {
 			t.Fatalf("offer mutated by repair edit: items=%d total=%d", len(off.Items), off.TotalCents)
 		}
-		// The repair reflects the new lines (3 * 50.00 = 150.00; +19% = 178.50).
 		reloaded, err := repairs.Get(ctx, tenant.ID, r.ID)
 		if err != nil {
 			t.Fatalf("reload repair: %v", err)
 		}
-		if len(reloaded.Items) != 1 || reloaded.SubtotalCents != 15000 || reloaded.TotalCents != 17850 {
-			t.Fatalf("repair not updated: items=%d sub=%d total=%d", len(reloaded.Items), reloaded.SubtotalCents, reloaded.TotalCents)
+		if len(reloaded.Items) != 1 || reloaded.SubtotalCents != 12605 || reloaded.TotalCents != 15000 || reloaded.Mileage != 90000 {
+			t.Fatalf("repair not updated: items=%d sub=%d total=%d mileage=%d", len(reloaded.Items), reloaded.SubtotalCents, reloaded.TotalCents, reloaded.Mileage)
+		}
+		updatedCar, err := NewCarStore(NewDB(repairs.db.pool)).Get(ctx, tenant.ID, car.ID)
+		if err != nil {
+			t.Fatalf("reload car: %v", err)
+		}
+		if updatedCar.Mileage != 90000 {
+			t.Fatalf("car mileage not advanced by repair edit: %d", updatedCar.Mileage)
 		}
 	})
 
-	t.Run("CreateFromOffer gates on offer status and existence", func(t *testing.T) {
-		// A draft (never sent) offer cannot be converted.
+	t.Run("CreateFromOffer accepts drafts and gates terminal states", func(t *testing.T) {
 		draft := newOffer(tenant.ID, car.ID)
 		if err := offers.Create(ctx, draft); err != nil {
 			t.Fatalf("create draft: %v", err)
 		}
-		if _, err := repairs.CreateFromOffer(ctx, tenant.ID, draft.ID); err != ErrOfferNotAcceptable {
-			t.Fatalf("expected ErrOfferNotAcceptable for draft, got %v", err)
+		if _, err := repairs.CreateFromOffer(ctx, tenant.ID, draft.ID); err != nil {
+			t.Fatalf("convert draft: %v", err)
 		}
 
-		// Converting the same sent offer twice fails the second time (already
-		// accepted, no longer sent).
-		o := sentOffer(t, ctx, offers, tenant.ID, car.ID)
-		if _, err := repairs.CreateFromOffer(ctx, tenant.ID, o.ID); err != nil {
-			t.Fatalf("first convert: %v", err)
-		}
-		if _, err := repairs.CreateFromOffer(ctx, tenant.ID, o.ID); err != ErrOfferNotAcceptable {
+		if _, err := repairs.CreateFromOffer(ctx, tenant.ID, draft.ID); err != ErrOfferNotAcceptable {
 			t.Fatalf("expected ErrOfferNotAcceptable on re-convert, got %v", err)
 		}
 
-		// Unknown offer.
+		sent := sentOffer(t, ctx, offers, tenant.ID, car.ID)
+		if _, err := repairs.CreateFromOffer(ctx, tenant.ID, sent.ID); err != nil {
+			t.Fatalf("convert sent offer: %v", err)
+		}
+
 		if _, err := repairs.CreateFromOffer(ctx, tenant.ID, uuid.NewString()); err != ErrNotFound {
 			t.Fatalf("expected ErrNotFound, got %v", err)
 		}
@@ -158,6 +163,9 @@ func TestRepairStore(t *testing.T) {
 		if _, err := repairs.Get(ctx, tenant.ID, uuid.NewString()); err != ErrNotFound {
 			t.Fatalf("expected ErrNotFound, got %v", err)
 		}
+		if _, err := repairs.GetByOffer(ctx, tenant.ID, uuid.NewString()); err != ErrNotFound {
+			t.Fatalf("GetByOffer: expected ErrNotFound, got %v", err)
+		}
 	})
 
 	t.Run("Update is open-only", func(t *testing.T) {
@@ -166,7 +174,6 @@ func TestRepairStore(t *testing.T) {
 		if err != nil {
 			t.Fatalf("convert: %v", err)
 		}
-		// Start the work: now frozen.
 		if _, err := repairs.SetStatus(ctx, tenant.ID, r.ID, domain.RepairStatusInProgress); err != nil {
 			t.Fatalf("start: %v", err)
 		}
@@ -175,7 +182,6 @@ func TestRepairStore(t *testing.T) {
 			t.Fatalf("expected ErrRepairNotOpen, got %v", err)
 		}
 
-		// Unknown id.
 		ghost := &domain.Repair{ID: uuid.NewString(), TenantID: tenant.ID, TaxRateBps: 1900}
 		if err := repairs.Update(ctx, ghost); err != ErrNotFound {
 			t.Fatalf("expected ErrNotFound, got %v", err)
@@ -189,7 +195,6 @@ func TestRepairStore(t *testing.T) {
 			t.Fatalf("convert: %v", err)
 		}
 
-		// open → completed is NOT a generic move (Complete owns it).
 		if _, err := repairs.SetStatus(ctx, tenant.ID, r.ID, domain.RepairStatusCompleted); err != ErrInvalidRepairStatusTransition {
 			t.Fatalf("expected ErrInvalidRepairStatusTransition, got %v", err)
 		}
@@ -200,7 +205,6 @@ func TestRepairStore(t *testing.T) {
 		if started.Status != domain.RepairStatusInProgress {
 			t.Fatalf("status not in_progress: %s", started.Status)
 		}
-		// Revert is allowed.
 		if _, err := repairs.SetStatus(ctx, tenant.ID, r.ID, domain.RepairStatusOpen); err != nil {
 			t.Fatalf("revert: %v", err)
 		}
@@ -228,7 +232,6 @@ func TestRepairStore(t *testing.T) {
 		if done.Mileage != 120000 {
 			t.Fatalf("mileage not recorded on repair: %d", done.Mileage)
 		}
-		// Car odometer advanced to the reading.
 		c, err := cars.Get(ctx, tenant.ID, car.ID)
 		if err != nil {
 			t.Fatalf("reload car: %v", err)
@@ -237,11 +240,44 @@ func TestRepairStore(t *testing.T) {
 			t.Fatalf("car mileage not advanced: %d", c.Mileage)
 		}
 
-		// Completing again fails (terminal).
+		corrected, err := repairs.UpdateMileage(ctx, tenant.ID, r.ID, 125000)
+		if err != nil {
+			t.Fatalf("correct mileage: %v", err)
+		}
+		if corrected.Mileage != 125000 {
+			t.Fatalf("repair mileage not corrected: %d", corrected.Mileage)
+		}
+		c, err = cars.Get(ctx, tenant.ID, car.ID)
+		if err != nil {
+			t.Fatalf("reload car after correction: %v", err)
+		}
+		if c.Mileage != 125000 {
+			t.Fatalf("car mileage not advanced by correction: %d", c.Mileage)
+		}
+
+		corrected, err = repairs.UpdateMileage(ctx, tenant.ID, r.ID, 115000)
+		if err != nil {
+			t.Fatalf("correct mileage downward: %v", err)
+		}
+		c, err = cars.Get(ctx, tenant.ID, car.ID)
+		if err != nil {
+			t.Fatalf("reload car after downward correction: %v", err)
+		}
+		if corrected.Mileage != 115000 || c.Mileage != 115000 {
+			t.Fatalf("downward correction not synced: repair=%d car=%d", corrected.Mileage, c.Mileage)
+		}
+
+		stats, err := repairs.Stats(ctx, tenant.ID)
+		if err != nil {
+			t.Fatalf("stats: %v", err)
+		}
+		if stats.Completed < 1 || stats.RevenueCents < done.TotalCents {
+			t.Fatalf("completed repair missing from revenue stats: %+v", stats)
+		}
+
 		if _, err := repairs.Complete(ctx, tenant.ID, r.ID, 130000); err != ErrRepairNotOpen {
 			t.Fatalf("expected ErrRepairNotOpen on re-complete, got %v", err)
 		}
-		// A lower later reading never rolls the car back.
 		o2 := sentOffer(t, ctx, offers, tenant.ID, car.ID)
 		r2, err := repairs.CreateFromOffer(ctx, tenant.ID, o2.ID)
 		if err != nil {
@@ -254,20 +290,32 @@ func TestRepairStore(t *testing.T) {
 		if err != nil {
 			t.Fatalf("reload car 2: %v", err)
 		}
-		if c2.Mileage != 120000 {
+		if c2.Mileage != 115000 {
 			t.Fatalf("car mileage rolled backwards: %d", c2.Mileage)
+		}
+		older, err := repairs.UpdateMileage(ctx, tenant.ID, r2.ID, 50000)
+		if err != nil {
+			t.Fatalf("correct older repair: %v", err)
+		}
+		c2, err = cars.Get(ctx, tenant.ID, car.ID)
+		if err != nil {
+			t.Fatalf("reload car after older correction: %v", err)
+		}
+		if older.Mileage != 50000 || c2.Mileage != 115000 {
+			t.Fatalf("older correction changed current car mileage: repair=%d car=%d", older.Mileage, c2.Mileage)
 		}
 
 		if _, err := repairs.Complete(ctx, tenant.ID, uuid.NewString(), 1); err != ErrNotFound {
 			t.Fatalf("expected ErrNotFound, got %v", err)
 		}
+		if _, err := repairs.UpdateMileage(ctx, tenant.ID, uuid.NewString(), 1); err != ErrNotFound {
+			t.Fatalf("UpdateMileage: expected ErrNotFound, got %v", err)
+		}
 	})
 
 	t.Run("List is tenant-wide, status-filtered, and enriched", func(t *testing.T) {
-		// Fresh tenant so the count is deterministic amid the other subtests.
 		ctx2, _, repairs2, offers2, tenant2, customer2, car2 := repairFixture(t)
 
-		// Two repairs; leave one open, complete the other.
 		oA := sentOffer(t, ctx2, offers2, tenant2.ID, car2.ID)
 		rA, err := repairs2.CreateFromOffer(ctx2, tenant2.ID, oA.ID)
 		if err != nil {
@@ -289,7 +337,6 @@ func TestRepairStore(t *testing.T) {
 		if total != 2 || len(all) != 2 {
 			t.Fatalf("expected 2 repairs, got total=%d len=%d", total, len(all))
 		}
-		// Enriched with car plate + customer name.
 		if all[0].CarPlate != car2.Plate || all[0].CustomerName != customer2.Name {
 			t.Fatalf("enrichment missing: plate=%q name=%q", all[0].CarPlate, all[0].CustomerName)
 		}
@@ -304,9 +351,6 @@ func TestRepairStore(t *testing.T) {
 	})
 }
 
-// TestRepairTenantIsolation proves a second tenant cannot read or mutate the
-// first tenant's repair through the store (the app-filter layer; RLS is proven
-// separately in the API package).
 func TestRepairTenantIsolation(t *testing.T) {
 	ctx, db, repairs, offers, tenantA, _, carA := repairFixture(t)
 
@@ -316,7 +360,6 @@ func TestRepairTenantIsolation(t *testing.T) {
 		t.Fatalf("convert A: %v", err)
 	}
 
-	// A second tenant in the same database.
 	ts := NewTenantStore(db)
 	tenantB := newTenant("Garage B")
 	if err := ts.Create(ctx, tenantB); err != nil {
@@ -325,6 +368,13 @@ func TestRepairTenantIsolation(t *testing.T) {
 
 	if _, err := repairs.Get(ctx, tenantB.ID, rA.ID); err != ErrNotFound {
 		t.Fatalf("cross-tenant Get: expected ErrNotFound, got %v", err)
+	}
+	if _, err := repairs.GetByOffer(ctx, tenantB.ID, oA.ID); err != ErrNotFound {
+		t.Fatalf("cross-tenant GetByOffer: expected ErrNotFound, got %v", err)
+	}
+	stats, err := repairs.Stats(ctx, tenantB.ID)
+	if err != nil || stats.Total != 0 || stats.RevenueCents != 0 {
+		t.Fatalf("cross-tenant Stats leaked data: stats=%+v err=%v", stats, err)
 	}
 	poison := *rA
 	poison.TenantID = tenantB.ID
@@ -338,7 +388,9 @@ func TestRepairTenantIsolation(t *testing.T) {
 	if _, err := repairs.Complete(ctx, tenantB.ID, rA.ID, 1); err != ErrNotFound {
 		t.Fatalf("cross-tenant Complete: expected ErrNotFound, got %v", err)
 	}
-	// B cannot convert A's offer either.
+	if _, err := repairs.UpdateMileage(ctx, tenantB.ID, rA.ID, 1); err != ErrNotFound {
+		t.Fatalf("cross-tenant UpdateMileage: expected ErrNotFound, got %v", err)
+	}
 	if _, err := repairs.CreateFromOffer(ctx, tenantB.ID, oA.ID); err != ErrNotFound {
 		t.Fatalf("cross-tenant convert: expected ErrNotFound, got %v", err)
 	}

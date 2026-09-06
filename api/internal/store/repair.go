@@ -10,43 +10,28 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// ErrRepairNotOpen is returned when a write targets a repair that is no longer
-// open. Repair content is immutable once work starts (ADR §Domain Model),
-// mirroring the offer's draft-only rule. The handler maps it to a 409.
 var ErrRepairNotOpen = errors.New("repair is not open")
 
-// ErrInvalidRepairStatusTransition is returned when a status change is not
-// allowed by the lifecycle machine (domain.repairTransitions). Handler → 409.
 var ErrInvalidRepairStatusTransition = errors.New("invalid repair status transition")
 
-// ErrOfferNotAcceptable is returned when a conversion is attempted on an offer
-// that is not in the `sent` state (a draft has not been quoted to the customer;
-// an accepted/rejected/expired offer is terminal). Handler → 409.
 var ErrOfferNotAcceptable = errors.New("offer is not in an acceptable state")
 
-// RepairStore follows the OfferStore pattern: column list + scan helper
-// co-located, every method runs inside WithTenant, every query filters on
-// tenant_id. A repair owns its items, so open writes replace the item set
-// wholesale inside the same transaction and Recompute keeps the money snapshots
-// in step. Repairs are born by converting an offer (CreateFromOffer); there is
-// no from-scratch create in this phase.
 type RepairStore struct {
 	db *DB
 }
 
-// NewRepairStore builds a store.
 func NewRepairStore(db *DB) *RepairStore {
 	return &RepairStore{db: db}
 }
 
-// repairColumns is the canonical select order; scanRepair reads in this order.
-const repairColumns = "id, tenant_id, car_id, offer_id, status, tax_rate_bps, subtotal_cents, tax_cents, total_cents, mileage, notes, completed_at, created_at, updated_at"
+const repairColumns = "id, document_number, tenant_id, car_id, offer_id, status, tax_rate_bps, subtotal_cents, tax_cents, total_cents, cost_total_cents, cost_subtotal_cents, mileage, notes, completed_at, created_at, updated_at"
 
 func scanRepair(row pgx.Row) (*domain.Repair, error) {
 	var r domain.Repair
 	if err := row.Scan(
-		&r.ID, &r.TenantID, &r.CarID, &r.OfferID, &r.Status, &r.TaxRateBps,
-		&r.SubtotalCents, &r.TaxCents, &r.TotalCents, &r.Mileage, &r.Notes,
+		&r.ID, &r.DocumentNumber, &r.TenantID, &r.CarID, &r.OfferID, &r.Status, &r.TaxRateBps,
+		&r.SubtotalCents, &r.TaxCents, &r.TotalCents,
+		&r.CostTotalCents, &r.CostSubtotalCents, &r.Mileage, &r.Notes,
 		&r.CompletedAt, &r.CreatedAt, &r.UpdatedAt,
 	); err != nil {
 		return nil, err
@@ -54,47 +39,79 @@ func scanRepair(row pgx.Row) (*domain.Repair, error) {
 	return &r, nil
 }
 
-// repairItemColumns is the canonical select order; scanRepairItem reads it.
-const repairItemColumns = "id, tenant_id, repair_id, kind, description, quantity, unit_price_cents, line_total_cents, sort_order, created_at"
+const repairItemColumns = "id, tenant_id, repair_id, kind, description, quantity, unit_price_cents, line_total_cents, cost_cents, line_cost_cents, sort_order, created_at"
 
 func scanRepairItem(row pgx.Row) (*domain.RepairItem, error) {
 	var it domain.RepairItem
 	if err := row.Scan(
 		&it.ID, &it.TenantID, &it.RepairID, &it.Kind, &it.Description,
-		&it.Quantity, &it.UnitPriceCents, &it.LineTotalCents, &it.SortOrder, &it.CreatedAt,
+		&it.Quantity, &it.UnitPriceCents, &it.LineTotalCents,
+		&it.CostCents, &it.LineCostCents, &it.SortOrder, &it.CreatedAt,
 	); err != nil {
 		return nil, err
 	}
 	return &it, nil
 }
 
-// RepairSummary is a board row: the repair plus the car plate and customer name
-// it belongs to, joined in for display so the client need not fan out N reads.
-// Items are not loaded for the board (Get loads them for the detail view).
 type RepairSummary struct {
 	Repair       *domain.Repair
 	CarPlate     string
 	CustomerName string
 }
 
-// RepairListParams controls the board query. Status "" means "all statuses";
-// zero Limit means "no rows" (the handler clamps to a sane page size).
 type RepairListParams struct {
 	Status string
 	Limit  int
 	Offset int
 }
 
-// List returns a tenant-wide page of repairs (newest first), optionally
-// filtered by status, plus the total count matching the filter. Each row is
-// enriched with the car plate and customer name via joins that stay in-tenant
-// (composite keys), so the board renders without extra round-trips.
+type RepairStats struct {
+	Total     int
+	Active    int
+	Completed int
+	// RevenueCents is what customers were billed, VAT included. ProfitCents is
+	// what was left after the parts, VAT excluded on both sides.
+	RevenueCents int64
+	ProfitCents  int64
+	HasCost      bool
+}
+
+// repairBoardSelect is the shared shape for every repair list (board, dashboard
+// panels, stalled-work panel); callers append their own WHERE/ORDER.
+const repairBoardSelect = `SELECT r.id, r.document_number, r.tenant_id, r.car_id, r.offer_id, r.status, r.tax_rate_bps,
+	        r.subtotal_cents, r.tax_cents, r.total_cents,
+	        r.cost_total_cents, r.cost_subtotal_cents, r.mileage, r.notes,
+	        r.completed_at, r.created_at, r.updated_at,
+	        c.plate, cust.name
+	 FROM repairs r
+	 JOIN cars c ON c.id = r.car_id AND c.tenant_id = r.tenant_id
+	 JOIN customers cust ON cust.id = c.customer_id AND cust.tenant_id = c.tenant_id
+	 `
+
+func scanRepairSummaries(rows pgx.Rows) ([]RepairSummary, error) {
+	var out []RepairSummary
+	for rows.Next() {
+		var r domain.Repair
+		var plate, customerName string
+		if err := rows.Scan(
+			&r.ID, &r.DocumentNumber, &r.TenantID, &r.CarID, &r.OfferID, &r.Status, &r.TaxRateBps,
+			&r.SubtotalCents, &r.TaxCents, &r.TotalCents,
+			&r.CostTotalCents, &r.CostSubtotalCents, &r.Mileage, &r.Notes,
+			&r.CompletedAt, &r.CreatedAt, &r.UpdatedAt,
+			&plate, &customerName,
+		); err != nil {
+			return nil, fmt.Errorf("scan repair summary: %w", err)
+		}
+		out = append(out, RepairSummary{Repair: &r, CarPlate: plate, CustomerName: customerName})
+	}
+	return out, rows.Err()
+}
+
 func (s *RepairStore) List(ctx context.Context, tenantID string, p RepairListParams) ([]RepairSummary, int, error) {
 	var out []RepairSummary
 	var total int
 
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
-		// $1 tenant, $2 status ('' = any).
 		const where = `WHERE r.tenant_id = $1 AND ($2 = '' OR r.status = $2)`
 
 		if err := tx.QueryRow(ctx,
@@ -105,14 +122,7 @@ func (s *RepairStore) List(ctx context.Context, tenantID string, p RepairListPar
 		}
 
 		rows, err := tx.Query(ctx,
-			`SELECT r.id, r.tenant_id, r.car_id, r.offer_id, r.status, r.tax_rate_bps,
-			        r.subtotal_cents, r.tax_cents, r.total_cents, r.mileage, r.notes,
-			        r.completed_at, r.created_at, r.updated_at,
-			        c.plate, cust.name
-			 FROM repairs r
-			 JOIN cars c ON c.id = r.car_id AND c.tenant_id = r.tenant_id
-			 JOIN customers cust ON cust.id = c.customer_id AND cust.tenant_id = c.tenant_id
-			 `+where+`
+			repairBoardSelect+where+`
 			 ORDER BY r.created_at DESC, r.id DESC
 			 LIMIT $3 OFFSET $4`,
 			tenantID, p.Status, p.Limit, p.Offset,
@@ -122,26 +132,29 @@ func (s *RepairStore) List(ctx context.Context, tenantID string, p RepairListPar
 		}
 		defer rows.Close()
 
-		for rows.Next() {
-			var r domain.Repair
-			var plate, customerName string
-			if err := rows.Scan(
-				&r.ID, &r.TenantID, &r.CarID, &r.OfferID, &r.Status, &r.TaxRateBps,
-				&r.SubtotalCents, &r.TaxCents, &r.TotalCents, &r.Mileage, &r.Notes,
-				&r.CompletedAt, &r.CreatedAt, &r.UpdatedAt,
-				&plate, &customerName,
-			); err != nil {
-				return fmt.Errorf("scan repair summary: %w", err)
-			}
-			out = append(out, RepairSummary{Repair: &r, CarPlate: plate, CustomerName: customerName})
-		}
-		return rows.Err()
+		out, err = scanRepairSummaries(rows)
+		return err
 	})
 	return out, total, err
 }
 
-// Get returns one repair with its items in editor order, scoped to the tenant,
-// or ErrNotFound.
+func (s *RepairStore) Stats(ctx context.Context, tenantID string) (RepairStats, error) {
+	var stats RepairStats
+	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT count(*),
+			       count(*) FILTER (WHERE status IN ('open', 'in_progress')),
+			       count(*) FILTER (WHERE status = 'completed'),
+			       COALESCE(sum(total_cents) FILTER (WHERE status = 'completed'), 0),
+			       COALESCE(sum(subtotal_cents - cost_subtotal_cents) FILTER (WHERE status = 'completed'), 0),
+			       COALESCE(sum(cost_total_cents) FILTER (WHERE status = 'completed'), 0) > 0
+			FROM repairs
+			WHERE tenant_id = $1
+		`, tenantID).Scan(&stats.Total, &stats.Active, &stats.Completed, &stats.RevenueCents, &stats.ProfitCents, &stats.HasCost)
+	})
+	return stats, err
+}
+
 func (s *RepairStore) Get(ctx context.Context, tenantID, id string) (*domain.Repair, error) {
 	var repair *domain.Repair
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
@@ -155,23 +168,31 @@ func (s *RepairStore) Get(ctx context.Context, tenantID, id string) (*domain.Rep
 	return repair, err
 }
 
-// CreateFromOffer is the offer→repair conversion, and the ONLY way a repair is
-// born. In one transaction it: locks the offer, gates that it is `sent`, copies
-// its line items into a new open repair (fresh item IDs — a copy, never a
-// shared reference, so later repair edits never touch the offer), links
-// provenance (offer_id), snapshots the tax rate + notes, and flips the offer to
-// `accepted`. Because accept and convert are the same atomic step, an accepted
-// offer always has exactly one repair (ADR §Domain Model).
-//
-// The offer row is locked FOR UPDATE (inside getOfferTx's reload path we re-read
-// it; the lock is taken explicitly first) so a concurrent send/accept cannot
-// race the gate. Returns ErrNotFound if the offer is absent, or
-// ErrOfferNotAcceptable if it is not `sent`.
+func (s *RepairStore) GetByOffer(ctx context.Context, tenantID, offerID string) (*domain.Repair, error) {
+	var repair *domain.Repair
+	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
+		var id string
+		if err := tx.QueryRow(ctx, `
+			SELECT id FROM repairs WHERE tenant_id = $1 AND offer_id = $2
+		`, tenantID, offerID).Scan(&id); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrNotFound
+			}
+			return err
+		}
+		r, err := getRepairTx(ctx, tx, tenantID, id)
+		if err != nil {
+			return err
+		}
+		repair = r
+		return nil
+	})
+	return repair, err
+}
+
 func (s *RepairStore) CreateFromOffer(ctx context.Context, tenantID, offerID string) (*domain.Repair, error) {
 	var repair *domain.Repair
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
-		// Lock the offer and gate on status before copying anything, so a
-		// concurrent accept/send cannot slip past and double-convert.
 		var status domain.OfferStatus
 		err := tx.QueryRow(ctx,
 			`SELECT status FROM offers WHERE id = $1 AND tenant_id = $2 FOR UPDATE`,
@@ -183,18 +204,15 @@ func (s *RepairStore) CreateFromOffer(ctx context.Context, tenantID, offerID str
 			}
 			return err
 		}
-		if status != domain.OfferStatusSent {
+		if status != domain.OfferStatusDraft && status != domain.OfferStatusSent {
 			return ErrOfferNotAcceptable
 		}
 
-		// Load the offer with its (frozen) items to copy from.
 		offer, err := getOfferTx(ctx, tx, tenantID, offerID)
 		if err != nil {
 			return err
 		}
 
-		// Build the repair as a faithful copy: same car, tax rate, notes, and
-		// a fresh item per offer line (Recompute reproduces the frozen totals).
 		r := &domain.Repair{
 			ID:         uuid.NewString(),
 			TenantID:   tenantID,
@@ -211,16 +229,24 @@ func (s *RepairStore) CreateFromOffer(ctx context.Context, tenantID, offerID str
 				Description:    it.Description,
 				Quantity:       it.Quantity,
 				UnitPriceCents: it.UnitPriceCents,
+				CostCents:      it.CostCents,
 			})
 		}
 		r.Recompute()
 
+		documentNumber, err := nextDocumentNumber(ctx, tx, tenantID, documentTypeRepair)
+		if err != nil {
+			return err
+		}
+		r.DocumentNumber = documentNumber
+
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO repairs (id, tenant_id, car_id, offer_id, status, tax_rate_bps, subtotal_cents, tax_cents, total_cents, notes)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			INSERT INTO repairs (id, document_number, tenant_id, car_id, offer_id, status, tax_rate_bps, subtotal_cents, tax_cents, total_cents, cost_total_cents, cost_subtotal_cents, notes)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 			RETURNING created_at, updated_at
-		`, r.ID, r.TenantID, r.CarID, r.OfferID, string(r.Status),
-			r.TaxRateBps, r.SubtotalCents, r.TaxCents, r.TotalCents, r.Notes).
+		`, r.ID, r.DocumentNumber, r.TenantID, r.CarID, r.OfferID, string(r.Status),
+			r.TaxRateBps, r.SubtotalCents, r.TaxCents, r.TotalCents,
+			r.CostTotalCents, r.CostSubtotalCents, r.Notes).
 			Scan(&r.CreatedAt, &r.UpdatedAt); err != nil {
 			return fmt.Errorf("insert repair: %w", err)
 		}
@@ -228,7 +254,6 @@ func (s *RepairStore) CreateFromOffer(ctx context.Context, tenantID, offerID str
 			return err
 		}
 
-		// Accept the offer in the same tx: convert ≡ accept.
 		if _, err := tx.Exec(ctx,
 			`UPDATE offers SET status = $3, updated_at = now() WHERE id = $1 AND tenant_id = $2`,
 			offerID, tenantID, string(domain.OfferStatusAccepted),
@@ -242,21 +267,17 @@ func (s *RepairStore) CreateFromOffer(ctx context.Context, tenantID, offerID str
 	return repair, err
 }
 
-// Update rewrites an open repair's editable fields (tax rate, notes) and
-// replaces its item set, recomputing totals. It is open-only: a repair that has
-// started (or completed) returns ErrRepairNotOpen, and a missing repair returns
-// ErrNotFound. car_id and offer_id are immutable.
 func (s *RepairStore) Update(ctx context.Context, r *domain.Repair) error {
 	r.Recompute()
 
 	return s.db.WithTenant(ctx, r.TenantID, func(tx pgx.Tx) error {
-		// Lock and gate on status before touching anything, so a concurrent
-		// status change can't slip a write past the open-only rule.
 		var status domain.RepairStatus
+		var carID string
+		var oldMileage int
 		err := tx.QueryRow(ctx,
-			`SELECT status FROM repairs WHERE id = $1 AND tenant_id = $2 FOR UPDATE`,
+			`SELECT status, car_id, mileage FROM repairs WHERE id = $1 AND tenant_id = $2 FOR UPDATE`,
 			r.ID, r.TenantID,
-		).Scan(&status)
+		).Scan(&status, &carID, &oldMileage)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrNotFound
@@ -277,21 +298,71 @@ func (s *RepairStore) Update(ctx context.Context, r *domain.Repair) error {
 			return err
 		}
 
-		return tx.QueryRow(ctx, `
+		if err := tx.QueryRow(ctx, `
 			UPDATE repairs
-			SET tax_rate_bps = $3, subtotal_cents = $4, tax_cents = $5, total_cents = $6, notes = $7, updated_at = now()
+			SET tax_rate_bps = $3, subtotal_cents = $4, tax_cents = $5, total_cents = $6,
+			    cost_total_cents = $7, cost_subtotal_cents = $8,
+			    mileage = $9, notes = $10, updated_at = now()
 			WHERE id = $1 AND tenant_id = $2
 			RETURNING updated_at
-		`, r.ID, r.TenantID, r.TaxRateBps, r.SubtotalCents, r.TaxCents, r.TotalCents, r.Notes).
-			Scan(&r.UpdatedAt)
+		`, r.ID, r.TenantID, r.TaxRateBps, r.SubtotalCents, r.TaxCents, r.TotalCents,
+			r.CostTotalCents, r.CostSubtotalCents, r.Mileage, r.Notes).
+			Scan(&r.UpdatedAt); err != nil {
+			return err
+		}
+
+		if _, err := tx.Exec(ctx, `
+			UPDATE cars
+			SET mileage = CASE WHEN mileage = $3 THEN $4 ELSE GREATEST(mileage, $4) END,
+			    updated_at = now()
+			WHERE id = $1 AND tenant_id = $2
+		`, carID, r.TenantID, oldMileage, r.Mileage); err != nil {
+			return fmt.Errorf("update car mileage: %w", err)
+		}
+		return nil
 	})
 }
 
-// SetStatus advances a repair through the generic lifecycle machine
-// (open ↔ in_progress), enforcing the allowed transitions. Completion is NOT
-// reachable here — that is the Complete path. Returns ErrNotFound if absent, or
-// ErrInvalidRepairStatusTransition if the move is not allowed. On success it
-// returns the reloaded repair with items.
+func (s *RepairStore) UpdateMileage(ctx context.Context, tenantID, id string, mileage int) (*domain.Repair, error) {
+	var repair *domain.Repair
+	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
+		var carID string
+		var oldMileage int
+		if err := tx.QueryRow(ctx,
+			`SELECT car_id, mileage FROM repairs WHERE id = $1 AND tenant_id = $2 FOR UPDATE`,
+			id, tenantID,
+		).Scan(&carID, &oldMileage); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrNotFound
+			}
+			return err
+		}
+
+		if _, err := tx.Exec(ctx, `
+			UPDATE repairs SET mileage = $3, updated_at = now()
+			WHERE id = $1 AND tenant_id = $2
+		`, id, tenantID, mileage); err != nil {
+			return fmt.Errorf("update repair mileage: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE cars
+			SET mileage = CASE WHEN mileage = $3 THEN $4 ELSE GREATEST(mileage, $4) END,
+			    updated_at = now()
+			WHERE id = $1 AND tenant_id = $2
+		`, carID, tenantID, oldMileage, mileage); err != nil {
+			return fmt.Errorf("update car mileage: %w", err)
+		}
+
+		r, err := getRepairTx(ctx, tx, tenantID, id)
+		if err != nil {
+			return err
+		}
+		repair = r
+		return nil
+	})
+	return repair, err
+}
+
 func (s *RepairStore) SetStatus(ctx context.Context, tenantID, id string, next domain.RepairStatus) (*domain.Repair, error) {
 	var repair *domain.Repair
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
@@ -327,16 +398,6 @@ func (s *RepairStore) SetStatus(ctx context.Context, tenantID, id string, next d
 	return repair, err
 }
 
-// Complete finishes a repair: status → completed, completed_at stamped, the
-// odometer reading recorded on the repair AND advanced onto the car — all in
-// one transaction, so a completed repair always carries a mileage reading and
-// the car's mileage reflects the latest job. The car mileage only ever moves
-// forward (GREATEST), since an odometer does not run backwards; a lower reading
-// is kept on the repair record but does not roll the car back.
-//
-// Completable from open or in_progress; a repair that is already completed
-// returns ErrRepairNotOpen (the "not writable" signal), and a missing repair
-// returns ErrNotFound. On success it returns the reloaded repair with items.
 func (s *RepairStore) Complete(ctx context.Context, tenantID, id string, mileage int) (*domain.Repair, error) {
 	var repair *domain.Repair
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
@@ -364,7 +425,6 @@ func (s *RepairStore) Complete(ctx context.Context, tenantID, id string, mileage
 			return fmt.Errorf("complete repair: %w", err)
 		}
 
-		// Advance the car's odometer, never backwards.
 		if _, err := tx.Exec(ctx, `
 			UPDATE cars
 			SET mileage = GREATEST(mileage, $3), updated_at = now()
@@ -383,7 +443,6 @@ func (s *RepairStore) Complete(ctx context.Context, tenantID, id string, mileage
 	return repair, err
 }
 
-// getRepairTx loads one repair plus its items within an existing tenant tx.
 func getRepairTx(ctx context.Context, tx pgx.Tx, tenantID, id string) (*domain.Repair, error) {
 	row := tx.QueryRow(ctx,
 		`SELECT `+repairColumns+` FROM repairs WHERE id = $1 AND tenant_id = $2`,
@@ -404,7 +463,6 @@ func getRepairTx(ctx context.Context, tx pgx.Tx, tenantID, id string) (*domain.R
 	return r, nil
 }
 
-// loadRepairItems reads a repair's items in editor order within an existing tx.
 func loadRepairItems(ctx context.Context, tx pgx.Tx, tenantID, repairID string) ([]domain.RepairItem, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT `+repairItemColumns+` FROM repair_items WHERE tenant_id = $1 AND repair_id = $2 ORDER BY sort_order ASC, id ASC`,
@@ -426,9 +484,6 @@ func loadRepairItems(ctx context.Context, tx pgx.Tx, tenantID, repairID string) 
 	return items, rows.Err()
 }
 
-// insertRepairItems writes a repair's items, stamping tenant_id, repair_id, and
-// sort_order from slice position. The store owns item identity because items
-// are replaced wholesale on every open write, so it assigns any missing IDs.
 func insertRepairItems(ctx context.Context, tx pgx.Tx, r *domain.Repair) error {
 	for i := range r.Items {
 		it := &r.Items[i]
@@ -439,11 +494,12 @@ func insertRepairItems(ctx context.Context, tx pgx.Tx, r *domain.Repair) error {
 			it.ID = uuid.NewString()
 		}
 		err := tx.QueryRow(ctx, `
-			INSERT INTO repair_items (id, tenant_id, repair_id, kind, description, quantity, unit_price_cents, line_total_cents, sort_order)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			INSERT INTO repair_items (id, tenant_id, repair_id, kind, description, quantity, unit_price_cents, line_total_cents, cost_cents, line_cost_cents, sort_order)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 			RETURNING created_at
 		`, it.ID, it.TenantID, it.RepairID, string(it.Kind), it.Description,
-			it.Quantity, it.UnitPriceCents, it.LineTotalCents, it.SortOrder).
+			it.Quantity, it.UnitPriceCents, it.LineTotalCents,
+			it.CostCents, it.LineCostCents, it.SortOrder).
 			Scan(&it.CreatedAt)
 		if err != nil {
 			return fmt.Errorf("insert repair item: %w", err)

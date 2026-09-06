@@ -1,0 +1,24 @@
+{{define "title"}}{{if .Car}}Редактиране на автомобил{{else}}Нов автомобил{{end}}{{end}}
+{{define "main"}}
+<header class="page-header">
+  <div><a class="back" href="{{if .Car}}/cars/{{.Car.ID}}{{else}}/customers/{{.Customer.ID}}{{end}}">← Назад</a>
+    <h1>{{if .Car}}Редактиране на {{.Car.Plate}}{{else}}Нов автомобил за {{.Customer.Name}}{{end}}</h1>
+  </div>
+</header>
+<section class="panel form-panel">
+  <form method="post" class="form-grid">
+    <label>Регистрационен номер<input name="plate" value="{{.Form.Get "plate"}}" autofocus required
+        class="uppercase">{{with errorFor .Form "plate"}}<span class="field-error">{{.}}</span>{{end}}</label>
+    <label>VIN<input name="vin" value="{{.Form.Get "vin"}}" class="uppercase">{{with errorFor .Form "vin"}}<span
+        class="field-error">{{.}}</span>{{end}}</label>
+    <label>Марка<input name="make" value="{{.Form.Get "make"}}"></label>
+    <label>Модел<input name="model" value="{{.Form.Get "model"}}"></label>
+    <label>Година<input type="number" name="year" min="0" max="2100" value="{{.Form.Get "year"}}">{{with errorFor .Form
+      "year"}}<span class="field-error">{{.}}</span>{{end}}</label>
+    <label>Пробег (км)<input type="number" name="mileage" min="0" value="{{.Form.Get "mileage"}}">{{with errorFor .Form
+      "mileage"}}<span class="field-error">{{.}}</span>{{end}}</label>
+    <div class="full form-actions"><button class="button primary" type="submit">{{if .Car}}Запази
+        промените{{else}}Добави автомобил{{end}}</button></div>
+  </form>
+</section>
+{{end}}

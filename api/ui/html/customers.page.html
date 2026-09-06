@@ -1,0 +1,36 @@
+{{define "title"}}Клиенти{{end}}
+{{define "main"}}
+<header class="page-header">
+    <div>
+        <h1>Клиенти</h1>
+        <p class="muted">Хора и фирми, с които работи Вашият сервиз · общо {{.Total}}</p>
+    </div><a class="button primary" href="/customers/new">Нов клиент</a>
+</header>
+<form class="filters" method="get"><input type="search" name="q" value="{{.Form.Get "q"}}"
+        placeholder="Име, фирма, имейл, телефон"><label class="check"><input type="checkbox" name="archived" value="1"
+            {{if .Form.Get "archived" }}checked{{end}}> Показване на архивираните</label><button class="button"
+        type="submit">Търсене</button></form>
+<section class="panel table-panel">
+    {{if .Customers}}<table>
+        <thead>
+            <tr>
+                <th>Име</th>
+                <th>Фирма</th>
+                <th>Контакт</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>{{range .Customers}}<tr class="{{if .ArchivedAt}}archived{{end}}">
+                <td><a class="strong-link" href="/customers/{{.ID}}">{{.Name}}</a>{{if .ArchivedAt}} <span
+                        class="tag">Архивиран</span>{{end}}</td>
+                <td>{{if .Company}}{{.Company}}{{else}}—{{end}}</td>
+                <td><span class="stacked">{{if .Email}}{{.Email}}{{end}}{{if
+                        .Phone}}<small>{{.Phone}}</small>{{end}}</span></td>
+                <td class="number"><a href="/customers/{{.ID}}">Преглед →</a></td>
+            </tr>{{end}}</tbody>
+    </table>{{else}}<div class="empty">
+        <h3>Няма намерени клиенти</h3>
+        <p>Добавете първия си клиент или променете филтрите.</p>
+    </div>{{end}}
+</section>
+{{end}}

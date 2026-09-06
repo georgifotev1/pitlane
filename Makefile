@@ -1,56 +1,50 @@
 -include .env
 export
 
-.PHONY: dev deps deps-down dev-api dev-frontend test types build \
-	migrate-up migrate-down migrate-status audit
+.PHONY: dev deps deps-down test audit build build-local migrate-up migrate-down migrate-status demo-seed demo-reset demo-drop
 
 .env:
 	cp .env.example .env
-	@echo "Created .env from .env.example — review before production use."
+	@echo "Created .env from .env.example"
 
 deps:
-	docker compose up -d --wait postgres mailpit minio
-	docker compose run --rm minio-init
+	docker compose up -d --wait postgres mailpit
 
 deps-down:
 	docker compose down
 
-dev: .env deps
-	$(MAKE) -j2 dev-api dev-frontend
-
-dev-api: migrate-up
-	cd api && go run ./cmd/api
-
-dev-frontend:
-	cd frontend && pnpm dev
+dev: .env deps migrate-up
+	cd api && go run ./cmd/web
 
 test:
 	cd api && go test ./...
 
-types:
-	cd api && go tool tygo generate
+audit:
+	cd api && gofmt -w $$(find cmd internal ui -name '*.go')
+	cd api && go vet ./...
+	cd api && go test ./...
 
 build:
 	docker build -t pitlane:latest .
 
+build-local:
+	cd api && CGO_ENABLED=0 go build -trimpath -o ../bin/pitlane ./cmd/web
+
 migrate-up:
-	cd api && go run ./cmd/api migrate up
+	cd api && go run ./cmd/web migrate up
 
 migrate-down:
-	cd api && go run ./cmd/api migrate down
+	cd api && go run ./cmd/web migrate down
 
 migrate-status:
-	cd api && go run ./cmd/api migrate status
+	cd api && go run ./cmd/web migrate status
 
-audit:
-	cd api && go vet ./...
-	cd frontend && pnpm exec tsc -b
-	cd frontend && pnpm exec oxlint src
-	cd frontend && pnpm audit
-	$(MAKE) types
-	git diff --exit-code frontend/src/lib/generated
-	cd frontend && pnpm exec lingui extract
-	cd frontend && pnpm exec lingui compile
-	@awk '/^msgstr ""$$/ && prev != "msgid \"\"" { bad=1 } { prev=$$0 } END { exit bad }' frontend/src/locales/*.po \
-		|| (echo "ERROR: empty translations in PO catalog" && exit 1)
-	git diff --exit-code frontend/src/locales
+# A demonstration garage with a year of history, for showing the product.
+demo-seed:
+	cd api && go run ./cmd/web demo seed
+
+demo-reset:
+	cd api && go run ./cmd/web demo reset
+
+demo-drop:
+	cd api && go run ./cmd/web demo drop

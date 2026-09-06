@@ -1,14 +1,5 @@
 name: pitlane-prod
 
-# Local production rehearsal (AGENT_PLAN Phase 1): the exact image from
-# `make build` + postgres, serving SPA and API from ONE container on :4000.
-#
-#   docker compose -f docker-compose.prod.yml up -d db
-#   docker compose -f docker-compose.prod.yml run --rm app migrate up
-#   docker compose -f docker-compose.prod.yml up -d app
-#
-# Real deployment (Dokploy on Hetzner) is Phase D.
-
 services:
   db:
     image: postgres:18
@@ -25,9 +16,7 @@ services:
       retries: 15
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     depends_on:
       db:
         condition: service_healthy
@@ -35,6 +24,13 @@ services:
       PORT: "4000"
       ENV: production
       DSN: postgres://pitlane:pitlane-prod-rehearsal@db:5432/pitlane?sslmode=disable
+      MIGRATE_DSN: postgres://pitlane:pitlane-prod-rehearsal@db:5432/pitlane?sslmode=disable
+      APP_BASE_URL: ${APP_BASE_URL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     ports:
       - "4000:4000"
 

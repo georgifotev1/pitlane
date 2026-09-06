@@ -1,0 +1,65 @@
+{{define "title"}}Ремонт {{.Repair.DocumentNumber}}{{end}}
+{{define "main"}}
+<header class="page-header">
+    <div><a class="back" href="/repairs">← Ремонти</a>
+        <div class="title-line">
+            <h1>Ремонт {{.Repair.DocumentNumber}}</h1><span class="status">{{statusLabel (printf "%s"
+                .Repair.Status)}}</span>
+        </div>
+        <p class="muted"><a href="/customers/{{.Customer.ID}}">{{.Customer.Name}}</a> · <a class="plate"
+                href="/cars/{{.Car.ID}}">{{.Car.Plate}}</a> · създаден на {{date .Repair.CreatedAt}}</p>
+    </div>
+    <div class="header-actions">{{if eq (printf "%s" .Repair.Status) "open"}}<a class="button"
+            href="/repairs/{{.Repair.ID}}/edit">Редактиране</a>
+        <form method="post" action="/repairs/{{.Repair.ID}}/start"><button class="button" type="submit">Започни
+                работа</button></form>{{else if eq (printf "%s" .Repair.Status) "in_progress"}}<form method="post"
+            action="/repairs/{{.Repair.ID}}/reopen"><button class="button" type="submit">Върни като отворен</button>
+        </form>{{end}}{{if .Repair.OfferID}}<a class="button" href="/offers/{{.Repair.OfferID}}">Изходна
+            оферта</a>{{end}}
+    </div>
+</header>
+{{if eq (printf "%s" .Repair.Status) "completed"}}<section class="vehicle-strip">
+    <div><span>Завършен на</span><strong>{{datePtr .Repair.CompletedAt}}</strong></div>
+    <div><span>Пробег</span><strong>{{.Repair.Mileage}} км</strong></div>
+    <div><span>Отчетен приход</span><strong>{{money .Repair.TotalCents .Tenant.Currency}}</strong></div>
+</section>
+<section class="panel completion-panel">
+    <div>
+        <h2>Корекция на пробега</h2>
+        <p class="muted">Промяната обновява пробега и на автомобила.</p>
+    </div>
+    <form method="post" action="/repairs/{{.Repair.ID}}/mileage"><label>Пробег (км)<input type="number" name="mileage"
+                min="0" max="10000000" value="{{if .Form.Get `mileage`}}{{- .Form.Get `mileage` -}}{{else}}{{- .Repair.Mileage -}}{{end}}" required>{{with errorFor .Form "mileage"}}<span
+                class="field-error">{{.}}</span>{{end}}</label><button class="button primary" type="submit">Обнови
+            пробега</button></form>
+</section>{{end}}
+<section class="document panel repair-document">
+    <div class="party-grid">
+        <div><span>Клиент</span><strong>{{.Customer.Name}}</strong>
+            <p>{{.Customer.Company}}</p>
+            <p>{{.Customer.Email}} {{.Customer.Phone}}</p>
+        </div>
+        <div><span>Автомобил</span><strong class="plate">{{.Car.Plate}}</strong>
+            <p>{{.Car.Make}} {{.Car.Model}} {{if .Car.Year}}({{.Car.Year}}){{end}}</p>
+            <p>{{if .Car.VIN}}VIN {{.Car.VIN}}{{end}}</p>
+        </div>
+    </div>
+    {{template "document-table" .Document}}
+    {{if .Repair.Notes}}<div class="document-notes"><span>Бележки</span>
+        <p class="preline">{{.Repair.Notes}}</p>
+    </div>{{end}}
+</section>
+{{template "margin-panel" .Margin}}
+{{if or (eq (printf "%s" .Repair.Status) "open") (eq (printf "%s" .Repair.Status) "in_progress")}}<section
+    class="panel completion-panel">
+    <div>
+        <h2>Завършване на ремонта</h2>
+        <p class="muted">Запишете текущия пробег. Сумата ще бъде отчетена като приход и ремонтът ще влезе в сервизната
+            история.</p>
+    </div>
+    <form method="post" action="/repairs/{{.Repair.ID}}/complete"><label>Пробег (км)<input type="number" name="mileage"
+                min="0" max="10000000" value="{{if .Form.Get `mileage`}}{{- .Form.Get `mileage` -}}{{else}}{{- .Car.Mileage -}}{{end}}" required>{{with errorFor .Form "mileage"}}<span
+                class="field-error">{{.}}</span>{{end}}</label><button class="button primary" type="submit">Завърши
+            ремонта</button></form>
+</section>{{end}}
+{{end}}

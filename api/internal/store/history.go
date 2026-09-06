@@ -11,11 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// HistoryEntry is one row in a car's service-history timeline. It is a union:
-// either a completed repair or a manual history note. The Type field tells the
-// UI which variant to render.
 type HistoryEntry struct {
-	Type        string // "repair" or "note"
+	Type        string
 	ID          string
 	Title       string
 	Description string
@@ -24,26 +21,18 @@ type HistoryEntry struct {
 	TotalCents  int64
 }
 
-// HistoryStore provides the derived service-history view and CRUD for manual
-// history notes. Every query includes tenant_id and runs inside WithTenant.
 type HistoryStore struct {
 	db *DB
 }
 
-// NewHistoryStore builds a store.
 func NewHistoryStore(db *DB) *HistoryStore {
 	return &HistoryStore{db: db}
 }
 
-// ListByCar returns the chronological service history for one car: completed
-// repairs (newest first) union history notes (newest first), merged by
-// recorded/completed date. A maximum of 500 entries is returned; this is a
-// timeline, not a paginated board.
 func (s *HistoryStore) ListByCar(ctx context.Context, tenantID, carID string) ([]HistoryEntry, error) {
 	var entries []HistoryEntry
 
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
-		// Completed repairs for this car.
 		repairRows, err := tx.Query(ctx, `
 			SELECT id, mileage, notes, total_cents, completed_at
 			FROM repairs
@@ -66,7 +55,7 @@ func (s *HistoryStore) ListByCar(ctx context.Context, tenantID, carID string) ([
 			entries = append(entries, HistoryEntry{
 				Type:        "repair",
 				ID:          id,
-				Title:       "", // UI fills a translated label
+				Title:       "",
 				Description: notes,
 				RecordedAt:  completedAt,
 				Mileage:     mileage,
@@ -77,7 +66,6 @@ func (s *HistoryStore) ListByCar(ctx context.Context, tenantID, carID string) ([
 			return err
 		}
 
-		// Manual notes for this car.
 		noteRows, err := tx.Query(ctx, `
 			SELECT id, title, description, recorded_at
 			FROM history_notes
@@ -114,8 +102,6 @@ func (s *HistoryStore) ListByCar(ctx context.Context, tenantID, carID string) ([
 		return nil, err
 	}
 
-	// Merge-sort the two already-sorted streams by RecordedAt desc.
-	// Because each source is sorted desc, a simple stable merge preserves order.
 	sortHistoryEntries(entries)
 	if len(entries) > 500 {
 		entries = entries[:500]
@@ -123,21 +109,15 @@ func (s *HistoryStore) ListByCar(ctx context.Context, tenantID, carID string) ([
 	return entries, nil
 }
 
-// sortHistoryEntries sorts entries by RecordedAt descending, with newer dates
-// first. The input is already two descending streams; this merge keeps the
-// overall order stable for equal timestamps.
 func sortHistoryEntries(entries []HistoryEntry) {
 	if len(entries) <= 1 {
 		return
 	}
-	// Identify where the repair stream ends and the note stream begins. Repairs
-	// were appended first, then notes, so the boundary is the first note.
 	mid := 0
 	for mid < len(entries) && entries[mid].Type == "repair" {
 		mid++
 	}
 	if mid == 0 || mid == len(entries) {
-		// Only one stream, already sorted.
 		return
 	}
 
@@ -169,7 +149,6 @@ func sortHistoryEntries(entries []HistoryEntry) {
 	}
 }
 
-// CreateNote inserts a manual history note.
 func (s *HistoryStore) CreateNote(ctx context.Context, n *domain.HistoryNote) error {
 	if n.ID == "" {
 		n.ID = uuid.NewString()
@@ -184,7 +163,6 @@ func (s *HistoryStore) CreateNote(ctx context.Context, n *domain.HistoryNote) er
 	})
 }
 
-// GetNote returns one history note or ErrNotFound.
 func (s *HistoryStore) GetNote(ctx context.Context, tenantID, id string) (*domain.HistoryNote, error) {
 	var note *domain.HistoryNote
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
@@ -206,8 +184,6 @@ func (s *HistoryStore) GetNote(ctx context.Context, tenantID, id string) (*domai
 	return note, err
 }
 
-// UpdateNote rewrites a history note. The note must belong to the tenant and
-// car implied by the struct fields. Returns ErrNotFound if no row matches.
 func (s *HistoryStore) UpdateNote(ctx context.Context, n *domain.HistoryNote) error {
 	return s.db.WithTenant(ctx, n.TenantID, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
@@ -227,7 +203,6 @@ func (s *HistoryStore) UpdateNote(ctx context.Context, n *domain.HistoryNote) er
 	})
 }
 
-// DeleteNote removes a history note.
 func (s *HistoryStore) DeleteNote(ctx context.Context, tenantID, id string) error {
 	return s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
 		res, err := tx.Exec(ctx, `

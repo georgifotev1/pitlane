@@ -1,0 +1,49 @@
+{{define "title"}}Оферта {{.Offer.DocumentNumber}}{{end}}
+{{define "base"}}
+<!doctype html>
+<html lang="bg">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <meta name="theme-color" content="#f97316">
+    <meta name="robots" content="noindex, noarchive">
+    <title>Оферта {{.Offer.DocumentNumber}} · Pitlane</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="/favicon.ico" sizes="any">
+    <link rel="stylesheet" href="/static/app.css">
+</head>
+
+<body class="print-page">
+    <div class="print-toolbar"><a class="button" href="/offers/{{.Offer.ID}}">← Назад</a><span>Използвайте командата за
+            печат на браузъра, за да отпечатате или запазите като PDF.</span><a class="button primary"
+            href="/offers/{{.Offer.ID}}/pdf">Изтегляне на PDF</a></div>
+    <main class="print-sheet">
+        <div class="document-header">
+            <div>
+                <h1>{{.Tenant.Name}}</h1>
+                <p>{{.Tenant.Address}}</p>{{if .Tenant.VATNumber}}<p>ДДС №: {{.Tenant.VATNumber}}</p>{{end}}
+            </div>
+            <div class="align-right"><strong class="print-title">ОФЕРТА</strong>
+                <p>№ {{.Offer.DocumentNumber}}</p>
+                <p>{{date .Offer.CreatedAt}}</p>
+            </div>
+        </div>
+        <div class="party-grid">
+            <div><span>Клиент</span><strong>{{.Customer.Name}}</strong>
+                <p>{{.Customer.Company}}</p>
+                <p>{{.Customer.Email}} {{.Customer.Phone}}</p>
+                <p>{{.Customer.Address}}</p>
+            </div>
+            <div><span>Автомобил</span><strong class="plate">{{.Car.Plate}}</strong>
+                <p>{{.Car.Make}} {{.Car.Model}} {{if .Car.Year}}({{.Car.Year}}){{end}}</p>{{if .Car.VIN}}<p>VIN
+                    {{.Car.VIN}}</p>{{end}}{{if .Car.Mileage}}<p>{{.Car.Mileage}} км</p>{{end}}
+            </div>
+        </div>{{template "document-table" .Document}}{{if .Offer.Notes}}<div class="document-notes"><span>Бележки</span>
+            <p class="preline">{{.Offer.Notes}}</p>
+        </div>{{end}}
+    </main>
+</body>
+
+</html>{{end}}
+{{define "main"}}{{end}}

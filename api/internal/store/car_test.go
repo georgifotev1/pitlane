@@ -82,7 +82,6 @@ func TestCarStore(t *testing.T) {
 			t.Fatalf("expected ErrDuplicatePlate, got %v", err)
 		}
 
-		// Archiving the first frees the plate for re-registration.
 		if err := cars.Archive(ctx, tenant.ID, first.ID); err != nil {
 			t.Fatalf("archive first: %v", err)
 		}
@@ -159,7 +158,6 @@ func TestCarStore(t *testing.T) {
 	})
 
 	t.Run("List paginates, searches, and filters archived, scoped to customer", func(t *testing.T) {
-		// Fresh tenant + customer so counts are deterministic.
 		lt := newTenant("ListGarage")
 		if err := ts.Create(ctx, lt); err != nil {
 			t.Fatalf("create list tenant: %v", err)
@@ -172,8 +170,6 @@ func TestCarStore(t *testing.T) {
 		if err := custs.Create(ctx, other); err != nil {
 			t.Fatalf("create other customer: %v", err)
 		}
-		// One car under a different customer of the SAME tenant — must not leak
-		// into cust's list.
 		if err := cars.Create(ctx, newCar(lt.ID, other.ID, "OTHER01")); err != nil {
 			t.Fatalf("create other car: %v", err)
 		}
@@ -213,7 +209,6 @@ func TestCarStore(t *testing.T) {
 			t.Fatalf("search wrong: total %d, %+v", total, plates2(found))
 		}
 
-		// Archive one; it drops from the default list but appears when included.
 		if err := cars.Archive(ctx, lt.ID, page1[0].ID); err != nil {
 			t.Fatalf("archive: %v", err)
 		}
@@ -234,8 +229,6 @@ func TestCarStore(t *testing.T) {
 	})
 
 	t.Run("ListAll spans customers, enriches names, and filters", func(t *testing.T) {
-		// Fresh tenant so counts are deterministic. Two customers, one car each;
-		// a second fixture's tenant must never appear.
 		lt := newTenant("BoardGarage")
 		if err := ts.Create(ctx, lt); err != nil {
 			t.Fatalf("create board tenant: %v", err)
@@ -266,7 +259,6 @@ func TestCarStore(t *testing.T) {
 		if total != 2 || len(board) != 2 {
 			t.Fatalf("board: got total=%d len=%d, want 2/2", total, len(board))
 		}
-		// Plate order, enriched with the owning customer's name.
 		if board[0].Car.Plate != "AAA1111" || board[0].CustomerName != "Ana Ivanova" {
 			t.Fatalf("row 0 wrong: %+v", board[0])
 		}
@@ -274,7 +266,6 @@ func TestCarStore(t *testing.T) {
 			t.Fatalf("row 1 wrong: %+v", board[1])
 		}
 
-		// Search crosses customers.
 		found, total, err := cars.ListAll(ctx, lt.ID, CarListParams{Search: "toyota", Limit: 10})
 		if err != nil {
 			t.Fatalf("search: %v", err)
@@ -283,7 +274,6 @@ func TestCarStore(t *testing.T) {
 			t.Fatalf("search wrong: total=%d len=%d", total, len(found))
 		}
 
-		// Archived cars drop from the default board but appear when included.
 		if err := cars.Archive(ctx, lt.ID, carA.ID); err != nil {
 			t.Fatalf("archive A: %v", err)
 		}
@@ -302,7 +292,6 @@ func TestCarStore(t *testing.T) {
 			t.Fatalf("incl-archived wrong: total=%d row0=%+v", inclTotal, withArchived[0].Car)
 		}
 
-		// Cross-tenant: another tenant's board is empty here.
 		otherTenant := newTenant("OtherBoard")
 		if err := ts.Create(ctx, otherTenant); err != nil {
 			t.Fatalf("create other tenant: %v", err)
