@@ -1,0 +1,148 @@
+{{ define "title" }}Софтуер за управление на автосервиз{{ end }}
+{{ define "main" }}
+<header class="landing-nav">
+	<div class="landing-container landing-nav-inner">
+		<a class="brand landing-brand" href="/" aria-label="Pitlane — начало">
+			<img class="brand-mark" src="/static/favicon.svg" width="36" height="36" alt="" />
+			<span>pitlane</span>
+		</a>
+		<nav aria-label="Навигация">
+			<a href="#features">Възможности</a>
+			<a href="#workflow">Как работи</a>
+		</nav>
+		<div class="landing-nav-actions">
+			<a class="landing-login" href="/account/login">Вход</a>
+			<a class="button primary" href="/account/signup">Създай сервиз</a>
+		</div>
+	</div>
+</header>
+
+<main>
+	<section class="landing-hero">
+		<div class="landing-container hero-grid">
+			<div class="hero-copy">
+				<p class="landing-kicker"><span></span> Софтуер за независимия автосервиз</p>
+				<h1>Пълен контрол<br /><em>в сервиза.</em></h1>
+				<p class="hero-lead">Клиенти, автомобили, оферти и ремонти — подредени в един лесен работен процес. Винаги знаете какво е свършено и какво предстои.</p>
+				<div class="hero-actions">
+					<a class="button primary landing-cta" href="/account/signup">Създай своя сервиз <span aria-hidden="true">→</span></a>
+					<a class="hero-secondary" href="#features">Разгледай възможностите <span aria-hidden="true">↓</span></a>
+				</div>
+				<p class="hero-note">
+					<svg aria-hidden="true" viewBox="0 0 20 20" width="18" height="18"><path d="m5 10 3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+					Създаваш профил и започваш веднага
+				</p>
+			</div>
+
+			<div class="product-preview" role="img" aria-label="Преглед на таблото в Pitlane">
+				<div class="preview-window">
+					<div class="preview-bar"><i></i><i></i><i></i><span>Табло · Моят сервиз</span></div>
+					<div class="preview-shell">
+						<aside class="preview-sidebar">
+							<div class="preview-logo"><img src="/static/favicon.svg" width="24" height="24" alt="" /><b>pitlane</b></div>
+							<ul><li class="selected">Начало</li><li>Клиенти</li><li>Автомобили</li><li>Оферти</li><li>Ремонти</li></ul>
+						</aside>
+						<div class="preview-content">
+							<div class="preview-heading"><div><b>Добро утро, Иван</b><small>Ето как върви сервизът.</small></div><span>+ Нов клиент</span></div>
+							<div class="preview-stats">
+								<div><small>Оборот този месец</small><strong>12 480 €</strong><em>↑ 14% спрямо миналия</em></div>
+								<div><small>Печалба този месец</small><strong>5 120 €</strong><em>41% марж</em></div>
+								<div><small>Ремонти в работа</small><strong>6</strong><em>2 чакат части</em></div>
+							</div>
+							<div class="preview-panels">
+								<div class="preview-chart-card">
+									<div class="preview-card-title"><b>Приходи и печалба</b><small>Последните 6 месеца</small></div>
+									<div class="preview-chart" aria-hidden="true"><span style="--bar: 38%"></span><span style="--bar: 55%"></span><span style="--bar: 47%"></span><span style="--bar: 72%"></span><span style="--bar: 63%"></span><span class="current" style="--bar: 88%"></span></div>
+									<div class="preview-months"><span>ОКТ</span><span>НОЕ</span><span>ДЕК</span><span>ЯНУ</span><span>ФЕВ</span><span>МАР</span></div>
+								</div>
+								<div class="preview-list-card">
+									<div class="preview-card-title"><b>В работа</b><small>6 ремонта</small></div>
+									<div class="preview-job"><i>CA</i><span><b>СА 2481 КМ</b><small>Audi A4 · Спирачки</small></span><em>В работа</em></div>
+									<div class="preview-job"><i>PB</i><span><b>РВ 9032 ТХ</b><small>VW Golf · Масло</small></span><em>Отворен</em></div>
+									<div class="preview-job"><i>CB</i><span><b>СВ 1174 АС</b><small>BMW X3 · Окачване</small></span><em>В работа</em></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="preview-badge preview-badge-top"><span>✓</span><div><b>Офертата е приета</b><small>Създаден е ремонт RP-0042</small></div></div>
+				<div class="preview-badge preview-badge-bottom"><span>↗</span><div><b>+ 14% оборот</b><small>спрямо миналия месец</small></div></div>
+			</div>
+		</div>
+	</section>
+
+	<section class="landing-strip" aria-label="Основни възможности">
+		<div class="landing-container">
+			<span>КЛИЕНТИ</span><i></i><span>АВТОМОБИЛИ</span><i></i><span>ОФЕРТИ</span><i></i><span>РЕМОНТИ</span><i></i><span>СЕРВИЗНА ИСТОРИЯ</span>
+		</div>
+	</section>
+
+	<section class="landing-section" id="features">
+		<div class="landing-container">
+			<div class="section-heading">
+				<p class="landing-kicker"><span></span> Всичко необходимо. Нищо излишно.</p>
+				<h2>От първото обаждане<br />до завършения ремонт.</h2>
+				<p>Pitlane свързва ежедневните задачи на сервиза, без сложни менюта и без излишно въвеждане на данни.</p>
+			</div>
+			<div class="feature-grid">
+				<article class="feature-card feature-card-wide">
+					<div class="feature-icon">
+						<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 18v-5.5A2.5 2.5 0 0 1 6.5 10h11a2.5 2.5 0 0 1 2.5 2.5V18M6 10l1.5-4h9l1.5 4M3 14h18M7 18v2M17 18v2" /></svg>
+					</div>
+					<div><p class="feature-number">01</p><h3>Цялата история на автомобила</h3><p>Данни за клиента, автомобилите му, пробегът и всяка сервизна намеса са на едно място.</p></div>
+					<div class="mini-timeline" aria-hidden="true"><span><i></i><b>Смяна на масло и филтри</b><small>18.03.2026 · 142 380 км</small></span><span><i></i><b>Предни накладки</b><small>04.11.2025 · 133 120 км</small></span><span><i></i><b>Годишен преглед</b><small>21.06.2025 · 125 640 км</small></span></div>
+				</article>
+				<article class="feature-card">
+					<div class="feature-icon">
+						<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 3h8l4 4v14H7zM14 3v5h5M10 13h6M10 17h6" /></svg>
+					</div>
+					<p class="feature-number">02</p><h3>Професионални оферти</h3><p>Добавяш части и труд, а Pitlane изчислява сумите и ДДС. Разпечатваш или сваляш готов PDF.</p>
+					<div class="mini-offer" aria-hidden="true"><span>ОФЕРТА</span><b>OF-2026-000042</b><i></i><small>Части и материали</small><em>426,00 €</em><small>Труд</small><em>180,00 €</em><strong>Общо&nbsp; 606,00 €</strong></div>
+				</article>
+				<article class="feature-card feature-card-accent">
+					<div class="feature-icon dark">
+						<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3" /></svg>
+					</div>
+					<p class="feature-number">03</p><h3>Знаеш не само оборота, а и печалбата</h3><p>Следиш доставни цени, разходи и марж. Таблото показва кои ремонти движат бизнеса напред.</p>
+					<div class="mini-metric"><small>Печалба този месец</small><strong>5 120 €</strong><span>↑ 18%</span><div><i style="--h: 42%"></i><i style="--h: 56%"></i><i style="--h: 49%"></i><i style="--h: 68%"></i><i style="--h: 61%"></i><i style="--h: 85%"></i></div></div>
+				</article>
+			</div>
+		</div>
+	</section>
+
+	<section class="workflow-section" id="workflow">
+		<div class="landing-container workflow-grid">
+			<div class="workflow-copy">
+				<p class="landing-kicker light"><span></span> Един ясен работен процес</p>
+				<h2>Поемаш автомобила.<br />Pitlane пази реда.</h2>
+				<p>Всяка следваща стъпка използва вече въведеното. Без преписване между тетрадки, таблици и документи.</p>
+				<a class="button landing-light-button" href="/account/signup">Започни сега <span aria-hidden="true">→</span></a>
+			</div>
+			<ol class="workflow-steps">
+				<li><span>01</span><div><b>Добавяш клиент и автомобил</b><p>Контакти, регистрационен номер, VIN и пробег.</p></div></li>
+				<li><span>02</span><div><b>Изготвяш ясна оферта</b><p>Части, труд, цени и автоматично изчислено ДДС.</p></div></li>
+				<li><span>03</span><div><b>Проследяваш ремонта</b><p>Отворен, в работа или завършен — винаги знаеш статуса.</p></div></li>
+				<li><span>04</span><div><b>Историята и отчетът са готови</b><p>Ремонтът влиза в досието на колата и в приходите.</p></div></li>
+			</ol>
+		</div>
+	</section>
+
+	<section class="landing-final">
+		<div class="landing-container final-card">
+			<div class="final-mark" aria-hidden="true"><img src="/static/favicon.svg" width="58" height="58" alt="" /></div>
+			<p class="landing-kicker"><span></span> Готов ли е сервизът ти за по-добър ред?</p>
+			<h2>Започни още днес.</h2>
+			<p>Създай своя сервиз в Pitlane и събери цялата работа на едно място.</p>
+			<a class="button primary landing-cta" href="/account/signup">Създай своя сервиз <span aria-hidden="true">→</span></a>
+		</div>
+	</section>
+</main>
+
+<footer class="landing-footer">
+	<div class="landing-container">
+		<a class="brand landing-brand" href="/"><img class="brand-mark" src="/static/favicon.svg" width="30" height="30" alt="" /><span>pitlane</span></a>
+		<p>Софтуер за управление на независимия автосервиз.</p>
+		<div><a href="/account/login">Вход</a><a href="/account/signup">Създай сервиз</a></div>
+	</div>
+</footer>
+{{ end }}

@@ -26,7 +26,7 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 		return
 	}
-	http.Redirect(w, r, "/account/login", http.StatusSeeOther)
+	app.render(w, r, "home.page.html", app.newTemplateData(r))
 }
 
 func (app *application) health(w http.ResponseWriter, _ *http.Request) {

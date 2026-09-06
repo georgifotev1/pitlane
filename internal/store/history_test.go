@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/gfotev/pitlane/internal/domain"
 	"github.com/google/uuid"
@@ -12,6 +13,26 @@ func historyFixture(t *testing.T) (context.Context, *DB, *HistoryStore, *RepairS
 	t.Helper()
 	ctx, db, repairs, offers, tenant, _, car := repairFixture(t)
 	return ctx, db, NewHistoryStore(db), repairs, offers, tenant, car
+}
+
+func TestSortHistoryEntriesNewestFirst(t *testing.T) {
+	oldest := time.Date(2024, time.January, 10, 0, 0, 0, 0, time.UTC)
+	middle := oldest.AddDate(0, 1, 0)
+	latest := middle.AddDate(0, 1, 0)
+	entries := []HistoryEntry{
+		{ID: "oldest-repair", Type: "repair", RecordedAt: oldest},
+		{ID: "latest-repair", Type: "repair", RecordedAt: latest},
+		{ID: "middle-note", Type: "note", RecordedAt: middle},
+	}
+
+	sortHistoryEntries(entries)
+
+	want := []string{"latest-repair", "middle-note", "oldest-repair"}
+	for i, id := range want {
+		if entries[i].ID != id {
+			t.Fatalf("entry %d = %q; want %q", i, entries[i].ID, id)
+		}
+	}
 }
 
 func TestHistoryStore(t *testing.T) {

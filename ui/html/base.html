@@ -41,7 +41,7 @@
       <script src="/static/app.js" defer></script>
 	</head>
 
-	<body class="{{ if .CurrentUser }}app-shell{{ else }}auth-shell{{ end }}">
+	<body class="{{ if .CurrentUser }}app-shell{{ else if eq .CurrentPath "/" }}landing-shell{{ else }}auth-shell{{ end }}">
 		{{ if .CurrentUser }}
 			<aside class="sidebar">
 				<a class="brand" href="/dashboard">
@@ -81,6 +81,8 @@
 				{{ if .Flash }}<div class="flash">{{ .Flash }}</div>{{ end }}
 				{{ template "main" . }}
 			</main>
+		{{ else if eq .CurrentPath "/" }}
+			{{ template "main" . }}
 		{{ else }}
 			<main class="auth-main">
 				<a class="brand auth-brand" href="/"><img class="brand-mark" src="/static/favicon.svg" width="32" height="32" alt="" /><span>pitlane</span></a>

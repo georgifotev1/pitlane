@@ -109,7 +109,7 @@
 		{{ range .Rows }}
 			<a class="list-row" href="{{ .URL }}">
 				<div>
-					<strong>{{ with .TypeLabel }}{{ . }}{{ end }}{{ .Number }} · {{ .CarPlate }}</strong><span>{{ .CustomerName }} ·
+					<strong>{{ with .TypeLabel }}{{ . }} {{ end }}{{ .Number }} · {{ .CarPlate }}</strong><span>{{ .CustomerName }} ·
 						{{ if .Note }}
 							{{ .Note }}
 						{{ else }}

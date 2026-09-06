@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/gfotev/pitlane/internal/domain"
@@ -110,43 +111,12 @@ func (s *HistoryStore) ListByCar(ctx context.Context, tenantID, carID string) ([
 }
 
 func sortHistoryEntries(entries []HistoryEntry) {
-	if len(entries) <= 1 {
-		return
-	}
-	mid := 0
-	for mid < len(entries) && entries[mid].Type == "repair" {
-		mid++
-	}
-	if mid == 0 || mid == len(entries) {
-		return
-	}
-
-	left := make([]HistoryEntry, mid)
-	right := make([]HistoryEntry, len(entries)-mid)
-	copy(left, entries[:mid])
-	copy(right, entries[mid:])
-
-	i, j, k := 0, 0, 0
-	for i < len(left) && j < len(right) {
-		if !left[i].RecordedAt.Before(right[j].RecordedAt) {
-			entries[k] = left[i]
-			i++
-		} else {
-			entries[k] = right[j]
-			j++
-		}
-		k++
-	}
-	for i < len(left) {
-		entries[k] = left[i]
-		i++
-		k++
-	}
-	for j < len(right) {
-		entries[k] = right[j]
-		j++
-		k++
-	}
+	// Service history is a reverse-chronological timeline: the work an owner is
+	// most likely looking for should always be at the top. Sort the combined
+	// result rather than relying on the separate repair and note query orders.
+	sort.SliceStable(entries, func(i, j int) bool {
+		return entries[i].RecordedAt.After(entries[j].RecordedAt)
+	})
 }
 
 func (s *HistoryStore) CreateNote(ctx context.Context, n *domain.HistoryNote) error {

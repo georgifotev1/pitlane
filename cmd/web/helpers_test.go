@@ -20,8 +20,8 @@ func TestTemplateCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(cache) != 21 {
-		t.Fatalf("got %d templates; want 21", len(cache))
+	if len(cache) != 22 {
+		t.Fatalf("got %d templates; want 22", len(cache))
 	}
 
 	tenant := &domain.Tenant{Currency: "EUR", Name: "Garage"}

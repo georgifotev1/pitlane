@@ -5,13 +5,18 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/alexedwards/scs/v2"
 )
 
 func TestPublicAndProtectedRoutes(t *testing.T) {
-	app := &application{logger: slog.New(slog.NewTextHandler(io.Discard, nil)), sessions: scs.New()}
+	templates, err := newTemplateCache()
+	if err != nil {
+		t.Fatal(err)
+	}
+	app := &application{logger: slog.New(slog.NewTextHandler(io.Discard, nil)), sessions: scs.New(), templates: templates}
 	handler := app.routes()
 
 	t.Run("health", func(t *testing.T) {
@@ -19,6 +24,14 @@ func TestPublicAndProtectedRoutes(t *testing.T) {
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/healthz", nil))
 		if response.Code != http.StatusOK || response.Body.String() != "ok" {
 			t.Fatalf("got status %d body %q", response.Code, response.Body.String())
+		}
+	})
+
+	t.Run("public landing page", func(t *testing.T) {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/", nil))
+		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "По-малко таблици") {
+			t.Fatalf("got status %d without landing-page copy", response.Code)
 		}
 	})
 
