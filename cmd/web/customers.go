@@ -15,12 +15,20 @@ func (app *application) customersList(w http.ResponseWriter, r *http.Request) {
 	data := app.newTemplateData(r)
 	search := clean(r.URL.Query().Get("q"))
 	includeArchived := r.URL.Query().Get("archived") == "1"
-	customers, total, err := app.customers.List(r.Context(), app.tenantID(r), store.CustomerListParams{Search: search, IncludeArchived: includeArchived, Limit: 500})
+	page := requestedPage(r)
+	customers, total, err := app.customers.List(r.Context(), app.tenantID(r), store.CustomerListParams{
+		Search: search, IncludeArchived: includeArchived,
+		Limit: listPageSize, Offset: pageOffset(page),
+	})
 	if err != nil {
 		app.serverError(w, r, err)
 		return
 	}
+	if redirectIfPageOutOfRange(w, r, page, total) {
+		return
+	}
 	data.Customers, data.Total = customers, total
+	data.Pagination = newPagination(r, page, total)
 	data.Form.Values.Set("q", search)
 	if includeArchived {
 		data.Form.Values.Set("archived", "1")

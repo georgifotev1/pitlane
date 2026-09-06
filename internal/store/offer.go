@@ -69,9 +69,10 @@ type OfferSummary struct {
 }
 
 type OfferBoardParams struct {
-	Status string
-	Limit  int
-	Offset int
+	Status         string
+	CustomerSearch string
+	Limit          int
+	Offset         int
 }
 
 // offerBoardSelect is the one query shape every offer list uses - the board, the
@@ -111,11 +112,18 @@ func (s *OfferStore) ListAll(ctx context.Context, tenantID string, p OfferBoardP
 	var total int
 
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
-		const where = `WHERE o.tenant_id = $1 AND ($2 = '' OR o.status = $2)`
+		const where = `WHERE o.tenant_id = $1
+			AND ($2 = '' OR o.status = $2)
+			AND ($3 = '' OR cust.name ILIKE '%' || $3 || '%'
+			                  OR cust.company ILIKE '%' || $3 || '%')`
 
 		if err := tx.QueryRow(ctx,
-			`SELECT count(*) FROM offers o `+where,
-			tenantID, p.Status,
+			`SELECT count(*)
+			 FROM offers o
+			 JOIN cars c ON c.id = o.car_id AND c.tenant_id = o.tenant_id
+			 JOIN customers cust ON cust.id = c.customer_id AND cust.tenant_id = c.tenant_id
+			 `+where,
+			tenantID, p.Status, p.CustomerSearch,
 		).Scan(&total); err != nil {
 			return fmt.Errorf("count offers: %w", err)
 		}
@@ -123,8 +131,8 @@ func (s *OfferStore) ListAll(ctx context.Context, tenantID string, p OfferBoardP
 		rows, err := tx.Query(ctx,
 			offerBoardSelect+where+`
 			 ORDER BY o.created_at DESC, o.id DESC
-			 LIMIT $3 OFFSET $4`,
-			tenantID, p.Status, p.Limit, p.Offset,
+			 LIMIT $4 OFFSET $5`,
+			tenantID, p.Status, p.CustomerSearch, p.Limit, p.Offset,
 		)
 		if err != nil {
 			return fmt.Errorf("list offers board: %w", err)

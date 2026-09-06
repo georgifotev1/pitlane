@@ -57,9 +57,23 @@
 					<a class="{{ if active .CurrentPath "/garage" }}active{{ end }}" href="/garage">Настройки</a>
 				</nav>
 				<div class="sidebar-user">
-					<span>{{ .CurrentUser }}</span>
+					<a class="sidebar-profile {{ if active .CurrentPath "/account/profile" }}active{{ end }}" href="/account/profile" title="Моят профил">
+						<span class="user-avatar" aria-hidden="true">
+							<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
+								<circle cx="12" cy="8" r="3.25" />
+								<path d="M5.75 19c.7-3.15 2.8-4.75 6.25-4.75s5.55 1.6 6.25 4.75" />
+							</svg>
+						</span>
+						<span class="user-details"><strong>{{ .CurrentUser }}</strong><small>Моят профил</small></span>
+					</a>
 					<form action="/account/logout" method="post">
-						<button class="link-button" type="submit">Изход</button>
+						<button class="sidebar-logout" type="submit" title="Изход от профила">
+							<svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8">
+								<path d="M14 8V5.75A1.75 1.75 0 0 0 12.25 4h-6.5A1.75 1.75 0 0 0 4 5.75v12.5A1.75 1.75 0 0 0 5.75 20h6.5A1.75 1.75 0 0 0 14 18.25V16" />
+								<path d="M10 12h10m-3-3 3 3-3 3" />
+							</svg>
+							<span>Изход</span>
+						</button>
 					</form>
 				</div>
 			</aside>

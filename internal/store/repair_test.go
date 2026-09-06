@@ -349,6 +349,51 @@ func TestRepairStore(t *testing.T) {
 			t.Fatalf("status filter wrong: total=%d len=%d", openTotal, len(open))
 		}
 	})
+
+	t.Run("List finds repairs by customer name or company", func(t *testing.T) {
+		ctx2, db2, repairs2, offers2, tenant2, _, car2 := repairFixture(t)
+
+		ivanOffer := sentOffer(t, ctx2, offers2, tenant2.ID, car2.ID)
+		if _, err := repairs2.CreateFromOffer(ctx2, tenant2.ID, ivanOffer.ID); err != nil {
+			t.Fatalf("create Ivan repair: %v", err)
+		}
+
+		customer := newCustomer(tenant2.ID, "Maria Georgieva")
+		customer.Company = "Acme Fleet"
+		if err := NewCustomerStore(db2).Create(ctx2, customer); err != nil {
+			t.Fatalf("create Maria: %v", err)
+		}
+		car := newCar(tenant2.ID, customer.ID, "CA4321BC")
+		if err := NewCarStore(db2).Create(ctx2, car); err != nil {
+			t.Fatalf("create Maria car: %v", err)
+		}
+		mariaOffer := sentOffer(t, ctx2, offers2, tenant2.ID, car.ID)
+		mariaRepair, err := repairs2.CreateFromOffer(ctx2, tenant2.ID, mariaOffer.ID)
+		if err != nil {
+			t.Fatalf("create Maria repair: %v", err)
+		}
+		if _, err := repairs2.Complete(ctx2, tenant2.ID, mariaRepair.ID, 50000); err != nil {
+			t.Fatalf("complete Maria repair: %v", err)
+		}
+
+		byName, total, err := repairs2.List(ctx2, tenant2.ID, RepairListParams{CustomerSearch: "georg", Limit: 10})
+		if err != nil {
+			t.Fatalf("filter by customer name: %v", err)
+		}
+		if total != 1 || len(byName) != 1 || byName[0].Repair.ID != mariaRepair.ID {
+			t.Fatalf("name filter wrong: total=%d repairs=%+v", total, byName)
+		}
+
+		byCompanyAndStatus, total, err := repairs2.List(ctx2, tenant2.ID, RepairListParams{
+			CustomerSearch: "ACME", Status: "completed", Limit: 10,
+		})
+		if err != nil {
+			t.Fatalf("filter by customer company and status: %v", err)
+		}
+		if total != 1 || len(byCompanyAndStatus) != 1 || byCompanyAndStatus[0].Repair.ID != mariaRepair.ID {
+			t.Fatalf("company and status filter wrong: total=%d repairs=%+v", total, byCompanyAndStatus)
+		}
+	})
 }
 
 func TestRepairTenantIsolation(t *testing.T) {

@@ -349,6 +349,50 @@ func TestOfferStore(t *testing.T) {
 		}
 	})
 
+	t.Run("ListAll finds offers by customer name or company", func(t *testing.T) {
+		ctx2, db2, offers2, tenant2, car2 := offerFixture(t)
+
+		ivanOffer := newOffer(tenant2.ID, car2.ID)
+		if err := offers2.Create(ctx2, ivanOffer); err != nil {
+			t.Fatalf("create Ivan offer: %v", err)
+		}
+
+		customer := newCustomer(tenant2.ID, "Maria Georgieva")
+		customer.Company = "Acme Fleet"
+		if err := NewCustomerStore(db2).Create(ctx2, customer); err != nil {
+			t.Fatalf("create Maria: %v", err)
+		}
+		car := newCar(tenant2.ID, customer.ID, "CA4321BC")
+		if err := NewCarStore(db2).Create(ctx2, car); err != nil {
+			t.Fatalf("create Maria car: %v", err)
+		}
+		mariaOffer := newOffer(tenant2.ID, car.ID)
+		if err := offers2.Create(ctx2, mariaOffer); err != nil {
+			t.Fatalf("create Maria offer: %v", err)
+		}
+		if _, err := offers2.MarkSending(ctx2, tenant2.ID, mariaOffer.ID, "maria@example.com", &fakeEnqueuer{}); err != nil {
+			t.Fatalf("send Maria offer: %v", err)
+		}
+
+		byName, total, err := offers2.ListAll(ctx2, tenant2.ID, OfferBoardParams{CustomerSearch: "georg", Limit: 10})
+		if err != nil {
+			t.Fatalf("filter by customer name: %v", err)
+		}
+		if total != 1 || len(byName) != 1 || byName[0].Offer.ID != mariaOffer.ID {
+			t.Fatalf("name filter wrong: total=%d offers=%+v", total, byName)
+		}
+
+		byCompanyAndStatus, total, err := offers2.ListAll(ctx2, tenant2.ID, OfferBoardParams{
+			CustomerSearch: "ACME", Status: "sent", Limit: 10,
+		})
+		if err != nil {
+			t.Fatalf("filter by customer company and status: %v", err)
+		}
+		if total != 1 || len(byCompanyAndStatus) != 1 || byCompanyAndStatus[0].Offer.ID != mariaOffer.ID {
+			t.Fatalf("company and status filter wrong: total=%d offers=%+v", total, byCompanyAndStatus)
+		}
+	})
+
 	t.Run("cross-tenant access is invisible", func(t *testing.T) {
 		ctx2, _, offers2, tenantA, carA := offerFixture(t)
 		mine := newOffer(tenantA.ID, carA.ID)

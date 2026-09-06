@@ -78,6 +78,30 @@
 </section>
 {{ end }}
 
+{{/* Previous/next navigation for server-rendered list pages. Takes a pagination. */}}
+{{ define "pagination" }}
+{{ if . }}
+	{{ if .Show }}
+		<nav class="pagination" aria-label="Страници">
+			<p>Показани <strong>{{ .FirstItem }}–{{ .LastItem }}</strong> от <strong>{{ .TotalItems }}</strong></p>
+			<div class="pagination-controls">
+				{{ if .HasPrevious }}
+					<a class="button" rel="prev" href="{{ .PreviousURL }}">← Предишна</a>
+				{{ else }}
+					<span class="button disabled" aria-disabled="true">← Предишна</span>
+				{{ end }}
+				<span>Страница {{ .CurrentPage }} от {{ .TotalPages }}</span>
+				{{ if .HasNext }}
+					<a class="button" rel="next" href="{{ .NextURL }}">Следваща →</a>
+				{{ else }}
+					<span class="button disabled" aria-disabled="true">Следваща →</span>
+				{{ end }}
+			</div>
+		</nav>
+	{{ end }}
+{{ end }}
+{{ end }}
+
 {{/* The compact form of the same rows, for dashboard panels. */}}
 {{ define "document-list" }}
 {{ if .Rows }}

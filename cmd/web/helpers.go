@@ -51,6 +51,79 @@ func (app *application) flash(r *http.Request, message string) {
 
 func clean(value string) string { return strings.TrimSpace(value) }
 
+const listPageSize = 25
+
+// requestedPage treats missing, malformed and overflowing page values as the
+// first page. This keeps list offsets bounded before they reach PostgreSQL.
+func requestedPage(r *http.Request) int {
+	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	maxInt := int(^uint(0) >> 1)
+	if err != nil || page < 1 || page-1 > maxInt/listPageSize {
+		return 1
+	}
+	return page
+}
+
+func paginationPageCount(total int) int {
+	if total < 1 {
+		return 1
+	}
+	return (total-1)/listPageSize + 1
+}
+
+func pageOffset(page int) int { return (page - 1) * listPageSize }
+
+// redirectIfPageOutOfRange avoids rendering an empty table when rows disappear
+// or a user follows a stale page link. Search and filter parameters survive.
+func redirectIfPageOutOfRange(w http.ResponseWriter, r *http.Request, page, total int) bool {
+	lastPage := paginationPageCount(total)
+	if page <= lastPage {
+		return false
+	}
+	http.Redirect(w, r, paginationURL(r, lastPage), http.StatusSeeOther)
+	return true
+}
+
+func newPagination(r *http.Request, page, total int) *pagination {
+	pages := paginationPageCount(total)
+	p := &pagination{
+		CurrentPage: page,
+		TotalPages:  pages,
+		TotalItems:  total,
+		HasPrevious: page > 1,
+		HasNext:     page < pages,
+		Show:        pages > 1,
+	}
+	if total > 0 {
+		offset := pageOffset(page)
+		p.FirstItem = offset + 1
+		p.LastItem = total
+		if total-offset > listPageSize {
+			p.LastItem = offset + listPageSize
+		}
+	}
+	if p.HasPrevious {
+		p.PreviousURL = paginationURL(r, page-1)
+	}
+	if p.HasNext {
+		p.NextURL = paginationURL(r, page+1)
+	}
+	return p
+}
+
+func paginationURL(r *http.Request, page int) string {
+	query := r.URL.Query()
+	if page <= 1 {
+		query.Del("page")
+	} else {
+		query.Set("page", strconv.Itoa(page))
+	}
+	if encoded := query.Encode(); encoded != "" {
+		return r.URL.Path + "?" + encoded
+	}
+	return r.URL.Path
+}
+
 // currency is the tenant's currency, or the empty string on a page rendered
 // before a tenant is loaded - pdf.FormatMoney reads that as the euro.
 func (app *application) currency(data *templateData) string {

@@ -60,9 +60,10 @@ type RepairSummary struct {
 }
 
 type RepairListParams struct {
-	Status string
-	Limit  int
-	Offset int
+	Status         string
+	CustomerSearch string
+	Limit          int
+	Offset         int
 }
 
 type RepairStats struct {
@@ -112,11 +113,18 @@ func (s *RepairStore) List(ctx context.Context, tenantID string, p RepairListPar
 	var total int
 
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
-		const where = `WHERE r.tenant_id = $1 AND ($2 = '' OR r.status = $2)`
+		const where = `WHERE r.tenant_id = $1
+			AND ($2 = '' OR r.status = $2)
+			AND ($3 = '' OR cust.name ILIKE '%' || $3 || '%'
+			                  OR cust.company ILIKE '%' || $3 || '%')`
 
 		if err := tx.QueryRow(ctx,
-			`SELECT count(*) FROM repairs r `+where,
-			tenantID, p.Status,
+			`SELECT count(*)
+			 FROM repairs r
+			 JOIN cars c ON c.id = r.car_id AND c.tenant_id = r.tenant_id
+			 JOIN customers cust ON cust.id = c.customer_id AND cust.tenant_id = c.tenant_id
+			 `+where,
+			tenantID, p.Status, p.CustomerSearch,
 		).Scan(&total); err != nil {
 			return fmt.Errorf("count repairs: %w", err)
 		}
@@ -124,8 +132,8 @@ func (s *RepairStore) List(ctx context.Context, tenantID string, p RepairListPar
 		rows, err := tx.Query(ctx,
 			repairBoardSelect+where+`
 			 ORDER BY r.created_at DESC, r.id DESC
-			 LIMIT $3 OFFSET $4`,
-			tenantID, p.Status, p.Limit, p.Offset,
+			 LIMIT $4 OFFSET $5`,
+			tenantID, p.Status, p.CustomerSearch, p.Limit, p.Offset,
 		)
 		if err != nil {
 			return fmt.Errorf("list repairs: %w", err)

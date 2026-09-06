@@ -22,14 +22,27 @@ const (
 
 func (app *application) offersList(w http.ResponseWriter, r *http.Request) {
 	data := app.newTemplateData(r)
-	offers, total, err := app.offers.ListAll(r.Context(), app.tenantID(r), store.OfferBoardParams{Status: clean(r.URL.Query().Get("status")), Limit: 500})
+	page := requestedPage(r)
+	status := clean(r.URL.Query().Get("status"))
+	customerSearch := clean(r.URL.Query().Get("customer"))
+	offers, total, err := app.offers.ListAll(r.Context(), app.tenantID(r), store.OfferBoardParams{
+		Status:         status,
+		CustomerSearch: customerSearch,
+		Limit:          listPageSize,
+		Offset:         pageOffset(page),
+	})
 	if err != nil {
 		app.serverError(w, r, err)
 		return
 	}
+	if redirectIfPageOutOfRange(w, r, page, total) {
+		return
+	}
 	data.Offers, data.Total = offers, total
+	data.Pagination = newPagination(r, page, total)
 	data.Board = offerBoard(offers, app.currency(data))
-	data.Form.Values.Set("status", r.URL.Query().Get("status"))
+	data.Form.Values.Set("status", status)
+	data.Form.Values.Set("customer", customerSearch)
 	app.render(w, r, "offers.page.html", data)
 }
 

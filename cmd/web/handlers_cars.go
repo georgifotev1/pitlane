@@ -16,12 +16,21 @@ import (
 func (app *application) carsList(w http.ResponseWriter, r *http.Request) {
 	data := app.newTemplateData(r)
 	search := clean(r.URL.Query().Get("q"))
-	cars, total, err := app.cars.ListAll(r.Context(), app.tenantID(r), store.CarListParams{Search: search, IncludeArchived: r.URL.Query().Get("archived") == "1", Limit: 500})
+	includeArchived := r.URL.Query().Get("archived") == "1"
+	page := requestedPage(r)
+	cars, total, err := app.cars.ListAll(r.Context(), app.tenantID(r), store.CarListParams{
+		Search: search, IncludeArchived: includeArchived,
+		Limit: listPageSize, Offset: pageOffset(page),
+	})
 	if err != nil {
 		app.serverError(w, r, err)
 		return
 	}
+	if redirectIfPageOutOfRange(w, r, page, total) {
+		return
+	}
 	data.Cars, data.Total = cars, total
+	data.Pagination = newPagination(r, page, total)
 	data.Form.Values.Set("q", search)
 	if r.URL.Query().Get("archived") == "1" {
 		data.Form.Values.Set("archived", "1")

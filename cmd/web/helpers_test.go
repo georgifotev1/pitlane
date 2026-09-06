@@ -20,8 +20,8 @@ func TestTemplateCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(cache) != 20 {
-		t.Fatalf("got %d templates; want 20", len(cache))
+	if len(cache) != 21 {
+		t.Fatalf("got %d templates; want 21", len(cache))
 	}
 
 	tenant := &domain.Tenant{Currency: "EUR", Name: "Garage"}
@@ -31,6 +31,7 @@ func TestTemplateCache(t *testing.T) {
 	repair := &domain.Repair{ID: "repair", DocumentNumber: "RP-2026-000001", CarID: car.ID, Status: domain.RepairStatusOpen, Items: []domain.RepairItem{{Kind: domain.OfferItemKindLabor, Description: "Work", Quantity: 1, UnitPriceCents: 2000, LineTotalCents: 2000}}}
 	data := &templateData{
 		CurrentUser: "Owner", GarageName: tenant.Name, Form: forms.New(nil), Tenant: tenant,
+		User: &domain.User{Email: "owner@example.com"}, NameForm: forms.New(nil), PasswordForm: forms.New(nil),
 		Customer: customer, Customers: []*domain.Customer{customer}, Car: car,
 		Cars: []store.CarSummary{{Car: car, CustomerName: customer.Name}}, CustomerCars: []*domain.Car{car},
 		Note: &domain.HistoryNote{ID: "note", CarID: car.ID}, Offer: offer,
@@ -181,6 +182,53 @@ func TestSidebarHighlightsCurrentSection(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPagination(t *testing.T) {
+	t.Run("parses safe page numbers", func(t *testing.T) {
+		tests := []struct {
+			query string
+			want  int
+		}{
+			{"", 1},
+			{"?page=2", 2},
+			{"?page=0", 1},
+			{"?page=-1", 1},
+			{"?page=nope", 1},
+			{"?page=999999999999999999999999999999", 1},
+		}
+		for _, tt := range tests {
+			r := httptest.NewRequest(http.MethodGet, "/customers"+tt.query, nil)
+			if got := requestedPage(r); got != tt.want {
+				t.Errorf("requestedPage(%q) = %d; want %d", tt.query, got, tt.want)
+			}
+		}
+	})
+
+	t.Run("builds ranges and preserves filters", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodGet, "/customers?q=ivan&archived=1&page=2", nil)
+		got := newPagination(r, 2, 61)
+		if got.FirstItem != 26 || got.LastItem != 50 || got.TotalPages != 3 {
+			t.Fatalf("pagination range = %d-%d of %d pages; want 26-50 of 3", got.FirstItem, got.LastItem, got.TotalPages)
+		}
+		if got.PreviousURL != "/customers?archived=1&q=ivan" {
+			t.Errorf("previous URL = %q", got.PreviousURL)
+		}
+		if got.NextURL != "/customers?archived=1&page=3&q=ivan" {
+			t.Errorf("next URL = %q", got.NextURL)
+		}
+	})
+
+	t.Run("redirects stale pages to the last page", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodGet, "/offers?status=draft&page=8", nil)
+		w := httptest.NewRecorder()
+		if !redirectIfPageOutOfRange(w, r, 8, 40) {
+			t.Fatal("expected an out-of-range redirect")
+		}
+		if w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/offers?page=2&status=draft" {
+			t.Fatalf("got status %d location %q", w.Code, w.Header().Get("Location"))
+		}
+	})
 }
 
 func TestParseCents(t *testing.T) {

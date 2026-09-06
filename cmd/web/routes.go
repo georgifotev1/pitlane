@@ -31,6 +31,9 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("GET /account/reset-password", app.resetPasswordView)
 	mux.HandleFunc("POST /account/reset-password", app.resetPassword)
 	mux.HandleFunc("POST /account/logout", app.requireAuthentication(app.logout))
+	mux.HandleFunc("GET /account/profile", app.requireAuthentication(app.profileView))
+	mux.HandleFunc("POST /account/profile/name", app.requireAuthentication(app.profileNameUpdate))
+	mux.HandleFunc("POST /account/profile/password", app.requireAuthentication(app.profilePasswordUpdate))
 
 	mux.HandleFunc("GET /dashboard", app.requireAuthentication(app.dashboard))
 	mux.HandleFunc("GET /garage", app.requireAuthentication(app.garageView))

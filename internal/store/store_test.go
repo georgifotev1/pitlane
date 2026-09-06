@@ -184,6 +184,44 @@ func TestUserStore(t *testing.T) {
 		}
 	})
 
+	t.Run("UpdateName changes name, scoped to tenant", func(t *testing.T) {
+		u := newUser(tenant.ID, "name@example.com", "Old Name", "owner")
+		u.PasswordHash = "fake-hash"
+		if err := us.Create(ctx, u); err != nil {
+			t.Fatalf("create user: %v", err)
+		}
+		if err := us.UpdateName(ctx, tenant.ID, u.ID, "New Name"); err != nil {
+			t.Fatalf("update name: %v", err)
+		}
+		got, err := us.GetByID(ctx, tenant.ID, u.ID)
+		if err != nil {
+			t.Fatalf("reload: %v", err)
+		}
+		if got.Name != "New Name" {
+			t.Fatalf("expected updated name, got %q", got.Name)
+		}
+
+		otherTenant := newTenant("Name Other")
+		if err := ts.Create(ctx, otherTenant); err != nil {
+			t.Fatalf("create other tenant: %v", err)
+		}
+		other := newUser(otherTenant.ID, "name-other@example.com", "Other Name", "owner")
+		other.PasswordHash = "fake-hash"
+		if err := us.Create(ctx, other); err != nil {
+			t.Fatalf("create other user: %v", err)
+		}
+		if err := us.UpdateName(ctx, tenant.ID, other.ID, "Leaked Name"); err != ErrNotFound {
+			t.Fatalf("cross-tenant update returned %v", err)
+		}
+		unchanged, err := us.GetByID(ctx, otherTenant.ID, other.ID)
+		if err != nil {
+			t.Fatalf("reload other: %v", err)
+		}
+		if unchanged.Name != "Other Name" {
+			t.Fatalf("cross-tenant name changed to %q", unchanged.Name)
+		}
+	})
+
 	t.Run("UpdateRole changes role, scoped to tenant", func(t *testing.T) {
 		u := newUser(tenant.ID, "role@example.com", "Role", "mechanic")
 		u.PasswordHash = "fake-hash"

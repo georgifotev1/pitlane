@@ -229,6 +229,22 @@ func (s *UserStore) List(ctx context.Context, tenantID string) ([]*domain.User, 
 	return users, err
 }
 
+func (s *UserStore) UpdateName(ctx context.Context, tenantID, userID, name string) error {
+	return s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
+		ct, err := tx.Exec(ctx, `
+			UPDATE users SET name = $3, updated_at = now()
+			WHERE id = $1 AND tenant_id = $2
+		`, userID, tenantID, name)
+		if err != nil {
+			return fmt.Errorf("update user name: %w", err)
+		}
+		if ct.RowsAffected() == 0 {
+			return ErrNotFound
+		}
+		return nil
+	})
+}
+
 func (s *UserStore) UpdateRole(ctx context.Context, tenantID, userID string, role domain.Role) error {
 	return s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
 		ct, err := tx.Exec(ctx, `

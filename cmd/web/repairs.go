@@ -19,7 +19,9 @@ func (app *application) repairsList(w http.ResponseWriter, r *http.Request) {
 	if status != "" && !domain.IsValidRepairStatus(status) {
 		status = ""
 	}
+	customerSearch := clean(r.URL.Query().Get("customer"))
 	tenantID := app.tenantID(r)
+	page := requestedPage(r)
 	var repairs []store.RepairSummary
 	var stats store.RepairStats
 	var total int
@@ -27,8 +29,10 @@ func (app *application) repairsList(w http.ResponseWriter, r *http.Request) {
 		func(ctx context.Context) error {
 			var err error
 			repairs, total, err = app.repairs.List(ctx, tenantID, store.RepairListParams{
-				Status: status,
-				Limit:  500,
+				Status:         status,
+				CustomerSearch: customerSearch,
+				Limit:          listPageSize,
+				Offset:         pageOffset(page),
 			})
 			return err
 		},
@@ -41,11 +45,16 @@ func (app *application) repairsList(w http.ResponseWriter, r *http.Request) {
 		app.serverError(w, r, err)
 		return
 	}
+	if redirectIfPageOutOfRange(w, r, page, total) {
+		return
+	}
 	data := app.newTemplateData(r)
 	data.Repairs, data.Total, data.RepairStats = repairs, total, stats
+	data.Pagination = newPagination(r, page, total)
 	data.Board = repairBoard(repairs, app.currency(data))
 	data.Stats = repairStatTiles(stats, app.currency(data))
 	data.Form.Values.Set("status", status)
+	data.Form.Values.Set("customer", customerSearch)
 	app.render(w, r, "repairs.page.html", data)
 }
 

@@ -8,7 +8,13 @@
 </header>
 {{ template "stat-tiles" .Stats }}
 <form class="filters compact" method="get">
-	<select name="status">
+	<input
+		type="search"
+		name="customer"
+		value="{{ .Form.Get "customer" }}"
+		placeholder="Клиент или фирма"
+		aria-label="Търсене по клиент"
+	/><select name="status">
 		<option value="">Всички статуси</option>
 		<option value="open" {{ if eq (.Form.Get "status") "open" }}selected{{ end }}>
 			Отворени
@@ -22,4 +28,5 @@
 	</select><button class="button" type="submit">Филтриране</button>
 </form>
 {{ template "document-board" .Board }}
+{{ template "pagination" .Pagination }}
 {{ end }}

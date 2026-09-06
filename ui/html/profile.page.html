@@ -1,0 +1,70 @@
+{{ define "title" }}Моят профил{{ end }}
+{{ define "main" }}
+<header class="page-header">
+	<div>
+		<h1>Моят профил</h1>
+		<p class="muted">Управлявайте личните си данни и сигурността на профила.</p>
+	</div>
+</header>
+<div class="profile-grid">
+	<section class="panel profile-panel">
+		<header class="panel-header">
+			<div>
+				<h2>Лични данни</h2>
+				<p class="muted">Името се показва в менюто на Pitlane.</p>
+			</div>
+		</header>
+		<form method="post" action="/account/profile/name" class="form-stack profile-form">
+			<label>Име<input
+					name="name"
+					value="{{ .NameForm.Get "name" }}"
+					autocomplete="name"
+					autofocus
+					required
+				/>
+				{{ with errorFor .NameForm "name" }}<span class="field-error">{{ . }}</span>{{ end }}</label>
+			<label>Имейл<input type="email" value="{{ .User.Email }}" autocomplete="username" disabled /><span class="hint">Имейлът служи за вход в профила.</span></label>
+			<div class="form-actions">
+				<button class="button primary" type="submit">Запази името</button>
+			</div>
+		</form>
+	</section>
+
+	<section class="panel profile-panel">
+		<header class="panel-header">
+			<div>
+				<h2>Промяна на парола</h2>
+				<p class="muted">Останалите активни сесии ще бъдат прекратени.</p>
+			</div>
+		</header>
+		<form method="post" action="/account/profile/password" class="form-stack profile-form">
+			<label>Текуща парола<input
+					type="password"
+					name="current_password"
+					autocomplete="current-password"
+					required
+				/>
+				{{ with errorFor .PasswordForm "current_password" }}<span class="field-error">{{ . }}</span>{{ end }}</label>
+			<label>Нова парола<input
+					type="password"
+					name="new_password"
+					autocomplete="new-password"
+					minlength="8"
+					required
+				/><span class="hint">Използвайте поне 8 символа.</span>
+				{{ with errorFor .PasswordForm "new_password" }}<span class="field-error">{{ . }}</span>{{ end }}</label>
+			<label>Повторете новата парола<input
+					type="password"
+					name="confirm_password"
+					autocomplete="new-password"
+					minlength="8"
+					required
+				/>
+				{{ with errorFor .PasswordForm "confirm_password" }}<span class="field-error">{{ . }}</span>{{ end }}</label>
+			<div class="form-actions">
+				<button class="button primary" type="submit">Промени паролата</button>
+			</div>
+		</form>
+	</section>
+</div>
+{{ end }}

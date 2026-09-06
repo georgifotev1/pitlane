@@ -38,10 +38,13 @@ type templateData struct {
 	CanonicalURL   string
 	Flash          string
 	Form           *forms.Form
+	NameForm       *forms.Form
+	PasswordForm   *forms.Form
 	ResetRequested bool
 	InvalidToken   bool
 
 	Tenant              *domain.Tenant
+	User                *domain.User
 	Customer            *domain.Customer
 	Customers           []*domain.Customer
 	Car                 *domain.Car
@@ -58,6 +61,7 @@ type templateData struct {
 	Repairs             []store.RepairSummary
 	RepairStats         store.RepairStats
 	Total               int
+	Pagination          *pagination
 
 	// Board, Document and Margin feed the components offers and repairs share:
 	// one list table, one line-item table, one internal margin panel.
@@ -74,6 +78,19 @@ type templateData struct {
 	RecentRepairs *documentBoard
 	RecentOffers  *documentBoard
 	Attention     *documentBoard
+}
+
+type pagination struct {
+	CurrentPage int
+	TotalPages  int
+	FirstItem   int
+	LastItem    int
+	TotalItems  int
+	PreviousURL string
+	NextURL     string
+	HasPrevious bool
+	HasNext     bool
+	Show        bool
 }
 
 type offerRow struct {
