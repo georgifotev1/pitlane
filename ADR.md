@@ -20,7 +20,7 @@ jobs are out of scope.
 2. **Alex Edwards structure.** A small `application` struct holds dependencies;
    handlers are methods; middleware is explicit; form values/errors are posted,
    validated and rendered server-side; POST success uses redirect-after-post.
-3. **Embedded UI.** `api/ui` embeds templates and CSS with `go:embed`. The
+3. **Embedded UI.** `ui` embeds templates and CSS with `go:embed`. The
    production image contains one static Go executable.
 4. **PostgreSQL.** Keep the existing tenant/customer/car/history/offer schema,
    raw pgx stores and RLS so deployed data remains compatible.
@@ -59,16 +59,15 @@ jobs are out of scope.
 ## Layout
 
 ```
-api/
-  cmd/web/            # main, routes, handlers, middleware and views
-  internal/forms/     # Edwards-style form validation
-  internal/domain/    # business types and offer calculations
-  internal/store/     # tenant-scoped PostgreSQL access
-  internal/mailer/    # welcome/reset templates and SMTP delivery
-  internal/pdf/       # offer PDF renderer
-  migrations/         # embedded goose SQL
-  ui/html/            # embedded templates
-  ui/static/          # embedded CSS
+cmd/web/            # main, routes, handlers, middleware and views
+internal/forms/     # Edwards-style form validation
+internal/domain/    # business types and offer calculations
+internal/store/     # tenant-scoped PostgreSQL access
+internal/mailer/    # welcome/reset templates and SMTP delivery
+internal/pdf/       # offer PDF renderer
+migrations/         # embedded goose SQL
+ui/html/            # embedded templates
+ui/static/          # embedded CSS
 Dockerfile
 Makefile
 ```

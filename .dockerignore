@@ -2,16 +2,14 @@
 .env
 .env.example
 
-# Build outputs — produced inside the image
+# Build outputs
 node_modules
-frontend/node_modules
-frontend/dist
-api/internal/api/dist/*
-!api/internal/api/dist/.gitkeep
 
 # Local binaries / coverage
-api/pitlane
-api/coverage.out
+bin
+pitlane
+web
+coverage.out
 
 # Docs and dev-only files
 *.md

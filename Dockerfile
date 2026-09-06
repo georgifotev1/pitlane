@@ -4,9 +4,12 @@
 # one executable and no Node.js runtime or copied asset directory.
 FROM golang:1.26-alpine AS build
 WORKDIR /build
-COPY api/go.mod api/go.sum ./
+COPY go.mod go.sum ./
 RUN go mod download
-COPY api/ ./
+COPY cmd ./cmd
+COPY internal ./internal
+COPY migrations ./migrations
+COPY ui ./ui
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/pitlane ./cmd/web
 
 FROM gcr.io/distroless/static-debian12:nonroot

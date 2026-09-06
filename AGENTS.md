@@ -7,7 +7,7 @@ before changing architecture.
 - Do not add a SPA, Node build, JSON API, jobs or object storage. Email is
   limited to the welcome and password-reset account messages; do not add offer
   email.
-- Follow the Alex Edwards shape already used in `api/cmd/web`: application
+- Follow the Alex Edwards shape already used in `cmd/web`: application
   struct dependency injection, handler methods, explicit middleware,
   server-side forms, and post/redirect/get.
 - Use `net/http` ServeMux patterns and keep dependencies minimal.

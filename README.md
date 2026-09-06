@@ -42,7 +42,6 @@ make deps-down
 The executable also accepts flags:
 
 ```sh
-cd api
 go run ./cmd/web -addr=:4000 -dsn='postgres://...'
 go run ./cmd/web migrate up
 ```

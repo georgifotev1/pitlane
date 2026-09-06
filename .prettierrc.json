@@ -2,7 +2,7 @@
   "plugins": ["prettier-plugin-go-template"],
   "overrides": [
     {
-      "files": ["api/ui/html/**/*.html"],
+      "files": ["ui/html/**/*.html"],
       "options": { "parser": "go-template" }
     }
   ],

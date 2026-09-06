@@ -1,6 +1,6 @@
 # Implementation status
 
-The server-rendered MVP is implemented under `api/cmd/web`.
+The server-rendered MVP is implemented under `cmd/web`.
 
 Verification gate:
 

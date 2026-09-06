@@ -14,37 +14,37 @@ deps-down:
 	docker compose down
 
 dev: .env deps migrate-up
-	cd api && go run ./cmd/web
+	go run ./cmd/web
 
 test:
-	cd api && go test ./...
+	go test ./...
 
 audit:
-	cd api && gofmt -w $$(find cmd internal ui -name '*.go')
-	cd api && go vet ./...
-	cd api && go test ./...
+	gofmt -w $$(find cmd internal ui -name '*.go')
+	go vet ./...
+	go test ./...
 
 build:
 	docker build -t pitlane:latest .
 
 build-local:
-	cd api && CGO_ENABLED=0 go build -trimpath -o ../bin/pitlane ./cmd/web
+	CGO_ENABLED=0 go build -trimpath -o bin/pitlane ./cmd/web
 
 migrate-up:
-	cd api && go run ./cmd/web migrate up
+	go run ./cmd/web migrate up
 
 migrate-down:
-	cd api && go run ./cmd/web migrate down
+	go run ./cmd/web migrate down
 
 migrate-status:
-	cd api && go run ./cmd/web migrate status
+	go run ./cmd/web migrate status
 
 # A demonstration garage with a year of history, for showing the product.
 demo-seed:
-	cd api && go run ./cmd/web demo seed
+	go run ./cmd/web demo seed
 
 demo-reset:
-	cd api && go run ./cmd/web demo reset
+	go run ./cmd/web demo reset
 
 demo-drop:
-	cd api && go run ./cmd/web demo drop
+	go run ./cmd/web demo drop
