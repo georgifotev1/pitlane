@@ -36,7 +36,7 @@ func (app *application) carCreateView(w http.ResponseWriter, r *http.Request) {
 	}
 	data := app.newTemplateData(r)
 	data.Customer = customer
-	app.render(w, r, "car-form.page.html", data)
+	app.renderCarForm(w, r, data)
 }
 
 func (app *application) carCreate(w http.ResponseWriter, r *http.Request) {
@@ -51,14 +51,14 @@ func (app *application) carCreate(w http.ResponseWriter, r *http.Request) {
 	data := app.newTemplateData(r)
 	data.Customer, data.Form = customer, form
 	if !form.Valid() {
-		app.render(w, r, "car-form.page.html", data)
+		app.renderCarForm(w, r, data)
 		return
 	}
 	car.ID, car.TenantID, car.CustomerID = uuid.NewString(), app.tenantID(r), customer.ID
 	if err := app.cars.Create(r.Context(), car); err != nil {
 		if errors.Is(err, store.ErrDuplicatePlate) {
 			form.Errors["plate"] = "Този регистрационен номер вече е регистриран."
-			app.render(w, r, "car-form.page.html", data)
+			app.renderCarForm(w, r, data)
 			return
 		}
 		app.serverError(w, r, err)
@@ -114,7 +114,7 @@ func (app *application) carEditView(w http.ResponseWriter, r *http.Request) {
 	}
 	data := app.newTemplateData(r)
 	data.Car, data.Customer, data.Form = car, customer, carForm(car)
-	app.render(w, r, "car-form.page.html", data)
+	app.renderCarForm(w, r, data)
 }
 
 func (app *application) carEdit(w http.ResponseWriter, r *http.Request) {
@@ -134,14 +134,14 @@ func (app *application) carEdit(w http.ResponseWriter, r *http.Request) {
 	data := app.newTemplateData(r)
 	data.Car, data.Customer, data.Form = current, customer, form
 	if !form.Valid() {
-		app.render(w, r, "car-form.page.html", data)
+		app.renderCarForm(w, r, data)
 		return
 	}
 	car.ID, car.TenantID, car.CustomerID = current.ID, current.TenantID, current.CustomerID
 	if err := app.cars.Update(r.Context(), car); err != nil {
 		if errors.Is(err, store.ErrDuplicatePlate) {
 			form.Errors["plate"] = "Този регистрационен номер вече е регистриран."
-			app.render(w, r, "car-form.page.html", data)
+			app.renderCarForm(w, r, data)
 			return
 		}
 		app.serverError(w, r, err)
@@ -158,6 +158,74 @@ func (app *application) carArchive(w http.ResponseWriter, r *http.Request) {
 	}
 	app.flash(r, "Автомобилът е архивиран.")
 	http.Redirect(w, r, "/cars", http.StatusSeeOther)
+}
+
+func (app *application) renderCarForm(w http.ResponseWriter, r *http.Request, data *templateData) {
+	suggestions, err := app.cars.Suggestions(r.Context(), app.tenantID(r))
+	if err != nil {
+		app.serverError(w, r, err)
+		return
+	}
+	data.CarMakeSuggestions = mergeSuggestions(commonCarMakes, suggestions.Makes)
+	data.CarModelSuggestions = mergeModelSuggestions(commonCarModels, suggestions.Models)
+	app.render(w, r, "car-form.page.html", data)
+}
+
+func mergeSuggestions(groups ...[]string) []string {
+	seen := make(map[string]struct{})
+	var merged []string
+	for _, group := range groups {
+		for _, suggestion := range group {
+			suggestion = canonicalCarMake(suggestion)
+			if suggestion == "" {
+				continue
+			}
+			key := strings.ToLower(suggestion)
+			if _, exists := seen[key]; exists {
+				continue
+			}
+			seen[key] = struct{}{}
+			merged = append(merged, suggestion)
+		}
+	}
+	return merged
+}
+
+func mergeModelSuggestions(builtIn []carModelSuggestion, learned []store.CarModelSuggestion) []carModelSuggestion {
+	seen := make(map[string]struct{})
+	merged := make([]carModelSuggestion, 0, len(builtIn)+len(learned))
+	add := func(makeName, model string) {
+		makeName, model = canonicalCarMake(makeName), strings.TrimSpace(model)
+		if model == "" {
+			return
+		}
+		key := strings.ToLower(makeName) + "\x00" + strings.ToLower(model)
+		if _, exists := seen[key]; exists {
+			return
+		}
+		seen[key] = struct{}{}
+		merged = append(merged, carModelSuggestion{Make: makeName, Model: model})
+	}
+	for _, suggestion := range builtIn {
+		add(suggestion.Make, suggestion.Model)
+	}
+	for _, suggestion := range learned {
+		add(suggestion.Make, suggestion.Model)
+	}
+	return merged
+}
+
+func canonicalCarMake(value string) string {
+	value = strings.TrimSpace(value)
+	if strings.EqualFold(value, "VW") {
+		return "Volkswagen"
+	}
+	for _, makeName := range commonCarMakes {
+		if strings.EqualFold(value, makeName) {
+			return makeName
+		}
+	}
+	return value
 }
 
 func (app *application) readCarForm(w http.ResponseWriter, r *http.Request) (*forms.Form, *domain.Car, bool) {
@@ -177,7 +245,9 @@ func (app *application) readCarForm(w http.ResponseWriter, r *http.Request) (*fo
 	if !mileageOK {
 		form.Errors["mileage"] = "Въведете валиден пробег."
 	}
-	car := &domain.Car{Plate: strings.ToUpper(clean(form.Get("plate"))), VIN: strings.ToUpper(clean(form.Get("vin"))), Make: clean(form.Get("make")), Model: clean(form.Get("model")), Year: year, Mileage: mileage}
+	makeName := canonicalCarMake(form.Get("make"))
+	form.Values.Set("make", makeName)
+	car := &domain.Car{Plate: strings.ToUpper(clean(form.Get("plate"))), VIN: strings.ToUpper(clean(form.Get("vin"))), Make: makeName, Model: clean(form.Get("model")), Year: year, Mileage: mileage}
 	return form, car, true
 }
 

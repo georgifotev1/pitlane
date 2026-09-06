@@ -89,7 +89,7 @@ func TestEditTemplatesPrepopulateCurrentValues(t *testing.T) {
 		want []string
 	}{
 		{"customer-form.page.html", &templateData{Form: form, Customer: customer}, []string{`value="Ivan"`, `value="Garage Ltd"`, `value="ivan@example.com"`, `value="0888123456"`, `>Sofia</textarea>`, `>Current notes</textarea>`}},
-		{"car-form.page.html", &templateData{Form: form, Customer: customer, Car: car}, []string{`value="CA1234AB"`, `value="VIN123"`, `value="Volvo"`, `value="V60"`, `value="2020"`, `value="123456"`}},
+		{"car-form.page.html", &templateData{Form: form, Customer: customer, Car: car, CarMakeSuggestions: []string{"Volvo", "Volkswagen"}, CarModelSuggestions: []carModelSuggestion{{Make: "Volvo", Model: "V60"}, {Make: "Volkswagen", Model: "Golf"}}}, []string{`value="CA1234AB"`, `value="VIN123"`, `value="Volvo"`, `value="V60"`, `value="2020"`, `value="123456"`, `list="car-makes"`, `list="car-models"`, `<option value="Volkswagen" label="VW">`, `<option value="Golf" data-make="Volkswagen">`}},
 		{"history-form.page.html", &templateData{Form: form, Car: car, Note: note}, []string{`value="Oil service"`, `value="2026-03-01"`, `>Changed oil</textarea>`}},
 		{"offer-form.page.html", &templateData{Form: form, Tenant: tenant, Customer: customer, Car: car, Offer: offer, Editor: newItemEditor(offerEditorTitle, offerEditorHint, blankOfferRows(1), form)}, []string{`>Current notes</textarea>`, `name="item_cost"`}},
 		{"repair-form.page.html", &templateData{Form: form, Tenant: tenant, Customer: customer, Car: car, Repair: repair, Editor: newItemEditor(repairEditorTitle, repairEditorHint, blankOfferRows(1), form)}, []string{`value="123456"`, `>Current notes</textarea>`, `name="item_cost"`}},
@@ -106,6 +106,43 @@ func TestEditTemplatesPrepopulateCurrentValues(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestMergeSuggestionsPreservesPriorityAndRemovesDuplicates(t *testing.T) {
+	got := mergeSuggestions(
+		[]string{"Volkswagen", "BMW"},
+		[]string{" volkswagen ", "Zastava", "", "bmw"},
+	)
+	want := []string{"Volkswagen", "BMW", "Zastava"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestCarCatalogueAndCanonicalMake(t *testing.T) {
+	modelsByMake := make(map[string]int)
+	for _, suggestion := range commonCarModels {
+		modelsByMake[suggestion.Make]++
+	}
+	for _, makeName := range commonCarMakes {
+		if modelsByMake[makeName] == 0 {
+			t.Errorf("%s has no model suggestions", makeName)
+		}
+	}
+	if got := canonicalCarMake("vw"); got != "Volkswagen" {
+		t.Fatalf("canonicalCarMake(vw) = %q, want Volkswagen", got)
+	}
+	if got := canonicalCarMake("bmw"); got != "BMW" {
+		t.Fatalf("canonicalCarMake(bmw) = %q, want BMW", got)
+	}
+
+	merged := mergeModelSuggestions(
+		[]carModelSuggestion{{Make: "Volkswagen", Model: "Golf"}},
+		[]store.CarModelSuggestion{{Make: "VW", Model: "golf"}, {Make: "VW", Model: "up!"}},
+	)
+	if len(merged) != 2 || merged[1] != (carModelSuggestion{Make: "Volkswagen", Model: "up!"}) {
+		t.Fatalf("merged Volkswagen models: got %v", merged)
 	}
 }
 

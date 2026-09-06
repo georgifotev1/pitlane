@@ -2,6 +2,8 @@ package store
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/gfotev/pitlane/internal/domain"
@@ -302,6 +304,68 @@ func TestCarStore(t *testing.T) {
 		}
 		if total != 0 || len(foreign) != 0 {
 			t.Fatalf("tenant leak: got total=%d len=%d, want 0/0", total, len(foreign))
+		}
+	})
+
+	t.Run("Suggestions returns distinct tenant values including archived cars", func(t *testing.T) {
+		suggestionTenant := newTenant("SuggestionGarage")
+		if err := ts.Create(ctx, suggestionTenant); err != nil {
+			t.Fatalf("create suggestion tenant: %v", err)
+		}
+		suggestionCustomer := newCustomer(suggestionTenant.ID, "Suggestion Customer")
+		if err := custs.Create(ctx, suggestionCustomer); err != nil {
+			t.Fatalf("create suggestion customer: %v", err)
+		}
+
+		for i, details := range []struct {
+			makeName string
+			model    string
+		}{
+			{makeName: "Ford", model: "Focus"},
+			{makeName: "Ford", model: "Puma"},
+			{makeName: "Volkswagen", model: "Golf"},
+			{makeName: "", model: ""},
+		} {
+			car := newCar(suggestionTenant.ID, suggestionCustomer.ID, fmt.Sprintf("SUG%04d", i))
+			car.Make, car.Model = details.makeName, details.model
+			if err := cars.Create(ctx, car); err != nil {
+				t.Fatalf("create suggestion car: %v", err)
+			}
+			if details.model == "Golf" {
+				if err := cars.Archive(ctx, suggestionTenant.ID, car.ID); err != nil {
+					t.Fatalf("archive suggestion car: %v", err)
+				}
+			}
+		}
+
+		otherTenant := newTenant("ForeignSuggestionGarage")
+		if err := ts.Create(ctx, otherTenant); err != nil {
+			t.Fatalf("create foreign suggestion tenant: %v", err)
+		}
+		otherCustomer := newCustomer(otherTenant.ID, "Foreign Customer")
+		if err := custs.Create(ctx, otherCustomer); err != nil {
+			t.Fatalf("create foreign suggestion customer: %v", err)
+		}
+		foreignCar := newCar(otherTenant.ID, otherCustomer.ID, "FOREIGN")
+		foreignCar.Make, foreignCar.Model = "Tesla", "Model 3"
+		if err := cars.Create(ctx, foreignCar); err != nil {
+			t.Fatalf("create foreign suggestion car: %v", err)
+		}
+
+		suggestions, err := cars.Suggestions(ctx, suggestionTenant.ID)
+		if err != nil {
+			t.Fatalf("suggestions: %v", err)
+		}
+		if want := []string{"Ford", "Volkswagen"}; !slices.Equal(suggestions.Makes, want) {
+			t.Fatalf("makes: got %v, want %v", suggestions.Makes, want)
+		}
+		wantModels := []CarModelSuggestion{
+			{Make: "Ford", Model: "Focus"},
+			{Make: "Ford", Model: "Puma"},
+			{Make: "Volkswagen", Model: "Golf"},
+		}
+		if !slices.Equal(suggestions.Models, wantModels) {
+			t.Fatalf("models: got %v, want %v", suggestions.Models, wantModels)
 		}
 	})
 

@@ -40,6 +40,69 @@ type CarListParams struct {
 	Offset          int
 }
 
+type CarModelSuggestion struct {
+	Make  string
+	Model string
+}
+
+type CarSuggestions struct {
+	Makes  []string
+	Models []CarModelSuggestion
+}
+
+// Suggestions returns values this garage has used before. Archived cars remain
+// useful here: their makes and models are still valid suggestions for new cars.
+func (s *CarStore) Suggestions(ctx context.Context, tenantID string) (CarSuggestions, error) {
+	var suggestions CarSuggestions
+	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT DISTINCT make
+			FROM cars
+			WHERE tenant_id = $1 AND make <> ''
+			ORDER BY make
+		`, tenantID)
+		if err != nil {
+			return fmt.Errorf("list car make suggestions: %w", err)
+		}
+		for rows.Next() {
+			var makeName string
+			if err := rows.Scan(&makeName); err != nil {
+				rows.Close()
+				return fmt.Errorf("scan car make suggestion: %w", err)
+			}
+			suggestions.Makes = append(suggestions.Makes, makeName)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return fmt.Errorf("list car make suggestions: %w", err)
+		}
+		rows.Close()
+
+		rows, err = tx.Query(ctx, `
+			SELECT DISTINCT make, model
+			FROM cars
+			WHERE tenant_id = $1 AND model <> ''
+			ORDER BY make, model
+		`, tenantID)
+		if err != nil {
+			return fmt.Errorf("list car model suggestions: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var suggestion CarModelSuggestion
+			if err := rows.Scan(&suggestion.Make, &suggestion.Model); err != nil {
+				return fmt.Errorf("scan car model suggestion: %w", err)
+			}
+			suggestions.Models = append(suggestions.Models, suggestion)
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("list car model suggestions: %w", err)
+		}
+		return nil
+	})
+	return suggestions, err
+}
+
 func (s *CarStore) List(ctx context.Context, tenantID, customerID string, p CarListParams) ([]*domain.Car, int, error) {
 	var cars []*domain.Car
 	var total int

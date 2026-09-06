@@ -41,21 +41,23 @@ type templateData struct {
 	ResetRequested bool
 	InvalidToken   bool
 
-	Tenant       *domain.Tenant
-	Customer     *domain.Customer
-	Customers    []*domain.Customer
-	Car          *domain.Car
-	Cars         []store.CarSummary
-	CustomerCars []*domain.Car
-	History      []store.HistoryEntry
-	Note         *domain.HistoryNote
-	Offer        *domain.Offer
-	Offers       []store.OfferSummary
-	CarOffers    []*domain.Offer
-	Repair       *domain.Repair
-	Repairs      []store.RepairSummary
-	RepairStats  store.RepairStats
-	Total        int
+	Tenant              *domain.Tenant
+	Customer            *domain.Customer
+	Customers           []*domain.Customer
+	Car                 *domain.Car
+	Cars                []store.CarSummary
+	CustomerCars        []*domain.Car
+	CarMakeSuggestions  []string
+	CarModelSuggestions []carModelSuggestion
+	History             []store.HistoryEntry
+	Note                *domain.HistoryNote
+	Offer               *domain.Offer
+	Offers              []store.OfferSummary
+	CarOffers           []*domain.Offer
+	Repair              *domain.Repair
+	Repairs             []store.RepairSummary
+	RepairStats         store.RepairStats
+	Total               int
 
 	// Board, Document and Margin feed the components offers and repairs share:
 	// one list table, one line-item table, one internal margin panel.

@@ -32,8 +32,24 @@
 				value="{{ .Form.Get "vin" }}"
 				class="uppercase"
 			/>{{ with errorFor .Form "vin" }}<span class="field-error">{{ . }}</span>{{ end }}</label>
-		<label>Марка<input name="make" value="{{ .Form.Get "make" }}" /></label>
-		<label>Модел<input name="model" value="{{ .Form.Get "model" }}" /></label>
+		<label>Марка<input
+				name="make"
+				value="{{ .Form.Get "make" }}"
+				list="car-makes"
+				data-car-make
+			/>
+		</label>
+		<datalist id="car-makes">
+			{{ range .CarMakeSuggestions }}
+				<option value="{{ . }}"{{ if eq . "Volkswagen" }} label="VW"{{ end }}></option>
+			{{ end }}
+		</datalist>
+		<label>Модел<input name="model" value="{{ .Form.Get "model" }}" list="car-models" /></label>
+		<datalist id="car-models" data-car-models>
+			{{ range .CarModelSuggestions }}
+				<option value="{{ .Model }}" data-make="{{ .Make }}"></option>
+			{{ end }}
+		</datalist>
 		<label>Година<input
 				type="number"
 				name="year"
