@@ -32,7 +32,7 @@ func demoCommand(ctx context.Context, dsn string, args []string, out io.Writer) 
 	flags := flag.NewFlagSet("pitlane demo", flag.ContinueOnError)
 	flags.SetOutput(out)
 	flags.StringVar(&opts.Email, "email", demo.DefaultEmail, "Login for the demonstration owner")
-	flags.StringVar(&opts.Password, "password", demo.DefaultPassword, "Password for the demonstration owner")
+	flags.StringVar(&opts.Password, "password", env("DEMO_PASSWORD", demo.DefaultPassword), "Password for the demonstration owner (default DEMO_PASSWORD)")
 	flags.StringVar(&opts.GarageName, "garage", demo.DefaultGarageName, "Garage name shown in the demonstration")
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
@@ -83,6 +83,12 @@ func demoCommand(ctx context.Context, dsn string, args []string, out io.Writer) 
 
 	fmt.Fprintf(out, "Demonstration garage ready: %d customers, %d cars, %d offers, %d repairs.\n",
 		result.Customers, result.Cars, result.Offers, result.Repairs)
-	fmt.Fprintf(out, "Sign in with %s / %s\n", result.Email, result.Password)
+	// Only the public default is echoed; a chosen password would otherwise end
+	// up in the job logs.
+	if result.Password == demo.DefaultPassword {
+		fmt.Fprintf(out, "Sign in with %s / %s\n", result.Email, result.Password)
+	} else {
+		fmt.Fprintf(out, "Sign in with %s and the configured password.\n", result.Email)
+	}
 	return nil
 }
