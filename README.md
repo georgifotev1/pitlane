@@ -12,9 +12,6 @@ A small, server-rendered garage manager built in Go. An owner can:
 - open a print-friendly offer or download a generated PDF;
 - receive a welcome email and reset a forgotten password by email.
 
-There is no React/Node build, JSON API, offer email, job queue or object storage.
-Go embeds all HTML templates and CSS into the executable.
-
 ## Run locally
 
 Requirements: Go, Docker and Docker Compose.
