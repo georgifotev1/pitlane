@@ -12,6 +12,9 @@ type Tenant struct {
 	Locale         string
 	DefaultTaxRate int32
 	Settings       map[string]any
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	// IsDemo marks the shared demonstration garage, which visitors may browse
+	// but never change.
+	IsDemo    bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

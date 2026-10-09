@@ -136,6 +136,9 @@ func (app *application) render(w http.ResponseWriter, r *http.Request, page stri
 	if data.GarageName == "" && data.Tenant != nil {
 		data.GarageName = data.Tenant.Name
 	}
+	if app.sessions.Exists(r.Context(), "userID") {
+		data.Demo = app.sessions.GetBool(r.Context(), "demo")
+	}
 	if data.Flash == "" && app.sessions.Exists(r.Context(), "userID") {
 		data.Flash = app.sessions.PopString(r.Context(), "flash")
 	}

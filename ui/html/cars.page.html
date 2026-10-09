@@ -23,7 +23,7 @@
 </form>
 <section class="panel table-panel">
 	{{ if .Cars }}
-		<table>
+		<table class="card-table cars-table">
 			<thead>
 				<tr>
 					<th>Регистрационен номер</th>
@@ -36,19 +36,19 @@
 			<tbody>
 				{{ range .Cars }}
 					<tr class="{{ if .Car.ArchivedAt }}archived{{ end }}">
-						<td>
+						<td class="cell-plate">
 							<a class="strong-link plate" href="/cars/{{ .Car.ID }}">{{ .Car.Plate }}</a>{{ if .Car.ArchivedAt }}<span class="tag">Архивиран</span>{{ end }}
 						</td>
-						<td>
+						<td class="cell-car">
 							{{ .Car.Make }}
 							{{ .Car.Model }}
 							{{ if .Car.Year }}
 								<span class="muted">· {{ .Car.Year }}</span>
 							{{ end }}
 						</td>
-						<td>{{ .CustomerName }}</td>
-						<td>{{ if .Car.Mileage }}{{ .Car.Mileage }} км{{ else }}—{{ end }}</td>
-						<td class="number"><a href="/cars/{{ .Car.ID }}">Преглед →</a></td>
+						<td class="cell-customer">{{ .CustomerName }}</td>
+						<td class="cell-mileage">{{ if .Car.Mileage }}{{ .Car.Mileage }} км{{ else }}—{{ end }}</td>
+						<td class="number cell-action"><a href="/cars/{{ .Car.ID }}">Преглед →</a></td>
 					</tr>
 				{{ end }}
 			</tbody>

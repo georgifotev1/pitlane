@@ -45,7 +45,7 @@
 						text-anchor="end">{{ .Label }}</text>
 				{{ end }}
 				{{ range .Revenue.Bars }}
-					<g class="chart-bar{{ if .Current }}is-current{{ end }}">
+					<g class="chart-bar{{ if .Current }} is-current{{ end }}">
 						<title>{{ .Title }}</title>
 						<rect
 							class="chart-band"

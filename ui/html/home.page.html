@@ -12,7 +12,8 @@
 		</nav>
 		<div class="landing-nav-actions">
 			<a class="landing-login" href="/account/login">Вход</a>
-			<a class="button primary" href="/account/signup">Създай сервиз</a>
+			<form action="/demo" method="post"><button class="button landing-demo" type="submit">Демо</button></form>
+			<a class="button primary landing-signup" href="/account/signup">Създай сервиз</a>
 		</div>
 	</div>
 </header>
@@ -26,7 +27,7 @@
 				<p class="hero-lead">Клиенти, автомобили, оферти и ремонти — подредени в един лесен работен процес. Винаги знаете какво е свършено и какво предстои.</p>
 				<div class="hero-actions">
 					<a class="button primary landing-cta" href="/account/signup">Създай своя сервиз <span aria-hidden="true">→</span></a>
-					<a class="hero-secondary" href="#features">Разгледай възможностите <span aria-hidden="true">↓</span></a>
+					<form action="/demo" method="post"><button class="button landing-cta landing-demo-cta" type="submit">Разгледай демото</button></form>
 				</div>
 				<p class="hero-note">
 					<svg aria-hidden="true" viewBox="0 0 20 20" width="18" height="18"><path d="m5 10 3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
@@ -133,7 +134,10 @@
 			<p class="landing-kicker"><span></span> Готов ли е сервизът ти за по-добър ред?</p>
 			<h2>Започни още днес.</h2>
 			<p>Създай своя сервиз в Pitlane и събери цялата работа на едно място.</p>
-			<a class="button primary landing-cta" href="/account/signup">Създай своя сервиз <span aria-hidden="true">→</span></a>
+			<div class="final-actions">
+				<a class="button primary landing-cta" href="/account/signup">Създай своя сервиз <span aria-hidden="true">→</span></a>
+				<form action="/demo" method="post"><button class="button landing-cta landing-demo-cta" type="submit">Разгледай демото</button></form>
+			</div>
 		</div>
 	</section>
 </main>

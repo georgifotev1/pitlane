@@ -30,7 +30,7 @@ func TestPublicAndProtectedRoutes(t *testing.T) {
 	t.Run("public landing page", func(t *testing.T) {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/", nil))
-		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "По-малко таблици") {
+		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "Пълен контрол") {
 			t.Fatalf("got status %d without landing-page copy", response.Code)
 		}
 	})

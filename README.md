@@ -33,7 +33,7 @@ An owner can:
 - **Tenant isolation in the store layer.** Every tenant-scoped query runs inside `store.WithTenant` and filters on `tenant_id`, and composite foreign keys stop a row from ever referencing another garage's data. The database itself enforces no row-level security, so a query that leaves out its `tenant_id` filter is a security bug.
 - **Single self-contained binary.** Templates, CSS and migrations are embedded, so the image contains just `/pitlane` and nothing else.
 - **Migrations ship in the binary.** The executable applies them itself (`pitlane migrate up`), against a separate `MIGRATE_DSN` when the database needs a direct, non-pooled endpoint.
-- **Safe demo data.** A built-in demo mode creates a separate, flagged garage with a year of realistic data, and its reset/drop commands refuse to touch any real garage.
+- **Safe demo data.** A built-in demo mode creates a separate, flagged garage with a year of realistic data that anyone can open from the home page. It is read-only in the app, and its reset/drop commands refuse to touch any real garage.
 - **Explicit dependencies.** Handlers are methods on a small `application` struct, with hand-written middleware and no hidden globals.
 
 ## Run locally
@@ -89,20 +89,21 @@ The hosted instance runs as the Cloud Run service `pitlane` in project `pitlane-
 - The service runs as `pitlane-run`, which can only read those secrets.
 - To cap cost, the service scales to zero and is limited to one instance, 20 concurrent requests and a 30-second request timeout.
 
-Apply new migrations first, from your machine, against Neon's **direct** (non-pooled) endpoint:
+Redeploy with one command:
 
 ```
-MIGRATE_DSN='postgres://...direct...?sslmode=require' go run ./cmd/web migrate up
+make deploy
 ```
 
-Then deploy:
+It runs, in order and stopping at the first failure:
 
-```
-make deploy             # build with Cloud Build, deploy the service, then repoint the demo job
-make deploy-job         # only repoint the demo job at the image the service is running
-```
+1. `make test` - the Go tests (Docker must be running for the database tests);
+2. `make migrate-cloud` - applies new migrations to Neon. Migrations need the **direct** endpoint, which is derived from the `pitlane-dsn` secret by dropping `-pooler` from the host, so nothing has to be kept locally;
+3. `gcloud run deploy` - builds with Cloud Build and deploys the service;
+4. `make deploy-job` - repoints the demo job at the image the service now runs;
+5. `make demo-reset-cloud` - rebuilds the demo with that image, so a broken seed fails the deploy instead of the demo button.
 
-`make deploy` sends only the source code; the service keeps its settings between deploys. Change those with `gcloud run services update`. Check that the output ends with the demo job being updated; if it doesn't, run `make deploy-job`.
+Each step can also be run on its own. `make deploy` sends only the source code; the service keeps its settings between deploys. Change those with `gcloud run services update`.
 
 ### Docker Compose
 
@@ -124,6 +125,8 @@ docker compose -f docker-compose.prod.yml run --rm app demo reset
 
 `seed` creates it, `reset` rebuilds it from scratch (and creates it if it is missing), and `drop` removes it. Run `reset` before a demonstration to undo whatever the last one clicked on.
 
+Visitors open it with the **Демо** button on the home page (and under the login form), which signs them in without a password. The demonstration garage is **read-only** for everyone signed in to it: every change - forms, status changes, profile and password updates - is refused with a message, and password resets are never issued for it, so one visitor can never alter what the next one sees.
+
 The login is `demo@pitlane.bg`. The password comes from `DEMO_PASSWORD` and falls back to `pitlane-demo`; override any of them with `-email`, `-password` and `-garage`. Only the default password is printed after seeding, so a chosen one never ends up in logs.
 
 On Cloud Run, the demo is rebuilt by the Cloud Run job `pitlane-demo-reset`, which runs `pitlane demo reset` with `DEMO_PASSWORD` from the `pitlane-demo-password` secret. Cloud Scheduler (`pitlane-demo-reset-weekly`) starts it every Monday at 04:00 Europe/Sofia. To rebuild it before a demonstration:
@@ -132,7 +135,7 @@ On Cloud Run, the demo is rebuilt by the Cloud Run job `pitlane-demo-reset`, whi
 make demo-reset-cloud
 ```
 
-The demonstration garage is a normal tenant, scoped by the same `tenant_id` filters as every other, and it is flagged `is_demo`. That flag is what lets `reset` and `drop` delete data at all: pointed at a real garage they refuse and change nothing.
+The demonstration garage is a normal tenant, scoped by the same `tenant_id` filters as every other, and it is flagged `is_demo`. That flag is what lets `reset` and `drop` delete data at all: pointed at a real garage they refuse and change nothing. It is also what makes the garage read-only in the web app, and the demo button refuses to sign in to any garage without it.
 
 ## Architecture
 

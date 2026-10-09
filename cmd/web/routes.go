@@ -22,6 +22,7 @@ func (app *application) routes() http.Handler {
 
 	mux.HandleFunc("GET /healthz", app.health)
 	mux.HandleFunc("GET /", app.home)
+	mux.HandleFunc("POST /demo", app.demoLogin)
 	mux.HandleFunc("GET /account/signup", app.signupView)
 	mux.HandleFunc("POST /account/signup", app.signup)
 	mux.HandleFunc("GET /account/login", app.loginView)

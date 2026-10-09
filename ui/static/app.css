@@ -2078,12 +2078,66 @@ tr.archived {
   outline-offset: 3px;
 }
 
+/* Demonstration garage */
+.demo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 0.75rem 0.7rem 1rem;
+  margin-bottom: 1.2rem;
+  background: var(--sidebar);
+  border-radius: 0.55rem;
+  color: #e5e5e5;
+  font-size: 0.86rem;
+}
+.demo-banner strong {
+  color: #fff;
+}
+.demo-banner .button {
+  min-height: 2.2rem;
+  padding-block: 0.35rem;
+  font-size: 0.8rem;
+}
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 550;
+  cursor: pointer;
+}
+.link-button:hover {
+  text-decoration: underline;
+}
+.landing-nav-actions form,
+.hero-actions form,
+.final-actions form {
+  display: contents;
+}
+.landing-demo-cta {
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.final-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
 @media (max-width: 1100px) {
   .landing-hero {
     padding-top: 5.5rem;
   }
+  /* minmax(0, …) lets the column shrink below the fixed-width preview, which
+     would otherwise stretch the headline off a phone screen. */
   .hero-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .hero-copy {
     max-width: 760px;
@@ -2117,8 +2171,11 @@ tr.archived {
     gap: 1rem;
   }
   .landing-nav nav,
-  .landing-login {
+  .landing-signup {
     display: none;
+  }
+  .landing-nav-actions {
+    gap: 0.9rem;
   }
   .landing-nav-actions {
     margin-left: auto;
@@ -2141,15 +2198,23 @@ tr.archived {
     flex-direction: column;
     gap: 1.1rem;
   }
+  .hero-actions {
+    align-items: stretch;
+    gap: 0.75rem;
+  }
   .landing-cta {
     width: 100%;
+    justify-content: center;
   }
+  /* The preview is a fixed 700px desktop screenshot; on a phone it is scaled to
+     the container (358px at 390px wide) and the space it no longer uses is
+     taken back from the margin. */
   .product-preview {
     width: 700px;
     margin-left: 50%;
-    transform: translateX(-50%) scale(0.58);
+    transform: translateX(-50%) scale(0.5);
     transform-origin: top center;
-    margin-bottom: -175px;
+    margin-bottom: -215px;
   }
   .preview-badge-top {
     right: 8px;
@@ -2343,6 +2408,262 @@ tr.archived {
   .print-toolbar {
     position: static;
     flex-wrap: wrap;
+  }
+}
+/* Phones. List tables become one card per row: the first link in each row is
+   stretched over the whole card, so the separate "Преглед" column goes. */
+@media (max-width: 640px) {
+  .panel-header {
+    flex-wrap: wrap;
+  }
+  .list-row .align-right strong,
+  .card-table .cell-total,
+  .card-table .cell-profit {
+    white-space: nowrap;
+  }
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+  .stats a {
+    align-items: flex-start;
+    padding: 0.9rem;
+  }
+  .stat-body .money-stat {
+    font-size: 1.2rem;
+  }
+  .stat-body small {
+    font-size: 0.7rem;
+  }
+  .table-panel {
+    overflow-x: visible;
+  }
+  .card-table thead {
+    display: none;
+  }
+  .card-table,
+  .card-table tbody {
+    display: block;
+  }
+  .card-table tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.2rem 1rem;
+    align-items: center;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .card-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .card-table td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none !important;
+    font-size: 0.85rem;
+  }
+  .card-table .cell-action,
+  .card-table .is-empty {
+    display: none;
+  }
+  .card-table .strong-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  .card-table td.number {
+    text-align: right;
+  }
+  .card-table .strong-link + small,
+  .card-table .tag {
+    margin-left: 0.4rem;
+  }
+
+  .board-table tr {
+    grid-template-areas:
+      "number total"
+      "customer profit"
+      "car status";
+  }
+  .board-table .cell-number {
+    grid-area: number;
+  }
+  .board-table .cell-number small {
+    display: inline;
+  }
+  .board-table .cell-customer {
+    grid-area: customer;
+    color: var(--muted);
+  }
+  .board-table .cell-car {
+    grid-area: car;
+  }
+  .board-table .cell-status {
+    grid-area: status;
+    justify-self: end;
+  }
+  .board-table .cell-total {
+    grid-area: total;
+  }
+  .board-table .cell-profit {
+    grid-area: profit;
+  }
+  .board-table .cell-profit small {
+    display: none;
+  }
+  .board-table .cell-profit strong::before {
+    content: "печалба ";
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 400;
+  }
+
+  .customers-table tr {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .customers-table .cell-company,
+  .customers-table .cell-contact {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .customers-table .stacked {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.6rem;
+    overflow-wrap: anywhere;
+  }
+
+  .cars-table tr {
+    grid-template-areas:
+      "plate mileage"
+      "car car"
+      "customer customer";
+  }
+  .cars-table .cell-plate {
+    grid-area: plate;
+  }
+  .cars-table .cell-car {
+    grid-area: car;
+  }
+  .cars-table .cell-customer {
+    grid-area: customer;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .cars-table .cell-mileage {
+    grid-area: mileage;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .lines-table tr {
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "description description total"
+      "kind quantity price";
+    column-gap: 0.5rem;
+    padding-inline: 0;
+  }
+  .lines-table .cell-description {
+    grid-area: description;
+  }
+  .lines-table .cell-total {
+    grid-area: total;
+    font-weight: 650;
+  }
+  .lines-table .cell-kind {
+    grid-area: kind;
+  }
+  .lines-table .cell-kind .tag {
+    margin-left: 0;
+  }
+  .lines-table .cell-quantity,
+  .lines-table .cell-price {
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+  .lines-table .cell-quantity {
+    grid-area: quantity;
+    text-align: left !important;
+  }
+  .lines-table .cell-quantity::after {
+    content: " ×";
+  }
+  .lines-table .cell-price {
+    grid-area: price;
+    text-align: left !important;
+  }
+
+  /* The item editor: one stacked card per line, labelled from data-label. */
+  .item-editor thead {
+    display: none;
+  }
+  .item-editor,
+  .item-editor tbody {
+    display: block;
+  }
+  .item-editor tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "kind remove"
+      "description description"
+      "quantity price"
+      "cost cost";
+    gap: 0.6rem 0.75rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .item-editor td {
+    display: block;
+    width: auto !important;
+    padding: 0;
+    border: 0;
+  }
+  .item-editor td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .item-editor input,
+  .item-editor select,
+  .item-editor td:nth-child(2) input {
+    width: 100%;
+    min-width: 0;
+  }
+  .item-editor .cell-kind {
+    grid-area: kind;
+  }
+  .item-editor .cell-description {
+    grid-area: description;
+  }
+  .item-editor .cell-quantity {
+    grid-area: quantity;
+  }
+  .item-editor .cell-price {
+    grid-area: price;
+  }
+  .item-editor .cell-cost {
+    grid-area: cost;
+    padding: 0.5rem 0.6rem;
+    border-radius: 0.5rem;
+  }
+  .item-editor .item-row-action {
+    grid-area: remove;
+    justify-self: end;
+    align-self: end;
+  }
+  .sticky-actions {
+    justify-content: stretch;
+  }
+  .sticky-actions > * {
+    flex: 1;
   }
 }
 @media print {

@@ -90,13 +90,13 @@ func (s *TenantStore) GetByID(ctx context.Context, tenantID string) (*domain.Ten
 	var tenant *domain.Tenant
 	err := s.db.WithTenant(ctx, tenantID, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `
-			SELECT id, name, address, vat_number, logo_key, currency, locale, default_tax_rate, settings, created_at, updated_at
+			SELECT id, name, address, vat_number, logo_key, currency, locale, default_tax_rate, settings, is_demo, created_at, updated_at
 			FROM tenants
 			WHERE id = $1
 		`, tenantID)
 		var t domain.Tenant
 		if err := row.Scan(&t.ID, &t.Name, &t.Address, &t.VATNumber, &t.LogoKey,
-			&t.Currency, &t.Locale, &t.DefaultTaxRate, &t.Settings, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			&t.Currency, &t.Locale, &t.DefaultTaxRate, &t.Settings, &t.IsDemo, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrNotFound
 			}

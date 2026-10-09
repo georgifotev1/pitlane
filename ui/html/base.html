@@ -78,6 +78,12 @@
 				</div>
 			</aside>
 			<main class="main">
+				{{ if .Demo }}
+					<div class="demo-banner">
+						<span><strong>Демо сервиз.</strong> Разглеждайте свободно - промените не се запазват.</span>
+						<a class="button primary" href="/account/signup">Създай своя сервиз</a>
+					</div>
+				{{ end }}
 				{{ if .Flash }}<div class="flash">{{ .Flash }}</div>{{ end }}
 				{{ template "main" . }}
 			</main>

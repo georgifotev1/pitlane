@@ -35,6 +35,13 @@ func (app *application) health(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (app *application) signupView(w http.ResponseWriter, r *http.Request) {
+	// A visitor leaving the demo to create a garage of their own.
+	if app.sessions.GetBool(r.Context(), "demo") {
+		if err := app.sessions.Destroy(r.Context()); err != nil {
+			app.serverError(w, r, err)
+			return
+		}
+	}
 	app.render(w, r, "signup.page.html", &templateData{CurrentPath: r.URL.Path, Form: forms.New(nil)})
 }
 
@@ -135,6 +142,12 @@ func (app *application) startSession(r *http.Request, user *domain.User) error {
 	app.sessions.Put(r.Context(), "tenantID", user.TenantID)
 	app.sessions.Put(r.Context(), "userName", user.Name)
 	app.sessions.Put(r.Context(), "authenticatedAt", time.Now().UnixNano())
+	// Only drives the banner; the write guard checks the tenant itself.
+	isDemo, err := app.isDemoTenant(r.Context(), user.TenantID)
+	if err != nil {
+		return err
+	}
+	app.sessions.Put(r.Context(), "demo", isDemo)
 	return nil
 }
 

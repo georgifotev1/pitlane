@@ -37,6 +37,7 @@ type templateData struct {
 	SiteURL        string
 	CanonicalURL   string
 	Flash          string
+	Demo           bool
 	Form           *forms.Form
 	NameForm       *forms.Form
 	PasswordForm   *forms.Form

@@ -1,7 +1,7 @@
 -include .env
 export
 
-.PHONY: fmt-templates dev deps deps-down test audit build build-local migrate-up migrate-down migrate-status demo-seed demo-reset demo-drop deploy deploy-job demo-reset-cloud
+.PHONY: fmt-templates dev deps deps-down test audit build build-local migrate-up migrate-down migrate-status demo-seed demo-reset demo-drop deploy migrate-cloud deploy-job demo-reset-cloud
 
 .env:
 	cp .env.example .env
@@ -54,15 +54,23 @@ demo-drop:
 	go run ./cmd/web demo drop
 
 # Cloud Run. Service settings (env vars, secrets, limits) persist between
-# deploys, so only the source is sent. The demo reset job runs the same binary,
-# so deploy repoints it at the image the service just started using.
+# deploys, so only the source is sent. `make deploy` is the whole release:
+# test, migrate, deploy the service, repoint the demo job at the new image and
+# rebuild the demo with it, so a broken seed shows up here and not on a visitor.
 GCP_PROJECT := pitlane-233d9z
 GCP_REGION  := europe-west1
 GCLOUD      := gcloud --project $(GCP_PROJECT)
 
-deploy:
+deploy: test migrate-cloud
 	$(GCLOUD) run deploy pitlane --source . --region $(GCP_REGION) --quiet
 	$(MAKE) deploy-job
+	$(MAKE) demo-reset-cloud
+
+# Migrations need Neon's direct endpoint; the service secret holds the pooled
+# one, which differs only by the "-pooler" suffix on the host.
+migrate-cloud:
+	@MIGRATE_DSN="$$($(GCLOUD) secrets versions access latest --secret=pitlane-dsn | sed 's/-pooler\././')" \
+		go run ./cmd/web migrate up
 
 deploy-job:
 	$(GCLOUD) run jobs update pitlane-demo-reset --region $(GCP_REGION) --args='demo,reset' \

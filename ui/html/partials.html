@@ -11,7 +11,7 @@
 				<span>{{ .Label }}</span><strong class="money-stat">{{ .Value }}</strong>
 				<small class="muted">{{ .Sub }}</small>
 				{{ if .Delta }}
-					<small class="delta{{ if .Rising }}is-up{{ end }}{{ if .Falling }}is-down{{ end }}">{{ .Delta }}</small>
+					<small class="delta{{ if .Rising }} is-up{{ end }}{{ if .Falling }} is-down{{ end }}">{{ .Delta }}</small>
 				{{ end }}
 			</div>
 		</a>
@@ -35,7 +35,7 @@
 {{ define "document-board" }}
 <section class="panel table-panel">
 	{{ if .Rows }}
-		<table>
+		<table class="card-table board-table">
 			<thead>
 				<tr>
 					<th>{{ .NumberHeading }}</th>
@@ -50,15 +50,15 @@
 			<tbody>
 				{{ range .Rows }}
 					<tr>
-						<td>
+						<td class="cell-number">
 							<a class="strong-link" href="{{ .URL }}">{{ .Number }}</a><small class="block muted">{{ date .CreatedAt }}</small>
 						</td>
-						<td>{{ .CustomerName }}</td>
-						<td><span class="plate">{{ .CarPlate }}</span></td>
-						<td><span class="status">{{ statusLabel .Status }}</span></td>
-						<td class="number"><strong>{{ money .TotalCents $.Currency }}</strong></td>
+						<td class="cell-customer">{{ .CustomerName }}</td>
+						<td class="cell-car"><span class="plate">{{ .CarPlate }}</span></td>
+						<td class="cell-status"><span class="status">{{ statusLabel .Status }}</span></td>
+						<td class="number cell-total"><strong>{{ money .TotalCents $.Currency }}</strong></td>
 						{{ if $.ShowProfit }}
-							<td class="number">
+							<td class="number cell-profit">
 								{{ if .HasCost }}
 									<strong class="profit">{{ money .ProfitCents $.Currency }}</strong><small class="block muted">{{ .Margin }} марж</small>
 								{{ else }}
@@ -66,7 +66,7 @@
 								{{ end }}
 							</td>
 						{{ end }}
-						<td class="number"><a href="{{ .URL }}">Преглед →</a></td>
+						<td class="number cell-action"><a href="{{ .URL }}">Преглед →</a></td>
 					</tr>
 				{{ end }}
 			</tbody>
@@ -135,7 +135,7 @@
 
 {{/* The line items and totals of an offer or a repair. This partial is rendered on the customer's print sheet as well, so it carries no cost or margin data of any kind. Takes a documentView. */}}
 {{ define "document-table" }}
-<table>
+<table class="card-table lines-table">
 	<thead>
 		<tr>
 			<th>Описание</th>
@@ -148,11 +148,11 @@
 	<tbody>
 		{{ range .Lines }}
 			<tr>
-				<td>{{ .Description }}</td>
-				<td><span class="tag">{{ kindLabel .Kind }}</span></td>
-				<td class="number">{{ .Quantity }}</td>
-				<td class="number">{{ money .UnitPriceCents $.Currency }}</td>
-				<td class="number">{{ money .LineTotalCents $.Currency }}</td>
+				<td class="cell-description">{{ .Description }}</td>
+				<td class="cell-kind"><span class="tag">{{ kindLabel .Kind }}</span></td>
+				<td class="number cell-quantity">{{ .Quantity }}</td>
+				<td class="number cell-price">{{ money .UnitPriceCents $.Currency }}</td>
+				<td class="number cell-total">{{ money .LineTotalCents $.Currency }}</td>
 			</tr>
 		{{ end }}
 	</tbody>
@@ -234,19 +234,23 @@
 {{ define "item-editor-rows" }}
 {{ range . }}
 	<tr data-item-row>
-		<td>
+		<td class="cell-kind" data-label="Вид">
 			<select name="item_kind">
 				<option value="part" {{ if eq .Kind "part" }}selected{{ end }}>Част</option>
 				<option value="labor" {{ if eq .Kind "labor" }}selected{{ end }}>Труд</option>
 				<option value="other" {{ if eq .Kind "other" }}selected{{ end }}>Друго</option>
 			</select>
 		</td>
-		<td><input name="item_description" value="{{ .Description }}" placeholder="Описание" /></td>
-		<td><input type="number" name="item_quantity" min="1" value="{{ .Quantity }}" /></td>
-		<td>
+		<td class="cell-description" data-label="Описание">
+			<input name="item_description" value="{{ .Description }}" placeholder="Описание" />
+		</td>
+		<td class="cell-quantity" data-label="Бр.">
+			<input type="number" name="item_quantity" min="1" value="{{ .Quantity }}" />
+		</td>
+		<td class="cell-price" data-label="Цена с ДДС (€)">
 			<input name="item_price" inputmode="decimal" value="{{ .UnitPrice }}" placeholder="0,00" />
 		</td>
-		<td class="cost-column">
+		<td class="cost-column cell-cost" data-label="Доставна цена (€)">
 			<input
 				class="cost-input"
 				name="item_cost"

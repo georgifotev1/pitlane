@@ -61,7 +61,12 @@ func (app *application) forgotPassword(w http.ResponseWriter, r *http.Request) {
 	email := strings.ToLower(clean(form.Get("email")))
 	user, err := app.users.GetByEmail(r.Context(), email)
 	if err == nil {
-		app.sendPasswordReset(r, user)
+		// The demonstration login is shared; nobody may take it over.
+		if isDemo, demoErr := app.isDemoTenant(r.Context(), user.TenantID); demoErr != nil {
+			app.logger.Error("password reset tenant lookup failed", "err", demoErr)
+		} else if !isDemo {
+			app.sendPasswordReset(r, user)
+		}
 	} else if !errors.Is(err, store.ErrNotFound) {
 		app.logger.Error("password reset lookup failed", "err", err)
 	}

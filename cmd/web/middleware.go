@@ -32,7 +32,7 @@ func (app *application) logRequest(next http.Handler) http.Handler {
 
 func secureHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self'; img-src 'self' data:; frame-ancestors 'self'; form-action 'self'; base-uri 'self'")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'self'; form-action 'self'; base-uri 'self'")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "SAMEORIGIN")
@@ -64,6 +64,9 @@ func (app *application) requireAuthentication(next http.HandlerFunc) http.Handle
 				app.redirectToLogin(w, r)
 				return
 			}
+		}
+		if app.refuseDemoWrite(w, r, user.TenantID) {
+			return
 		}
 		next(w, r)
 	}
