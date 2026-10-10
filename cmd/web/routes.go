@@ -15,7 +15,7 @@ func (app *application) routes() http.Handler {
 		panic(err)
 	}
 	staticHandler := http.FileServerFS(staticFS)
-	mux.Handle("GET /static/", http.StripPrefix("/static/", staticHandler))
+	mux.Handle("GET /static/", cacheStatic(http.StripPrefix("/static/", staticHandler)))
 	mux.Handle("GET /favicon.ico", staticHandler)
 	mux.Handle("GET /site.webmanifest", staticHandler)
 	mux.Handle("GET /robots.txt", staticHandler)

@@ -17,7 +17,8 @@ import (
 )
 
 var functions = template.FuncMap{
-	"date": func(t time.Time) string { return t.Format("02.01.2006") },
+	"asset": assetURL,
+	"date":  func(t time.Time) string { return t.Format("02.01.2006") },
 	"datePtr": func(t *time.Time) string {
 		if t == nil {
 			return ""

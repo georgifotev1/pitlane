@@ -45,6 +45,24 @@ func TestPublicAndProtectedRoutes(t *testing.T) {
 		}
 	})
 
+	t.Run("static cache headers", func(t *testing.T) {
+		immutable := "public, max-age=31536000, immutable"
+		for path, want := range map[string]string{
+			"/static/fonts/geist-latin-wght-normal.woff2": immutable,
+			assetURL("app.css"):                           immutable,
+			"/static/favicon.svg":                         "public, max-age=3600",
+		} {
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
+			if got := response.Header().Get("Cache-Control"); response.Code != http.StatusOK || got != want {
+				t.Errorf("GET %s: got status %d Cache-Control %q; want 200 %q", path, response.Code, got, want)
+			}
+		}
+		if !strings.Contains(assetURL("app.css"), "?v=") {
+			t.Errorf("assetURL(app.css) = %q; want a version query", assetURL("app.css"))
+		}
+	})
+
 	t.Run("protected page redirects", func(t *testing.T) {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/customers", nil))
